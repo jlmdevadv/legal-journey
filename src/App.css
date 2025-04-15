@@ -30,3 +30,16 @@
   padding: 0;
 }
 
+.contract-paper {
+  background-color: white;
+  background-image: linear-gradient(#f8fafc 1px, transparent 1px);
+  background-size: 100% 28px;
+  line-height: 28px;
+  padding: 27px 34px;
+  font-family: 'Georgia', 'Times New Roman', Times, serif;
+}
+
+.contract-field {
+  color: #1a56db;
+  font-weight: 600;
+}

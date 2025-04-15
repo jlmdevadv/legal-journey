@@ -10,21 +10,21 @@ const TemplateSelector = () => {
 
   return (
     <div id="templates" className="py-8">
-      <h2 className="text-2xl font-bold mb-6 text-contractPrimary text-center">Escolha um modelo de contrato</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <h2 className="text-3xl font-bold mb-8 text-contractPrimary text-center">Escolha um modelo de contrato</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {contractTemplates.map((template) => (
           <Card 
             key={template.id} 
-            className="cursor-pointer hover:shadow-lg transition-all border-2 border-gray-200 hover:border-contractAccent group overflow-hidden"
+            className="cursor-pointer hover:shadow-md transition-all border border-gray-100 hover:border-blue-200 group overflow-hidden"
             onClick={() => selectTemplate(template)}
           >
-            <CardHeader className="bg-gray-50 border-b relative">
+            <CardHeader className="bg-white border-b relative pb-3">
               <CardTitle className="flex items-center gap-2 text-contractPrimary">
                 <FileText className="w-5 h-5" />
                 {template.name}
               </CardTitle>
               <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <ArrowRight className="w-5 h-5 text-contractAccent" />
+                <ArrowRight className="w-5 h-5 text-blue-500" />
               </div>
             </CardHeader>
             <CardContent className="pt-4">

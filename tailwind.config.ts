@@ -63,8 +63,8 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				contractPrimary: "#1e40af", // deep blue
-				contractSecondary: "#475569", // slate gray
+				contractPrimary: "#1a56db", // blue like instituto futuros
+				contractSecondary: "#4b5563", // gray
 				contractAccent: "#3b82f6", // bright blue
 			},
 			borderRadius: {

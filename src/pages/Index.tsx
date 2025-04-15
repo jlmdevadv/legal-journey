@@ -14,26 +14,40 @@ const ContractContent = () => {
   if (!selectedTemplate) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="mb-8 text-center">
-            <h1 className="text-3xl font-bold text-contractPrimary mb-2">Gerador de Contratos Online</h1>
-            <p className="text-gray-600 text-lg">
-              Crie contratos personalizados em minutos. Escolha um modelo, preencha os campos e imprima seu documento pronto para uso.
+        <div className="max-w-5xl mx-auto">
+          <div className="mb-12 text-center">
+            <h1 className="text-4xl font-bold text-contractPrimary mb-4">Gerador de Contratos Inteligente</h1>
+            <p className="text-gray-600 text-xl max-w-3xl mx-auto">
+              Crie contratos personalizados em minutos. Escolha um modelo, preencha os campos e receba seu documento pronto para uso.
             </p>
           </div>
           
-          <TemplateSelector />
+          <div className="bg-gray-50 py-12 rounded-lg">
+            <TemplateSelector />
+          </div>
           
-          <div id="about" className="py-8 border-t border-gray-200 mt-8">
-            <h2 className="text-2xl font-bold mb-4 text-contractPrimary">Sobre o Legal Journey</h2>
-            <p className="text-gray-600 mb-4">
-              O Legal Journey é uma ferramenta online que permite a criação de contratos profissionais de forma rápida e segura.
-              Nossos modelos são desenvolvidos por especialistas e são atualizados regularmente para atender às mudanças na legislação.
-            </p>
-            <p className="text-gray-600">
-              Importante: Os contratos gerados por esta ferramenta são modelos genéricos que podem necessitar de adaptação
-              para sua situação específica. Recomendamos a revisão por um profissional antes da assinatura.
-            </p>
+          <div id="about" className="py-12 mt-12 border-t border-gray-100">
+            <h2 className="text-3xl font-bold mb-6 text-contractPrimary">Sobre o Legal Journey</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div>
+                <p className="text-gray-600 mb-4 text-lg">
+                  O Legal Journey é uma ferramenta online que permite a criação de contratos profissionais de forma rápida e segura.
+                  Nossos modelos são desenvolvidos por especialistas e são atualizados regularmente para atender às mudanças na legislação.
+                </p>
+                <p className="text-gray-600 text-lg">
+                  Utilizamos tecnologia avançada para garantir que seus documentos estejam sempre em conformidade com as leis vigentes.
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-600 mb-4 text-lg">
+                  Importante: Os contratos gerados por esta ferramenta são modelos genéricos que podem necessitar de adaptação
+                  para sua situação específica. Recomendamos a revisão por um profissional antes da assinatura.
+                </p>
+                <p className="text-gray-600 text-lg">
+                  Para mais informações sobre nossos serviços ou para solicitar assistência personalizada, entre em contato conosco.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -58,7 +72,7 @@ const ContractContent = () => {
 const Index = () => {
   return (
     <ContractProvider>
-      <div className="min-h-screen bg-gray-50 flex flex-col print:bg-white">
+      <div className="min-h-screen bg-white flex flex-col print:bg-white">
         <div className="print:hidden">
           <Navbar />
         </div>

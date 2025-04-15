@@ -23,13 +23,13 @@ const ContractPreview = () => {
         return part;
       } else {
         // This is a placeholder field
-        return <span key={i} className="bg-yellow-100 px-1 rounded">[{part}]</span>;
+        return <span key={i} className="bg-yellow-50 px-1 rounded border border-yellow-200 text-yellow-800">[{part}]</span>;
       }
     });
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-1 print:shadow-none print:p-0" style={{ minHeight: '29.7cm' }}>
+    <div className="bg-white rounded-lg shadow-sm p-1 print:shadow-none print:p-0 border border-gray-100" style={{ minHeight: '29.7cm' }}>
       <div 
         id="contract-preview"
         className="contract-paper p-8 text-gray-800"
@@ -46,7 +46,7 @@ const ContractPreview = () => {
                 return (
                   <p 
                     key={lineIndex} 
-                    className={`mb-1 ${isHeading ? 'font-bold text-center text-contractPrimary' : ''}`}
+                    className={`mb-1 ${isHeading ? 'font-bold text-center text-blue-800' : ''}`}
                   >
                     {renderContractText(line)}
                   </p>

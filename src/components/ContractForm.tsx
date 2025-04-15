@@ -35,14 +35,14 @@ const ContractForm = () => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+    <div className="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-100">
       <div className="flex items-center justify-between mb-6 border-b pb-4">
-        <h3 className="text-xl font-semibold text-contractPrimary">{selectedTemplate.name}</h3>
+        <h3 className="text-xl font-bold text-contractPrimary">{selectedTemplate.name}</h3>
         <Button 
           variant="outline" 
           size="sm" 
           onClick={resetForm}
-          className="text-gray-500 hover:text-contractPrimary flex items-center gap-1"
+          className="text-blue-600 hover:text-blue-700 flex items-center gap-1 border-blue-200"
         >
           <ArrowLeft className="w-4 h-4" />
           Voltar
@@ -52,7 +52,7 @@ const ContractForm = () => {
       <form className="space-y-6">
         {selectedTemplate.fields.map((field) => (
           <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.id} className="text-sm font-medium">
+            <Label htmlFor={field.id} className="text-sm font-medium text-gray-700">
               {field.label} {field.required && <span className="text-red-500">*</span>}
             </Label>
             
@@ -62,7 +62,7 @@ const ContractForm = () => {
                 placeholder={field.placeholder}
                 value={formValues[field.id] || ''}
                 onChange={(e) => updateFormValue(field.id, e.target.value)}
-                className="resize-y"
+                className="resize-y border-gray-200 focus:border-blue-300"
                 rows={4}
               />
             ) : field.type === 'select' ? (
@@ -70,7 +70,7 @@ const ContractForm = () => {
                 value={formValues[field.id] || ''} 
                 onValueChange={(value) => updateFormValue(field.id, value)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="border-gray-200 focus:border-blue-300">
                   <SelectValue placeholder={field.placeholder} />
                 </SelectTrigger>
                 <SelectContent>
@@ -88,16 +88,17 @@ const ContractForm = () => {
                 placeholder={field.placeholder}
                 value={formValues[field.id] || ''}
                 onChange={(e) => updateFormValue(field.id, e.target.value)}
+                className="border-gray-200 focus:border-blue-300"
               />
             )}
           </div>
         ))}
         
-        <div className="flex space-x-4 pt-4 border-t mt-4">
+        <div className="flex space-x-4 pt-4 border-t mt-6">
           <Button 
             type="button" 
             onClick={handlePrint}
-            className="bg-contractPrimary hover:bg-blue-800 flex items-center gap-2"
+            className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
           >
             <Printer className="w-4 h-4" />
             Imprimir
@@ -107,7 +108,7 @@ const ContractForm = () => {
             type="button" 
             variant="outline" 
             onClick={handleDownload}
-            className="border-contractPrimary text-contractPrimary hover:bg-blue-50 flex items-center gap-2"
+            className="border-blue-200 text-blue-600 hover:bg-blue-50 flex items-center gap-2"
           >
             <Download className="w-4 h-4" />
             Baixar
