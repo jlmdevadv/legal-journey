@@ -44,17 +44,6 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     
     let filledTemplate = selectedTemplate.template;
     
-    // Calculate end date for rental agreement if needed
-    if (selectedTemplate.id === 'rent-agreement' && formValues['start-date'] && formValues['rental-period']) {
-      const startDate = new Date(formValues['start-date']);
-      const periodMonths = parseInt(formValues['rental-period'], 10);
-      const endDate = new Date(startDate);
-      endDate.setMonth(startDate.getMonth() + periodMonths);
-      
-      const formattedEndDate = endDate.toISOString().split('T')[0];
-      filledTemplate = filledTemplate.replace(/\[calculated-end-date\]/g, formattedEndDate);
-    }
-    
     // Replace all field placeholders with their values
     Object.entries(formValues).forEach(([fieldId, value]) => {
       // Escape special regex characters in fieldId to use as literal string
