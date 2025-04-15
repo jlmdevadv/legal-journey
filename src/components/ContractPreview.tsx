@@ -32,7 +32,7 @@ const ContractPreview = () => {
     <div className="bg-white rounded-lg shadow-lg p-1 print:shadow-none print:p-0" style={{ minHeight: '29.7cm' }}>
       <div 
         id="contract-preview"
-        className="contract-paper"
+        className="contract-paper p-8 text-gray-800"
       >
         {sections.map((section, index) => {
           const lines = section.split('\n');
@@ -46,7 +46,7 @@ const ContractPreview = () => {
                 return (
                   <p 
                     key={lineIndex} 
-                    className={`mb-1 ${isHeading ? 'font-bold text-center' : ''}`}
+                    className={`mb-1 ${isHeading ? 'font-bold text-center text-contractPrimary' : ''}`}
                   >
                     {renderContractText(line)}
                   </p>

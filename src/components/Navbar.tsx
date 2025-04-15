@@ -8,7 +8,7 @@ const Navbar = () => {
       <div className="container mx-auto py-4 px-6 flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <FileText className="w-6 h-6" />
-          <h1 className="text-xl font-bold">Contrato Completo Fácil</h1>
+          <h1 className="text-xl font-bold">Legal Journey</h1>
         </div>
         <nav>
           <ul className="flex space-x-6">

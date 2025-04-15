@@ -36,7 +36,7 @@ const ContractForm = () => {
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 border-b pb-4">
         <h3 className="text-xl font-semibold text-contractPrimary">{selectedTemplate.name}</h3>
         <Button 
           variant="outline" 
@@ -93,7 +93,7 @@ const ContractForm = () => {
           </div>
         ))}
         
-        <div className="flex space-x-4 pt-4">
+        <div className="flex space-x-4 pt-4 border-t mt-4">
           <Button 
             type="button" 
             onClick={handlePrint}

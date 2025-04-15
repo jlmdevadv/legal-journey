@@ -25,9 +25,9 @@ const ContractContent = () => {
           <TemplateSelector />
           
           <div id="about" className="py-8 border-t border-gray-200 mt-8">
-            <h2 className="text-2xl font-bold mb-4 text-contractPrimary">Sobre o Contrato Completo Fácil</h2>
+            <h2 className="text-2xl font-bold mb-4 text-contractPrimary">Sobre o Legal Journey</h2>
             <p className="text-gray-600 mb-4">
-              O Contrato Completo Fácil é uma ferramenta online que permite a criação de contratos profissionais de forma rápida e segura.
+              O Legal Journey é uma ferramenta online que permite a criação de contratos profissionais de forma rápida e segura.
               Nossos modelos são desenvolvidos por especialistas e são atualizados regularmente para atender às mudanças na legislação.
             </p>
             <p className="text-gray-600">
