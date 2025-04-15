@@ -1,3 +1,4 @@
+
 export interface ContractTemplate {
   id: string;
   name: string;
@@ -686,4 +687,67 @@ c) Não divulgar, publicar, ou de qualquer forma revelar as INFORMAÇÕES CONFID
 d) Limitar o acesso às INFORMAÇÕES CONFIDENCIAIS apenas às pessoas que efetivamente necessitem ter conhecimento delas para a realização do PROPÓSITO, garantindo que tais pessoas estejam cientes das obrigações de confidencialidade assumidas neste Contrato;
 e) Tomar todas as medidas de segurança razoáveis e adequadas para proteger as INFORMAÇÕES CONFIDENCIAIS contra uso, cópia ou divulgação não autorizados.
 
-2.2. A PARTE RECEPTORA deverá
+2.2. A PARTE RECEPTORA deverá informar imediatamente à PARTE REVELADORA sobre qualquer uso ou divulgação não autorizada das INFORMAÇÕES CONFIDENCIAIS de que venha a ter conhecimento.
+
+CLÁUSULA TERCEIRA – DAS EXCEÇÕES
+3.1. As obrigações de confidencialidade aqui estabelecidas não se aplicam às informações que:
+a) Já sejam de domínio público no momento da divulgação ou que venham a se tornar públicas por outro meio que não por violação do presente Contrato;
+b) Já eram de conhecimento da PARTE RECEPTORA antes de sua divulgação pela PARTE REVELADORA, desde que tal conhecimento prévio possa ser comprovado;
+c) Tenham sido obtidas de forma legítima de terceiros que não tenham qualquer obrigação de confidencialidade com a PARTE REVELADORA;
+d) Sejam desenvolvidas independentemente pela PARTE RECEPTORA sem o uso de qualquer INFORMAÇÃO CONFIDENCIAL;
+e) Devam ser divulgadas por determinação judicial ou de autoridade governamental competente, desde que a PARTE RECEPTORA notifique previamente a PARTE REVELADORA sobre tal determinação, permitindo que esta adote as medidas cabíveis para evitar ou limitar a divulgação.
+
+CLÁUSULA QUARTA – DO PRAZO
+4.1. O presente Contrato vigorará pelo prazo de [confidentiality-period] meses, a contar da data de sua assinatura.
+
+4.2. As obrigações de confidencialidade estabelecidas neste Contrato permanecerão em vigor pelo prazo de [confidentiality-period] meses após o término ou rescisão deste Contrato.
+
+CLÁUSULA QUINTA – DA PROPRIEDADE DAS INFORMAÇÕES
+5.1. Todas as INFORMAÇÕES CONFIDENCIAIS continuarão sendo de propriedade exclusiva da PARTE REVELADORA, e a PARTE RECEPTORA não adquirirá qualquer direito, título ou licença sobre tais informações.
+
+5.2. A PARTE RECEPTORA concorda em devolver à PARTE REVELADORA, ou destruir, conforme solicitado, todas as INFORMAÇÕES CONFIDENCIAIS recebidas, incluindo cópias, reproduções ou outros materiais que contenham tais informações, dentro de 10 (dez) dias após o término ou rescisão deste Contrato, ou a qualquer momento mediante solicitação da PARTE REVELADORA.
+
+CLÁUSULA SEXTA – DAS PENALIDADES
+6.1. A PARTE RECEPTORA reconhece que o descumprimento de quaisquer obrigações estabelecidas neste Contrato poderá causar danos irreparáveis à PARTE REVELADORA, que terá direito a indenização por perdas e danos, sem prejuízo das medidas judiciais cabíveis para fazer cessar a violação.
+
+6.2. Em caso de descumprimento do presente Contrato, a PARTE RECEPTORA pagará à PARTE REVELADORA multa no valor de [penalty-value], sem prejuízo das perdas e danos que venham a ser apurados.
+
+CLÁUSULA SÉTIMA – DISPOSIÇÕES GERAIS
+7.1. Este Contrato representa o entendimento integral entre as PARTES com relação ao assunto aqui tratado e substitui quaisquer acordos, entendimentos ou negociações anteriores.
+
+7.2. Este Contrato não cria qualquer vínculo societário, associativo, de representação, agência ou de emprego entre as PARTES.
+
+7.3. Nenhuma falha ou atraso no exercício de qualquer direito, poder ou privilégio decorrente deste Contrato será considerado como renúncia a tal direito, poder ou privilégio.
+
+7.4. Se qualquer disposição deste Contrato for considerada inválida ou inexequível, tal invalidade ou inexequibilidade não afetará as demais disposições, que permanecerão em pleno vigor e efeito.
+
+7.5. Este Contrato não poderá ser cedido ou transferido, no todo ou em parte, por qualquer das PARTES, sem o consentimento prévio e por escrito da outra PARTE.
+
+7.6. Quaisquer modificações a este Contrato somente serão válidas se feitas por escrito e assinadas por ambas as PARTES.
+
+CLÁUSULA OITAVA – DO FORO
+8.1. As PARTES elegem o Foro da Comarca de [city]/[state] para dirimir quaisquer dúvidas ou controvérsias oriundas deste Contrato, com renúncia expressa a qualquer outro, por mais privilegiado que seja.
+
+E, por estarem assim justas e contratadas, as PARTES assinam o presente instrumento em 2 (duas) vias de igual teor e forma, na presença das testemunhas abaixo.
+
+[city]/[state], [signing-date]
+
+________________________________
+[disclosing-party-name]
+PARTE REVELADORA
+
+________________________________
+[receiving-party-name]
+PARTE RECEPTORA
+
+TESTEMUNHAS:
+
+1. ________________________________
+Nome:
+CPF:
+
+2. ________________________________
+Nome:
+CPF:`
+  }
+];
