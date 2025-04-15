@@ -57,8 +57,10 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     
     // Replace all field placeholders with their values
     Object.entries(formValues).forEach(([fieldId, value]) => {
-      const placeholder = `[${fieldId}]`;
-      filledTemplate = filledTemplate.replace(new RegExp(placeholder, 'g'), value || placeholder);
+      // Escape special regex characters in fieldId to use as literal string
+      const escapedFieldId = fieldId.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const placeholderPattern = new RegExp(`\\[${escapedFieldId}\\]`, 'g');
+      filledTemplate = filledTemplate.replace(placeholderPattern, value || `[${fieldId}]`);
     });
     
     return filledTemplate;
