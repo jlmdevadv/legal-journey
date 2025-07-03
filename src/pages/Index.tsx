@@ -4,12 +4,13 @@ import { ContractProvider } from '../contexts/ContractContext';
 import Navbar from '../components/Navbar';
 import TemplateSelector from '../components/TemplateSelector';
 import ContractForm from '../components/ContractForm';
+import QuestionnaireForm from '../components/QuestionnaireForm';
 import ContractPreview from '../components/ContractPreview';
 import { useContract } from '../contexts/ContractContext';
 
 // Main content with conditional rendering based on template selection
 const ContractContent = () => {
-  const { selectedTemplate } = useContract();
+  const { selectedTemplate, isQuestionnaireMode } = useContract();
 
   if (!selectedTemplate) {
     return (
@@ -54,6 +55,23 @@ const ContractContent = () => {
     );
   }
 
+  // Show questionnaire mode (one question at a time)
+  if (isQuestionnaireMode || selectedTemplate.fields.length > 0) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex flex-col md:flex-row gap-6">
+          <div className="md:w-1/2 print:hidden">
+            <QuestionnaireForm />
+          </div>
+          <div className="md:w-1/2 print:w-full">
+            <ContractPreview />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback to old form (shouldn't normally reach here)
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="flex flex-col md:flex-row gap-6">

@@ -1,0 +1,127 @@
+
+import React from 'react';
+import { useContract } from '../../contexts/ContractContext';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowLeft, CheckCircle, Edit, Printer, Download } from 'lucide-react';
+
+const QuestionnaireSummary = () => {
+  const { 
+    selectedTemplate, 
+    formValues, 
+    previousQuestion, 
+    goToQuestion, 
+    finishQuestionnaire 
+  } = useContract();
+
+  if (!selectedTemplate) return null;
+
+  const handlePrint = () => {
+    finishQuestionnaire();
+    setTimeout(() => window.print(), 100);
+  };
+
+  const handleDownload = () => {
+    const element = document.getElementById('contract-preview');
+    if (!element) return;
+    
+    const contractContent = element.innerText;
+    const blob = new Blob([contractContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedTemplate.name.replace(/\s+/g, '-').toLowerCase()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="min-h-[600px] flex items-center justify-center p-6">
+      <Card className="w-full max-w-3xl">
+        <CardHeader className="text-center pb-4">
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            </div>
+          </div>
+          <CardTitle className="text-2xl text-contractPrimary mb-2">
+            Questionário Concluído!
+          </CardTitle>
+          <p className="text-gray-600">
+            Revise suas respostas abaixo. Você pode editar qualquer informação antes de finalizar.
+          </p>
+        </CardHeader>
+        
+        <CardContent className="space-y-6">
+          <div className="grid gap-4">
+            {selectedTemplate.fields.map((field, index) => (
+              <div key={field.id} className="border border-gray-200 rounded-lg p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="font-medium text-gray-900">{field.label}</h4>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => goToQuestion(index)}
+                    className="text-blue-600 hover:text-blue-700 p-1"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                </div>
+                <p className="text-gray-700 bg-gray-50 p-2 rounded">
+                  {formValues[field.id] || <span className="text-gray-400 italic">Não preenchido</span>}
+                </p>
+              </div>
+            ))}
+          </div>
+          
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h3 className="font-semibold text-blue-800 mb-2">Próximos passos</h3>
+            <p className="text-sm text-blue-700 mb-3">
+              Seu contrato está pronto! Você pode visualizá-lo, imprimi-lo ou baixá-lo.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Button 
+                onClick={finishQuestionnaire}
+                variant="outline"
+                className="border-blue-200 text-blue-600 hover:bg-blue-50"
+              >
+                Visualizar Contrato
+              </Button>
+              <Button 
+                onClick={handlePrint}
+                className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
+              >
+                <Printer className="w-4 h-4" />
+                Imprimir
+              </Button>
+              <Button 
+                onClick={handleDownload}
+                variant="outline"
+                className="border-blue-200 text-blue-600 hover:bg-blue-50 flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Baixar
+              </Button>
+            </div>
+          </div>
+          
+          <div className="flex justify-start">
+            <Button 
+              variant="outline" 
+              onClick={previousQuestion}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Voltar à última pergunta
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default QuestionnaireSummary;

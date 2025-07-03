@@ -5,10 +5,17 @@ import { ContractTemplate } from '../data/contractTemplates';
 interface ContractContextType {
   selectedTemplate: ContractTemplate | null;
   formValues: Record<string, string>;
+  currentQuestionIndex: number;
+  isQuestionnaireMode: boolean;
   selectTemplate: (template: ContractTemplate) => void;
   updateFormValue: (fieldId: string, value: string) => void;
   resetForm: () => void;
   fillContractTemplate: () => string;
+  nextQuestion: () => void;
+  previousQuestion: () => void;
+  goToQuestion: (index: number) => void;
+  startQuestionnaire: () => void;
+  finishQuestionnaire: () => void;
 }
 
 const ContractContext = createContext<ContractContextType | undefined>(undefined);
@@ -16,6 +23,8 @@ const ContractContext = createContext<ContractContextType | undefined>(undefined
 export const ContractProvider = ({ children }: { children: ReactNode }) => {
   const [selectedTemplate, setSelectedTemplate] = useState<ContractTemplate | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(-1); // -1 = welcome screen
+  const [isQuestionnaireMode, setIsQuestionnaireMode] = useState(false);
 
   const selectTemplate = (template: ContractTemplate) => {
     setSelectedTemplate(template);
@@ -25,6 +34,8 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       initialValues[field.id] = '';
     });
     setFormValues(initialValues);
+    setCurrentQuestionIndex(-1);
+    setIsQuestionnaireMode(false);
   };
 
   const updateFormValue = (fieldId: string, value: string) => {
@@ -37,6 +48,41 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   const resetForm = () => {
     setFormValues({});
     setSelectedTemplate(null);
+    setCurrentQuestionIndex(-1);
+    setIsQuestionnaireMode(false);
+  };
+
+  const startQuestionnaire = () => {
+    setIsQuestionnaireMode(true);
+    setCurrentQuestionIndex(0);
+  };
+
+  const finishQuestionnaire = () => {
+    setIsQuestionnaireMode(false);
+    setCurrentQuestionIndex(-1);
+  };
+
+  const nextQuestion = () => {
+    if (selectedTemplate && currentQuestionIndex < selectedTemplate.fields.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+    } else if (selectedTemplate && currentQuestionIndex === selectedTemplate.fields.length - 1) {
+      // Go to summary screen
+      setCurrentQuestionIndex(selectedTemplate.fields.length);
+    }
+  };
+
+  const previousQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(prev => prev - 1);
+    } else if (currentQuestionIndex === 0) {
+      setCurrentQuestionIndex(-1); // Back to welcome
+    }
+  };
+
+  const goToQuestion = (index: number) => {
+    if (selectedTemplate && index >= -1 && index <= selectedTemplate.fields.length) {
+      setCurrentQuestionIndex(index);
+    }
   };
 
   const fillContractTemplate = (): string => {
@@ -60,10 +106,17 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       value={{
         selectedTemplate,
         formValues,
+        currentQuestionIndex,
+        isQuestionnaireMode,
         selectTemplate,
         updateFormValue,
         resetForm,
         fillContractTemplate,
+        nextQuestion,
+        previousQuestion,
+        goToQuestion,
+        startQuestionnaire,
+        finishQuestionnaire,
       }}
     >
       {children}
