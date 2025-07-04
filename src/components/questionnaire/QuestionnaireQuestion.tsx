@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import QuestionnaireHelp from './QuestionnaireHelp';
 
 const QuestionnaireQuestion = () => {
   const { 
@@ -115,6 +116,9 @@ const QuestionnaireQuestion = () => {
           {currentField.required && currentValue.trim() === '' && (
             <p className="text-sm text-red-600">Este campo é obrigatório</p>
           )}
+          
+          {/* Help Sections */}
+          <QuestionnaireHelp field={currentField} />
           
           <div className="flex justify-between items-center pt-4">
             <Button 

@@ -1,4 +1,3 @@
-
 export interface ContractTemplate {
   id: string;
   name: string;
@@ -14,6 +13,9 @@ export interface ContractField {
   placeholder: string;
   options?: string[];
   required?: boolean;
+  howToFill?: string;
+  whyImportant?: string;
+  videoLink?: string;
 }
 
 export const contractTemplates: ContractTemplate[] = [
@@ -27,42 +29,56 @@ export const contractTemplates: ContractTemplate[] = [
         label: 'Nome do Parceiro 1',
         type: 'text',
         placeholder: 'Digite o nome completo do primeiro parceiro',
-        required: true
+        required: true,
+        howToFill: 'Digite o nome completo do primeiro parceiro, exatamente como consta nos documentos oficiais (RG, CPF). Evite abreviações e certifique-se de que está correto.',
+        whyImportant: 'A identificação precisa dos parceiros é fundamental para a validade jurídica do memorando. Nomes incorretos podem gerar problemas na execução do acordo e em futuros registros empresariais.',
+        videoLink: 'https://www.youtube.com/watch?v=exemplo1'
       },
       {
         id: 'partner1-id',
         label: 'CPF do Parceiro 1',
         type: 'text',
         placeholder: 'Digite o CPF do primeiro parceiro',
-        required: true
+        required: true,
+        howToFill: 'Digite apenas os números do CPF, sem pontos ou traços. Exemplo: 12345678901. Verifique se o CPF está válido antes de prosseguir.',
+        whyImportant: 'O CPF é essencial para identificação única da pessoa física no contrato. É usado para validar a identidade e será necessário em processos futuros de abertura de empresa.',
+        videoLink: 'https://www.youtube.com/watch?v=exemplo2'
       },
       {
         id: 'partner1-address',
         label: 'Endereço do Parceiro 1',
         type: 'text',
         placeholder: 'Digite o endereço completo do primeiro parceiro',
-        required: true
+        required: true,
+        howToFill: 'Inclua rua/avenida, número, complemento (se houver), bairro, cidade, estado e CEP. Exemplo: "Rua das Flores, 123, Apto 45, Centro, São Paulo, SP, CEP 01234-567".',
+        whyImportant: 'O endereço completo é necessário para correspondências legais e notificações. Em caso de disputas ou questões jurídicas, será usado para localização oficial do parceiro.'
       },
       {
         id: 'partner2-name',
         label: 'Nome do Parceiro 2',
         type: 'text',
         placeholder: 'Digite o nome completo do segundo parceiro',
-        required: true
+        required: true,
+        howToFill: 'Digite o nome completo do segundo parceiro, exatamente como consta nos documentos oficiais (RG, CPF). Evite abreviações e certifique-se de que está correto.',
+        whyImportant: 'A identificação precisa dos parceiros é fundamental para a validade jurídica do memorando. Nomes incorretos podem gerar problemas na execução do acordo e em futuros registros empresariais.'
       },
       {
         id: 'partner2-id',
         label: 'CPF do Parceiro 2',
         type: 'text',
         placeholder: 'Digite o CPF do segundo parceiro',
-        required: true
+        required: true,
+        howToFill: 'Digite apenas os números do CPF, sem pontos ou traços. Exemplo: 12345678901. Verifique se o CPF está válido antes de prosseguir.',
+        whyImportant: 'O CPF é essencial para identificação única da pessoa física no contrato. É usado para validar a identidade e será necessário em processos futuros de abertura de empresa.'
       },
       {
         id: 'partner2-address',
         label: 'Endereço do Parceiro 2',
         type: 'text',
         placeholder: 'Digite o endereço completo do segundo parceiro',
-        required: true
+        required: true,
+        howToFill: 'Inclua rua/avenida, número, complemento (se houver), bairro, cidade, estado e CEP. Exemplo: "Rua das Flores, 123, Apto 45, Centro, São Paulo, SP, CEP 01234-567".',
+        whyImportant: 'O endereço completo é necessário para correspondências legais e notificações. Em caso de disputas ou questões jurídicas, será usado para localização oficial do parceiro.'
       },
       {
         id: 'partner3-name',
@@ -90,28 +106,38 @@ export const contractTemplates: ContractTemplate[] = [
         label: 'Nome do Projeto',
         type: 'text',
         placeholder: 'Digite o nome do projeto empresarial',
-        required: true
+        required: true,
+        howToFill: 'Escolha um nome claro e profissional que represente bem o projeto. Evite caracteres especiais e considere se o nome está disponível para registro de domínio.',
+        whyImportant: 'O nome do projeto será usado em todas as comunicações, contratos futuros e possivelmente no registro da marca. Um nome bem escolhido facilita o branding e reconhecimento no mercado.',
+        videoLink: 'https://www.youtube.com/watch?v=exemplo3'
       },
       {
         id: 'project-domain',
         label: 'Domínio do Projeto',
         type: 'text',
         placeholder: 'Digite o domínio do projeto (ex: projeto.com.br)',
-        required: true
+        required: true,
+        howToFill: 'Digite o domínio completo, incluindo a extensão (.com, .com.br, .org, etc.). Exemplo: "meuprojeto.com.br". Certifique-se de que o domínio já foi registrado.',
+        whyImportant: 'O domínio é fundamental para a presença online do projeto e faz parte dos ativos digitais da sociedade. Sua propriedade precisa estar bem definida no acordo.'
       },
       {
         id: 'domain-owner',
         label: 'Detentor do Domínio',
         type: 'text',
         placeholder: 'Digite o nome do parceiro que detém o domínio',
-        required: true
+        required: true,
+        howToFill: 'Digite o nome completo do parceiro que registrou e possui o domínio. Deve ser exatamente um dos nomes já informados nos campos anteriores.',
+        whyImportant: 'É crucial definir quem detém a propriedade do domínio, pois este é um ativo valioso. Esta definição evita conflitos futuros sobre controle e transferência do domínio.'
       },
       {
         id: 'project-description',
         label: 'Descrição do Projeto',
         type: 'textarea',
         placeholder: 'Descreva detalhadamente o projeto empresarial',
-        required: true
+        required: true,
+        howToFill: 'Descreva de forma clara e detalhada qual é o objeto do projeto, que serviços serão oferecidos, qual o público-alvo e como os parceiros pretendem atuar. Seja específico mas conciso.',
+        whyImportant: 'A descrição define o escopo do acordo e serve como referência para futuras decisões. Uma descrição clara evita mal-entendidos e conflitos sobre o direcionamento do projeto.',
+        videoLink: 'https://www.youtube.com/watch?v=exemplo4'
       },
       {
         id: 'city',
@@ -132,7 +158,9 @@ export const contractTemplates: ContractTemplate[] = [
         label: 'Data de Assinatura',
         type: 'date',
         placeholder: 'Selecione a data da assinatura',
-        required: true
+        required: true,
+        howToFill: 'Selecione a data em que o memorando será efetivamente assinado por todas as partes. Normalmente é a data atual ou uma data futura próxima.',
+        whyImportant: 'A data de assinatura marca o início da vigência do acordo e é usada para calcular prazos e obrigações. É essencial para a validade jurídica do documento.'
       }
     ],
     template: `MEMORANDO DE ENTENDIMENTOS
@@ -436,4 +464,3 @@ Nome:
 CPF:`
   }
 ];
-
