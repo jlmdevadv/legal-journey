@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Edit } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import QuestionnaireHelp from './QuestionnaireHelp';
 
@@ -15,6 +15,7 @@ const QuestionnaireQuestion = () => {
     selectedTemplate, 
     formValues, 
     currentQuestionIndex, 
+    isAdminMode,
     updateFormValue, 
     nextQuestion, 
     previousQuestion 
@@ -32,7 +33,6 @@ const QuestionnaireQuestion = () => {
   const isLastQuestion = currentQuestionIndex === selectedTemplate.fields.length - 1;
   const canProceed = !currentField.required || currentValue.trim() !== '';
 
-  // Auto-focus on input when question changes
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.focus();
@@ -51,6 +51,11 @@ const QuestionnaireQuestion = () => {
     }
   };
 
+  const handleEditField = () => {
+    // TODO: Open field editor modal
+    console.log('Edit field:', currentField.id);
+  };
+
   return (
     <div className="min-h-[600px] flex items-center justify-center p-6">
       <Card className="w-full max-w-2xl">
@@ -59,9 +64,22 @@ const QuestionnaireQuestion = () => {
             <span className="text-sm text-gray-500">
               Pergunta {currentQuestionIndex + 1} de {selectedTemplate.fields.length}
             </span>
-            <span className="text-sm font-medium text-blue-600">
-              {Math.round(progress)}% concluído
-            </span>
+            <div className="flex items-center gap-2">
+              {isAdminMode && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleEditField}
+                  className="flex items-center gap-1"
+                >
+                  <Edit className="w-3 h-3" />
+                  Editar
+                </Button>
+              )}
+              <span className="text-sm font-medium text-blue-600">
+                {Math.round(progress)}% concluído
+              </span>
+            </div>
           </div>
           
           <Progress value={progress} className="mb-4" />
@@ -117,7 +135,6 @@ const QuestionnaireQuestion = () => {
             <p className="text-sm text-red-600">Este campo é obrigatório</p>
           )}
           
-          {/* Help Sections */}
           <QuestionnaireHelp field={currentField} />
           
           <div className="flex justify-between items-center pt-4">

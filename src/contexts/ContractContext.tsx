@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { ContractTemplate } from '../data/contractTemplates';
 
@@ -7,6 +6,9 @@ interface ContractContextType {
   formValues: Record<string, string>;
   currentQuestionIndex: number;
   isQuestionnaireMode: boolean;
+  isAdminMode: boolean;
+  isAdminLoggedIn: boolean;
+  customTemplates: ContractTemplate[];
   selectTemplate: (template: ContractTemplate) => void;
   updateFormValue: (fieldId: string, value: string) => void;
   resetForm: () => void;
@@ -16,6 +18,12 @@ interface ContractContextType {
   goToQuestion: (index: number) => void;
   startQuestionnaire: () => void;
   finishQuestionnaire: () => void;
+  loginAdmin: (username: string, password: string) => boolean;
+  logoutAdmin: () => void;
+  toggleAdminMode: () => void;
+  addCustomTemplate: (template: ContractTemplate) => void;
+  updateCustomTemplate: (id: string, template: ContractTemplate) => void;
+  deleteCustomTemplate: (id: string) => void;
 }
 
 const ContractContext = createContext<ContractContextType | undefined>(undefined);
@@ -23,8 +31,16 @@ const ContractContext = createContext<ContractContextType | undefined>(undefined
 export const ContractProvider = ({ children }: { children: ReactNode }) => {
   const [selectedTemplate, setSelectedTemplate] = useState<ContractTemplate | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(-1); // -1 = welcome screen
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(-1);
   const [isQuestionnaireMode, setIsQuestionnaireMode] = useState(false);
+  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => {
+    return localStorage.getItem('admin_logged_in') === 'true';
+  });
+  const [customTemplates, setCustomTemplates] = useState<ContractTemplate[]>(() => {
+    const saved = localStorage.getItem('custom_templates');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   const selectTemplate = (template: ContractTemplate) => {
     setSelectedTemplate(template);
@@ -101,6 +117,44 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     return filledTemplate;
   };
 
+  // Admin functions
+  const loginAdmin = (username: string, password: string): boolean => {
+    if (username === 'Administrador' && password === '123456') {
+      setIsAdminLoggedIn(true);
+      localStorage.setItem('admin_logged_in', 'true');
+      return true;
+    }
+    return false;
+  };
+
+  const logoutAdmin = () => {
+    setIsAdminLoggedIn(false);
+    setIsAdminMode(false);
+    localStorage.removeItem('admin_logged_in');
+  };
+
+  const toggleAdminMode = () => {
+    setIsAdminMode(prev => !prev);
+  };
+
+  const addCustomTemplate = (template: ContractTemplate) => {
+    const newTemplates = [...customTemplates, template];
+    setCustomTemplates(newTemplates);
+    localStorage.setItem('custom_templates', JSON.stringify(newTemplates));
+  };
+
+  const updateCustomTemplate = (id: string, template: ContractTemplate) => {
+    const newTemplates = customTemplates.map(t => t.id === id ? template : t);
+    setCustomTemplates(newTemplates);
+    localStorage.setItem('custom_templates', JSON.stringify(newTemplates));
+  };
+
+  const deleteCustomTemplate = (id: string) => {
+    const newTemplates = customTemplates.filter(t => t.id !== id);
+    setCustomTemplates(newTemplates);
+    localStorage.setItem('custom_templates', JSON.stringify(newTemplates));
+  };
+
   return (
     <ContractContext.Provider
       value={{
@@ -108,6 +162,9 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         formValues,
         currentQuestionIndex,
         isQuestionnaireMode,
+        isAdminMode,
+        isAdminLoggedIn,
+        customTemplates,
         selectTemplate,
         updateFormValue,
         resetForm,
@@ -117,6 +174,12 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         goToQuestion,
         startQuestionnaire,
         finishQuestionnaire,
+        loginAdmin,
+        logoutAdmin,
+        toggleAdminMode,
+        addCustomTemplate,
+        updateCustomTemplate,
+        deleteCustomTemplate,
       }}
     >
       {children}
