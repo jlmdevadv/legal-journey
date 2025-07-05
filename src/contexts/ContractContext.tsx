@@ -9,6 +9,7 @@ interface ContractContextType {
   isAdminMode: boolean;
   isAdminLoggedIn: boolean;
   customTemplates: ContractTemplate[];
+  editingTemplate: ContractTemplate | null;
   selectTemplate: (template: ContractTemplate) => void;
   updateFormValue: (fieldId: string, value: string) => void;
   resetForm: () => void;
@@ -24,6 +25,9 @@ interface ContractContextType {
   addCustomTemplate: (template: ContractTemplate) => void;
   updateCustomTemplate: (id: string, template: ContractTemplate) => void;
   deleteCustomTemplate: (id: string) => void;
+  startEditingTemplate: (template: ContractTemplate) => void;
+  finishEditingTemplate: () => void;
+  saveEditingTemplate: (template: ContractTemplate) => void;
 }
 
 const ContractContext = createContext<ContractContextType | undefined>(undefined);
@@ -41,6 +45,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     const saved = localStorage.getItem('custom_templates');
     return saved ? JSON.parse(saved) : [];
   });
+  const [editingTemplate, setEditingTemplate] = useState<ContractTemplate | null>(null);
 
   const selectTemplate = (template: ContractTemplate) => {
     setSelectedTemplate(template);
@@ -155,6 +160,24 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('custom_templates', JSON.stringify(newTemplates));
   };
 
+  // Template editing functions
+  const startEditingTemplate = (template: ContractTemplate) => {
+    setEditingTemplate(template);
+  };
+
+  const finishEditingTemplate = () => {
+    setEditingTemplate(null);
+  };
+
+  const saveEditingTemplate = (template: ContractTemplate) => {
+    if (template.id.startsWith('custom-')) {
+      updateCustomTemplate(template.id, template);
+    } else {
+      addCustomTemplate(template);
+    }
+    setEditingTemplate(null);
+  };
+
   return (
     <ContractContext.Provider
       value={{
@@ -165,6 +188,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         isAdminMode,
         isAdminLoggedIn,
         customTemplates,
+        editingTemplate,
         selectTemplate,
         updateFormValue,
         resetForm,
@@ -180,6 +204,9 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         addCustomTemplate,
         updateCustomTemplate,
         deleteCustomTemplate,
+        startEditingTemplate,
+        finishEditingTemplate,
+        saveEditingTemplate,
       }}
     >
       {children}

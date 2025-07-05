@@ -1,13 +1,12 @@
-
 import React, { useState } from 'react';
+import { ContractTemplate } from '../../data/contractTemplates';
 import { useContract } from '../../contexts/ContractContext';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Upload, FileText, Type } from 'lucide-react';
-import { ContractTemplate } from '../../data/contractTemplates';
+import { Label } from '@/components/ui/label';
+import { Upload, FileText } from 'lucide-react';
 
 interface AddTemplateModalProps {
   open: boolean;
@@ -15,170 +14,134 @@ interface AddTemplateModalProps {
 }
 
 const AddTemplateModal = ({ open, onOpenChange }: AddTemplateModalProps) => {
-  const { addCustomTemplate } = useContract();
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [template, setTemplate] = useState('');
-  const [inputMethod, setInputMethod] = useState<'text' | 'file'>('text');
+  const { startEditingTemplate } = useContract();
+  const [templateName, setTemplateName] = useState('');
+  const [templateDescription, setTemplateDescription] = useState('');
+  const [templateContent, setTemplateContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      setTemplate(content);
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      setTemplateContent(content);
     };
-    reader.readAsText(file, 'UTF-8');
+    reader.readAsText(file);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !description.trim() || !template.trim()) return;
-
-    setIsLoading(true);
+  const handleNext = () => {
+    if (!templateName.trim() || !templateContent.trim()) return;
 
     const newTemplate: ContractTemplate = {
       id: `custom-${Date.now()}`,
-      name: name.trim(),
-      description: description.trim(),
-      template: template.trim(),
-      fields: [], // Initially empty, will be populated in editor
+      name: templateName,
+      description: templateDescription || 'Template personalizado',
+      fields: [], // Will be configured in the editor
+      template: templateContent
     };
 
-    addCustomTemplate(newTemplate);
-    
-    // Clear form
-    setName('');
-    setDescription('');
-    setTemplate('');
-    setInputMethod('text');
-    
-    setIsLoading(false);
+    // Start editing the template
+    startEditingTemplate(newTemplate);
     onOpenChange(false);
-  };
-
-  const handleClose = () => {
-    onOpenChange(false);
-    setName('');
-    setDescription('');
-    setTemplate('');
-    setInputMethod('text');
+    
+    // Reset form
+    setTemplateName('');
+    setTemplateDescription('');
+    setTemplateContent('');
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-contractPrimary">
+          <DialogTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
             Adicionar Novo Modelo
           </DialogTitle>
           <DialogDescription>
-            Crie um novo modelo de contrato para ser usado no sistema
+            Crie um novo modelo de contrato personalizado
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="name">Nome do Modelo*</Label>
-            <Input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Contrato de Trabalho"
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="description">Descrição*</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descreva brevemente o propósito deste modelo"
-              required
-              rows={3}
-            />
-          </div>
-          
+        <div className="space-y-6">
           <div className="space-y-4">
-            <Label>Conteúdo do Modelo*</Label>
-            
-            <div className="flex gap-2 mb-4">
-              <Button
-                type="button"
-                variant={inputMethod === 'text' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setInputMethod('text')}
-                className="flex items-center gap-2"
-              >
-                <Type className="w-4 h-4" />
-                Digitar Texto
-              </Button>
-              <Button
-                type="button"
-                variant={inputMethod === 'file' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setInputMethod('file')}
-                className="flex items-center gap-2"
-              >
-                <Upload className="w-4 h-4" />
-                Upload Arquivo
-              </Button>
+            <div>
+              <Label htmlFor="template-name">Nome do Modelo *</Label>
+              <Input
+                id="template-name"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder="Ex: Contrato de Prestação de Serviços"
+              />
             </div>
             
-            {inputMethod === 'text' ? (
-              <Textarea
-                value={template}
-                onChange={(e) => setTemplate(e.target.value)}
-                placeholder="Cole ou digite o texto do contrato aqui..."
-                required
-                rows={12}
-                className="font-mono text-sm"
+            <div>
+              <Label htmlFor="template-description">Descrição</Label>
+              <Input
+                id="template-description"
+                value={templateDescription}
+                onChange={(e) => setTemplateDescription(e.target.value)}
+                placeholder="Breve descrição do modelo"
               />
-            ) : (
-              <div className="space-y-2">
-                <Input
-                  type="file"
-                  accept=".txt,.doc,.docx,.md"
-                  onChange={handleFileUpload}
-                  className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                />
-                <p className="text-sm text-gray-500">
-                  Suporta arquivos .txt, .doc, .docx e .md
-                </p>
-                {template && (
-                  <div className="mt-4">
-                    <Label>Preview do Conteúdo:</Label>
-                    <Textarea
-                      value={template}
-                      onChange={(e) => setTemplate(e.target.value)}
-                      rows={8}
-                      className="font-mono text-sm mt-2"
-                    />
-                  </div>
-                )}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <Label>Conteúdo do Modelo</Label>
+            
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+              <div className="text-center">
+                <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                <div className="mt-4">
+                  <label htmlFor="file-upload" className="cursor-pointer">
+                    <span className="mt-2 block text-sm font-medium text-gray-900">
+                      Clique para fazer upload de um arquivo
+                    </span>
+                    <span className="mt-1 block text-sm text-gray-500">
+                      Formatos suportados: .txt, .doc, .md
+                    </span>
+                  </label>
+                  <input
+                    id="file-upload"
+                    name="file-upload"
+                    type="file"
+                    className="sr-only"
+                    accept=".txt,.doc,.md"
+                    onChange={handleFileUpload}
+                  />
+                </div>
               </div>
-            )}
+            </div>
+
+            <div className="text-center text-gray-500 font-medium">OU</div>
+
+            <div>
+              <Label htmlFor="template-content">Cole o texto do modelo</Label>
+              <Textarea
+                id="template-content"
+                value={templateContent}
+                onChange={(e) => setTemplateContent(e.target.value)}
+                placeholder="Cole aqui o texto completo do modelo de contrato..."
+                className="min-h-[200px]"
+              />
+            </div>
           </div>
           
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={handleClose}>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
             <Button 
-              type="submit" 
-              disabled={isLoading || !name.trim() || !description.trim() || !template.trim()}
+              onClick={handleNext}
+              disabled={!templateName.trim() || !templateContent.trim() || isLoading}
             >
-              {isLoading ? 'Salvando...' : 'Prosseguir'}
+              {isLoading ? 'Processando...' : 'Prosseguir para Configuração'}
             </Button>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ContractProvider } from '../contexts/ContractContext';
 import Navbar from '../components/Navbar';
@@ -6,11 +5,23 @@ import TemplateSelector from '../components/TemplateSelector';
 import ContractForm from '../components/ContractForm';
 import QuestionnaireForm from '../components/QuestionnaireForm';
 import ContractPreview from '../components/ContractPreview';
+import TemplateEditor from '../components/admin/TemplateEditor';
 import { useContract } from '../contexts/ContractContext';
 
 // Main content with conditional rendering based on template selection
 const ContractContent = () => {
-  const { selectedTemplate, isQuestionnaireMode } = useContract();
+  const { selectedTemplate, isQuestionnaireMode, editingTemplate, finishEditingTemplate, saveEditingTemplate } = useContract();
+
+  // Show template editor if editing
+  if (editingTemplate) {
+    return (
+      <TemplateEditor
+        template={editingTemplate}
+        onSave={saveEditingTemplate}
+        onCancel={finishEditingTemplate}
+      />
+    );
+  }
 
   if (!selectedTemplate) {
     return (
