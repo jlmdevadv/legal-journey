@@ -143,15 +143,19 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addCustomTemplate = (template: ContractTemplate) => {
+    console.log('Adding custom template:', template);
     const newTemplates = [...customTemplates, template];
     setCustomTemplates(newTemplates);
     localStorage.setItem('custom_templates', JSON.stringify(newTemplates));
+    console.log('Custom templates after add:', newTemplates);
   };
 
   const updateCustomTemplate = (id: string, template: ContractTemplate) => {
+    console.log('Updating custom template:', id, template);
     const newTemplates = customTemplates.map(t => t.id === id ? template : t);
     setCustomTemplates(newTemplates);
     localStorage.setItem('custom_templates', JSON.stringify(newTemplates));
+    console.log('Custom templates after update:', newTemplates);
   };
 
   const deleteCustomTemplate = (id: string) => {
@@ -162,20 +166,34 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
 
   // Template editing functions
   const startEditingTemplate = (template: ContractTemplate) => {
+    console.log('Starting to edit template:', template);
     setEditingTemplate(template);
   };
 
   const finishEditingTemplate = () => {
+    console.log('Finishing template editing');
     setEditingTemplate(null);
   };
 
   const saveEditingTemplate = (template: ContractTemplate) => {
-    if (template.id.startsWith('custom-')) {
+    console.log('Saving edited template:', template);
+    
+    // Check if this is an existing custom template or a new one
+    const existingTemplateIndex = customTemplates.findIndex(t => t.id === template.id);
+    
+    if (existingTemplateIndex !== -1) {
+      // Update existing template
+      console.log('Updating existing template');
       updateCustomTemplate(template.id, template);
     } else {
+      // Add as new template  
+      console.log('Adding new template');
       addCustomTemplate(template);
     }
+    
+    // Clear editing state
     setEditingTemplate(null);
+    console.log('Template saved successfully');
   };
 
   return (
