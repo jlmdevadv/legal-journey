@@ -1,9 +1,16 @@
+export interface TemplateVersion {
+  version: string;
+  date: string;
+  createdDate?: string;
+}
+
 export interface ContractTemplate {
   id: string;
   name: string;
   description: string;
   fields: ContractField[];
   template: string;
+  version?: TemplateVersion;
 }
 
 export interface ContractField {
@@ -270,6 +277,7 @@ CPF:
 2. ________________________________
 Nome:
 CPF:`
+
   },
   {
     id: 'confidentiality-agreement',

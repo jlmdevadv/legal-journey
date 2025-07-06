@@ -214,10 +214,23 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     console.log('Custom templates after update:', newTemplates);
   };
 
+  const deleteCustomTemplate = (id: string) => {
+    console.log('Deleting custom template:', id);
+    const newTemplates = customTemplates.filter(t => t.id !== id);
+    setCustomTemplates(newTemplates);
+    localStorage.setItem('custom_templates', JSON.stringify(newTemplates));
+    console.log('Custom templates after delete:', newTemplates);
+  };
+
   const startEditingTemplate = (template: ContractTemplate) => {
     console.log('Starting to edit template:', template);
     const templateWithVersion = initializeTemplateVersion(template);
     setEditingTemplate(templateWithVersion);
+  };
+
+  const finishEditingTemplate = () => {
+    console.log('Finishing template editing');
+    setEditingTemplate(null);
   };
 
   const saveEditingTemplate = (template: ContractTemplate) => {
