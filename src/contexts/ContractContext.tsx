@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { ContractTemplate } from '../data/contractTemplates';
 
@@ -48,6 +47,59 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     return saved ? JSON.parse(saved) : [];
   });
   const [editingTemplate, setEditingTemplate] = useState<ContractTemplate | null>(null);
+
+  const formatDate = (date: Date): string => {
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit'
+    }).replace(/\//g, '.');
+  };
+
+  const incrementVersion = (currentVersion?: string): string => {
+    if (!currentVersion || !currentVersion.includes('v.')) {
+      return 'v. 1.0';
+    }
+    
+    const versionMatch = currentVersion.match(/v\. (\d+)\.(\d+)/);
+    if (versionMatch) {
+      const major = parseInt(versionMatch[1]);
+      const minor = parseInt(versionMatch[2]);
+      return `v. ${major}.${minor + 1}`;
+    }
+    
+    return 'v. 1.1';
+  };
+
+  const initializeTemplateVersion = (template: ContractTemplate): ContractTemplate => {
+    if (!template.version) {
+      const today = formatDate(new Date());
+      return {
+        ...template,
+        version: {
+          version: 'v. 1.0',
+          date: today,
+          createdDate: today
+        }
+      };
+    }
+    return template;
+  };
+
+  const updateTemplateVersion = (template: ContractTemplate): ContractTemplate => {
+    const today = formatDate(new Date());
+    const currentVersion = template.version?.version || 'v. 1.0';
+    const newVersion = incrementVersion(currentVersion);
+    
+    return {
+      ...template,
+      version: {
+        version: newVersion,
+        date: today,
+        createdDate: template.version?.createdDate || today
+      }
+    };
+  };
 
   const selectTemplate = (template: ContractTemplate) => {
     setSelectedTemplate(template);
@@ -146,7 +198,8 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
 
   const addCustomTemplate = (template: ContractTemplate) => {
     console.log('Adding custom template:', template);
-    const newTemplates = [...customTemplates, template];
+    const templateWithVersion = initializeTemplateVersion(template);
+    const newTemplates = [...customTemplates, templateWithVersion];
     setCustomTemplates(newTemplates);
     localStorage.setItem('custom_templates', JSON.stringify(newTemplates));
     console.log('Custom templates after add:', newTemplates);
@@ -154,59 +207,40 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
 
   const updateCustomTemplate = (id: string, template: ContractTemplate) => {
     console.log('Updating custom template:', id, template);
-    const newTemplates = customTemplates.map(t => t.id === id ? template : t);
+    const templateWithVersion = updateTemplateVersion(template);
+    const newTemplates = customTemplates.map(t => t.id === id ? templateWithVersion : t);
     setCustomTemplates(newTemplates);
     localStorage.setItem('custom_templates', JSON.stringify(newTemplates));
     console.log('Custom templates after update:', newTemplates);
   };
 
-  const deleteCustomTemplate = (id: string) => {
-    const newTemplates = customTemplates.filter(t => t.id !== id);
-    setCustomTemplates(newTemplates);
-    localStorage.setItem('custom_templates', JSON.stringify(newTemplates));
-  };
-
-  // Template editing functions
   const startEditingTemplate = (template: ContractTemplate) => {
     console.log('Starting to edit template:', template);
-    
-    // If editing an original template, create a custom copy
-    if (!template.id.startsWith('custom-')) {
-      const customTemplate = {
-        ...template,
-        id: `custom-${template.id}-${Date.now()}`,
-        name: `${template.name} (Personalizado)`
-      };
-      setEditingTemplate(customTemplate);
-    } else {
-      setEditingTemplate(template);
-    }
-  };
-
-  const finishEditingTemplate = () => {
-    console.log('Finishing template editing');
-    setEditingTemplate(null);
+    const templateWithVersion = initializeTemplateVersion(template);
+    setEditingTemplate(templateWithVersion);
   };
 
   const saveEditingTemplate = (template: ContractTemplate) => {
     console.log('Saving edited template:', template);
     
-    // Check if this is an existing custom template or a new one
-    const existingTemplateIndex = customTemplates.findIndex(t => t.id === template.id);
+    const templateWithVersion = updateTemplateVersion(template);
     
-    if (existingTemplateIndex !== -1) {
+    // Check if this template exists in custom templates
+    const existingIndex = customTemplates.findIndex(t => t.id === template.id);
+    
+    if (existingIndex !== -1) {
       // Update existing template
       console.log('Updating existing template');
-      updateCustomTemplate(template.id, template);
+      updateCustomTemplate(template.id, templateWithVersion);
     } else {
       // Add as new template  
       console.log('Adding new template');
-      addCustomTemplate(template);
+      addCustomTemplate(templateWithVersion);
     }
     
     // If the edited template is currently selected, update it
     if (selectedTemplate && selectedTemplate.id === template.id) {
-      setSelectedTemplate(template);
+      setSelectedTemplate(templateWithVersion);
     }
     
     // Clear editing state
@@ -214,7 +248,6 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     console.log('Template saved successfully');
   };
 
-  // Function to update a field in the currently selected template
   const updateSelectedTemplateField = (fieldIndex: number, updatedField: any) => {
     if (!selectedTemplate) return;
     
@@ -223,23 +256,29 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     const updatedFields = [...selectedTemplate.fields];
     updatedFields[fieldIndex] = updatedField;
     
-    const updatedTemplate = {
+    const updatedTemplate = updateTemplateVersion({
       ...selectedTemplate,
       fields: updatedFields
-    };
+    });
 
-    // If this is a custom template, update it in the custom templates
+    // Update the template in the appropriate storage
     if (selectedTemplate.id.startsWith('custom-')) {
       updateCustomTemplate(selectedTemplate.id, updatedTemplate);
     } else {
-      // For original templates, create a new custom template
+      // For original templates, we now update them directly instead of creating copies
+      // But since original templates come from contractTemplates.ts, we need to store them as custom
       const customTemplate = {
         ...updatedTemplate,
-        id: `custom-${selectedTemplate.id}-${Date.now()}`,
-        name: `${selectedTemplate.name} (Personalizado)`
+        id: selectedTemplate.id // Keep the same ID
       };
-      addCustomTemplate(customTemplate);
-      setSelectedTemplate(customTemplate);
+      
+      // Check if it already exists in custom templates
+      const existingIndex = customTemplates.findIndex(t => t.id === selectedTemplate.id);
+      if (existingIndex !== -1) {
+        updateCustomTemplate(selectedTemplate.id, customTemplate);
+      } else {
+        addCustomTemplate(customTemplate);
+      }
     }
     
     // Update the selected template immediately

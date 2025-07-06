@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { contractTemplates } from '../data/contractTemplates';
 import { useContract } from '../contexts/ContractContext';
@@ -21,7 +20,15 @@ const TemplateSelector = () => {
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [showAddTemplate, setShowAddTemplate] = useState(false);
 
-  const allTemplates = [...contractTemplates, ...customTemplates];
+  const getDisplayTemplate = (template: any) => {
+    // Check if there's a custom version of this template
+    const customVersion = customTemplates.find(ct => ct.id === template.id);
+    return customVersion || template;
+  };
+
+  const allTemplates = contractTemplates.map(getDisplayTemplate).concat(
+    customTemplates.filter(ct => !contractTemplates.some(ot => ot.id === ct.id))
+  );
 
   const handleAdminButtonClick = () => {
     if (isAdminLoggedIn) {
@@ -80,7 +87,14 @@ const TemplateSelector = () => {
             <CardHeader className="bg-white border-b relative pb-3">
               <CardTitle className="flex items-center gap-2 text-contractPrimary">
                 <FileText className="w-5 h-5" />
-                {template.name}
+                <div className="flex flex-col">
+                  <span>{template.name}</span>
+                  {isAdminMode && template.version && (
+                    <span className="text-xs text-gray-500 font-normal">
+                      {template.version.version} {template.version.date}
+                    </span>
+                  )}
+                </div>
                 {template.id.startsWith('custom-') && (
                   <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
                     Personalizado
