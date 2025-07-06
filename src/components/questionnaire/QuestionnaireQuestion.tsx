@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { useContract } from '../../contexts/ContractContext';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,7 @@ const QuestionnaireQuestion = () => {
     updateFormValue, 
     nextQuestion, 
     previousQuestion,
-    updateCustomTemplate
+    updateSelectedTemplateField
   } = useContract();
   
   const inputRef = useRef<HTMLInputElement>(null);
@@ -58,18 +59,8 @@ const QuestionnaireQuestion = () => {
   };
 
   const handleFieldUpdate = (updatedField: any) => {
-    if (!selectedTemplate.id.startsWith('custom-')) return;
-
-    const updatedFields = selectedTemplate.fields.map((field, index) => 
-      index === currentQuestionIndex ? updatedField : field
-    );
-
-    const updatedTemplate = {
-      ...selectedTemplate,
-      fields: updatedFields
-    };
-
-    updateCustomTemplate(selectedTemplate.id, updatedTemplate);
+    console.log('Handling field update:', updatedField);
+    updateSelectedTemplateField(currentQuestionIndex, updatedField);
     setShowEditModal(false);
   };
 
@@ -83,7 +74,7 @@ const QuestionnaireQuestion = () => {
                 Pergunta {currentQuestionIndex + 1} de {selectedTemplate.fields.length}
               </span>
               <div className="flex items-center gap-2">
-                {isAdminMode && selectedTemplate.id.startsWith('custom-') && (
+                {isAdminMode && (
                   <Button
                     variant="outline"
                     size="sm"

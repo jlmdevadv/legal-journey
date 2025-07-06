@@ -4,12 +4,20 @@ import { contractTemplates } from '../data/contractTemplates';
 import { useContract } from '../contexts/ContractContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, ArrowRight, Shield, Plus, Settings } from 'lucide-react';
+import { FileText, ArrowRight, Shield, Plus, Settings, Edit } from 'lucide-react';
 import AdminLogin from './admin/AdminLogin';
 import AddTemplateModal from './admin/AddTemplateModal';
 
 const TemplateSelector = () => {
-  const { selectTemplate, isAdminLoggedIn, isAdminMode, toggleAdminMode, customTemplates } = useContract();
+  const { 
+    selectTemplate, 
+    isAdminLoggedIn, 
+    isAdminMode, 
+    toggleAdminMode, 
+    customTemplates,
+    startEditingTemplate,
+    deleteCustomTemplate
+  } = useContract();
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [showAddTemplate, setShowAddTemplate] = useState(false);
 
@@ -20,6 +28,18 @@ const TemplateSelector = () => {
       toggleAdminMode();
     } else {
       setShowAdminLogin(true);
+    }
+  };
+
+  const handleEditTemplate = (e: React.MouseEvent, template: any) => {
+    e.stopPropagation();
+    startEditingTemplate(template);
+  };
+
+  const handleDeleteTemplate = (e: React.MouseEvent, templateId: string) => {
+    e.stopPropagation();
+    if (confirm('Tem certeza que deseja excluir este template?')) {
+      deleteCustomTemplate(templateId);
     }
   };
 
@@ -75,20 +95,27 @@ const TemplateSelector = () => {
               <CardDescription className="text-sm text-gray-600">
                 {template.description}
               </CardDescription>
-              {isAdminMode && template.id.startsWith('custom-') && (
+              {isAdminMode && (
                 <div className="mt-3 pt-3 border-t flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // TODO: Implement edit functionality
-                    }}
+                    onClick={(e) => handleEditTemplate(e, template)}
                     className="flex items-center gap-1"
                   >
-                    <Settings className="w-3 h-3" />
-                    Editar
+                    <Edit className="w-3 h-3" />
+                    Editor Visual
                   </Button>
+                  {template.id.startsWith('custom-') && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => handleDeleteTemplate(e, template.id)}
+                      className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      Excluir
+                    </Button>
+                  )}
                 </div>
               )}
             </CardContent>

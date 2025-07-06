@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { ContractTemplate } from '../data/contractTemplates';
 
@@ -28,6 +29,7 @@ interface ContractContextType {
   startEditingTemplate: (template: ContractTemplate) => void;
   finishEditingTemplate: () => void;
   saveEditingTemplate: (template: ContractTemplate) => void;
+  updateSelectedTemplateField: (fieldIndex: number, updatedField: any) => void;
 }
 
 const ContractContext = createContext<ContractContextType | undefined>(undefined);
@@ -167,7 +169,18 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   // Template editing functions
   const startEditingTemplate = (template: ContractTemplate) => {
     console.log('Starting to edit template:', template);
-    setEditingTemplate(template);
+    
+    // If editing an original template, create a custom copy
+    if (!template.id.startsWith('custom-')) {
+      const customTemplate = {
+        ...template,
+        id: `custom-${template.id}-${Date.now()}`,
+        name: `${template.name} (Personalizado)`
+      };
+      setEditingTemplate(customTemplate);
+    } else {
+      setEditingTemplate(template);
+    }
   };
 
   const finishEditingTemplate = () => {
@@ -191,9 +204,47 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       addCustomTemplate(template);
     }
     
+    // If the edited template is currently selected, update it
+    if (selectedTemplate && selectedTemplate.id === template.id) {
+      setSelectedTemplate(template);
+    }
+    
     // Clear editing state
     setEditingTemplate(null);
     console.log('Template saved successfully');
+  };
+
+  // Function to update a field in the currently selected template
+  const updateSelectedTemplateField = (fieldIndex: number, updatedField: any) => {
+    if (!selectedTemplate) return;
+    
+    console.log('Updating selected template field:', fieldIndex, updatedField);
+    
+    const updatedFields = [...selectedTemplate.fields];
+    updatedFields[fieldIndex] = updatedField;
+    
+    const updatedTemplate = {
+      ...selectedTemplate,
+      fields: updatedFields
+    };
+
+    // If this is a custom template, update it in the custom templates
+    if (selectedTemplate.id.startsWith('custom-')) {
+      updateCustomTemplate(selectedTemplate.id, updatedTemplate);
+    } else {
+      // For original templates, create a new custom template
+      const customTemplate = {
+        ...updatedTemplate,
+        id: `custom-${selectedTemplate.id}-${Date.now()}`,
+        name: `${selectedTemplate.name} (Personalizado)`
+      };
+      addCustomTemplate(customTemplate);
+      setSelectedTemplate(customTemplate);
+    }
+    
+    // Update the selected template immediately
+    setSelectedTemplate(updatedTemplate);
+    console.log('Selected template field updated successfully');
   };
 
   return (
@@ -225,6 +276,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         startEditingTemplate,
         finishEditingTemplate,
         saveEditingTemplate,
+        updateSelectedTemplateField,
       }}
     >
       {children}
