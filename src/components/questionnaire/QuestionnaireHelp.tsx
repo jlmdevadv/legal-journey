@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { ContractField } from '../../data/contractTemplates';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { HelpCircle, Info, PlayCircle, ChevronDown } from 'lucide-react';
+import { HelpCircle, Info, PlayCircle, Bot, ChevronDown } from 'lucide-react';
 
 interface QuestionnaireHelpProps {
   field: ContractField;
@@ -22,7 +22,7 @@ const QuestionnaireHelp = ({ field }: QuestionnaireHelpProps) => {
     setOpenSections(newOpenSections);
   };
 
-  const hasAnyHelp = field.howToFill || field.whyImportant || field.videoLink;
+  const hasAnyHelp = field.howToFill || field.whyImportant || field.videoLink || field.aiAssistantLink;
 
   if (!hasAnyHelp) {
     return null;
@@ -101,6 +101,39 @@ const QuestionnaireHelp = ({ field }: QuestionnaireHelpProps) => {
               >
                 <PlayCircle className="w-4 h-4 mr-2" />
                 Assistir vídeo
+              </Button>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
+      {field.aiAssistantLink && (
+        <Collapsible open={openSections.has('aiAssistant')} onOpenChange={() => toggleSection('aiAssistant')}>
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              className="w-full justify-between text-left p-3 h-auto text-sm text-gray-600 hover:text-purple-600 hover:bg-purple-50"
+            >
+              <div className="flex items-center gap-2">
+                <Bot className="w-4 h-4" />
+                <span>Quer auxílio de IA?</span>
+              </div>
+              <ChevronDown className={`w-4 h-4 transition-transform ${openSections.has('aiAssistant') ? 'rotate-180' : ''}`} />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="px-3 pb-3">
+            <div className="bg-purple-50 p-3 rounded-md">
+              <p className="text-sm text-purple-800 mb-3">
+                Se você está com dificuldade, preparamos um prompt específico para você. Se você for utilizar o Chat GPT, acesse o nosso agente treinado para te ajudar a responder esse documento.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-purple-700 border-purple-300 hover:bg-purple-100"
+                onClick={() => window.open(field.aiAssistantLink, '_blank')}
+              >
+                <Bot className="w-4 h-4 mr-2" />
+                Acesse o GPT
               </Button>
             </div>
           </CollapsibleContent>

@@ -29,12 +29,14 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: F
     howToFill: field?.howToFill || '',
     whyImportant: field?.whyImportant || '',
     videoLink: field?.videoLink || '',
+    aiAssistantLink: field?.aiAssistantLink || '',
     options: field?.options || []
   }));
 
   const [showHowToFill, setShowHowToFill] = useState(!!field?.howToFill);
   const [showWhyImportant, setShowWhyImportant] = useState(!!field?.whyImportant);
   const [showVideoLink, setShowVideoLink] = useState(!!field?.videoLink);
+  const [showAiAssistant, setShowAiAssistant] = useState(!!field?.aiAssistantLink);
   const [newOption, setNewOption] = useState('');
 
   const generateFieldId = (label: string) => {
@@ -82,6 +84,7 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: F
       ...(showHowToFill && fieldData.howToFill && { howToFill: fieldData.howToFill }),
       ...(showWhyImportant && fieldData.whyImportant && { whyImportant: fieldData.whyImportant }),
       ...(showVideoLink && fieldData.videoLink && { videoLink: fieldData.videoLink }),
+      ...(showAiAssistant && fieldData.aiAssistantLink && { aiAssistantLink: fieldData.aiAssistantLink }),
       ...(fieldData.type === 'select' && fieldData.options && { options: fieldData.options })
     };
 
@@ -310,6 +313,41 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: F
                     value={fieldData.videoLink}
                     onChange={(e) => setFieldData(prev => ({ ...prev, videoLink: e.target.value }))}
                     placeholder="https://youtube.com/watch?v=..."
+                  />
+                )}
+              </div>
+
+              {/* AI Assistant Link */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label>Quer incluir um link para auxílio de IA?</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant={showAiAssistant ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setShowAiAssistant(true)}
+                    >
+                      Sim
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={!showAiAssistant ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setShowAiAssistant(false);
+                        setFieldData(prev => ({ ...prev, aiAssistantLink: '' }));
+                      }}
+                    >
+                      Remover
+                    </Button>
+                  </div>
+                </div>
+                {showAiAssistant && (
+                  <Input
+                    value={fieldData.aiAssistantLink}
+                    onChange={(e) => setFieldData(prev => ({ ...prev, aiAssistantLink: e.target.value }))}
+                    placeholder="https://chatgpt.com/g/..."
                   />
                 )}
               </div>

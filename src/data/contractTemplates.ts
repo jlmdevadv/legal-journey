@@ -23,6 +23,7 @@ export interface ContractField {
   howToFill?: string;
   whyImportant?: string;
   videoLink?: string;
+  aiAssistantLink?: string;
 }
 
 export const contractTemplates: ContractTemplate[] = [
@@ -470,5 +471,6 @@ CPF:
 2. ________________________________
 Nome:
 CPF:`
+
   }
 ];
