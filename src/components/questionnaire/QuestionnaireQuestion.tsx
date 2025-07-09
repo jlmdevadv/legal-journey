@@ -16,6 +16,7 @@ const QuestionnaireQuestion = () => {
     selectedTemplate, 
     formValues, 
     currentQuestionIndex, 
+    numberOfParties,
     isAdminMode,
     updateFormValue, 
     nextQuestion, 
@@ -26,14 +27,17 @@ const QuestionnaireQuestion = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [showEditModal, setShowEditModal] = useState(false);
 
-  if (!selectedTemplate || currentQuestionIndex < 0 || currentQuestionIndex >= selectedTemplate.fields.length) {
+  // Calculate the actual template question index
+  const templateQuestionIndex = currentQuestionIndex + 1000 - numberOfParties;
+  
+  if (!selectedTemplate || templateQuestionIndex < 0 || templateQuestionIndex >= selectedTemplate.fields.length) {
     return null;
   }
 
-  const currentField = selectedTemplate.fields[currentQuestionIndex];
+  const currentField = selectedTemplate.fields[templateQuestionIndex];
   const currentValue = formValues[currentField.id] || '';
-  const progress = ((currentQuestionIndex + 1) / selectedTemplate.fields.length) * 100;
-  const isLastQuestion = currentQuestionIndex === selectedTemplate.fields.length - 1;
+  const progress = ((templateQuestionIndex + 1) / selectedTemplate.fields.length) * 100;
+  const isLastQuestion = templateQuestionIndex === selectedTemplate.fields.length - 1;
   const canProceed = !currentField.required || currentValue.trim() !== '';
 
   useEffect(() => {
@@ -60,7 +64,7 @@ const QuestionnaireQuestion = () => {
 
   const handleFieldUpdate = (updatedField: any) => {
     console.log('Handling field update:', updatedField);
-    updateSelectedTemplateField(currentQuestionIndex, updatedField);
+    updateSelectedTemplateField(templateQuestionIndex, updatedField);
     setShowEditModal(false);
   };
 
@@ -71,7 +75,7 @@ const QuestionnaireQuestion = () => {
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm text-gray-500">
-                Pergunta {currentQuestionIndex + 1} de {selectedTemplate.fields.length}
+                Pergunta {templateQuestionIndex + 1} de {selectedTemplate.fields.length}
               </span>
               <div className="flex items-center gap-2">
                 {isAdminMode && (

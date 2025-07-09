@@ -50,7 +50,7 @@ const QuestionnaireWelcome = () => {
             
             <Button 
               onClick={startQuestionnaire}
-              className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
+              className="bg-primary hover:bg-primary/90 flex items-center gap-2"
             >
               Começar questionário
               <ArrowRight className="w-4 h-4" />

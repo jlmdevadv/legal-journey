@@ -16,6 +16,18 @@ export interface ContractField {
   helpVideo?: string;
 }
 
+export interface PartyData {
+  id: string;
+  fullName: string;
+  nationality: string;
+  maritalStatus: string;
+  cpf: string;
+  address: string;
+  city: string;
+  state: string;
+  partyType: 'Contratante' | 'Anuente' | 'Fiador' | 'Avalista' | 'Testemunha';
+}
+
 export interface ContractTemplate {
   id: string;
   name: string;
@@ -23,4 +35,5 @@ export interface ContractTemplate {
   template: string;
   fields: ContractField[];
   version?: TemplateVersion;
+  usePartySystem?: boolean;
 }

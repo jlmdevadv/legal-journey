@@ -11,19 +11,22 @@ export interface ContractTemplate {
   fields: ContractField[];
   template: string;
   version?: TemplateVersion;
+  usePartySystem?: boolean;
 }
 
 export interface ContractField {
   id: string;
   label: string;
-  type: 'text' | 'textarea' | 'date' | 'number' | 'select';
-  placeholder: string;
+  type: 'text' | 'textarea' | 'date' | 'number' | 'select' | 'email' | 'tel';
+  placeholder?: string;
   options?: string[];
   required?: boolean;
   howToFill?: string;
   whyImportant?: string;
   videoLink?: string;
   aiAssistantLink?: string;
+  helpText?: string;
+  helpVideo?: string;
 }
 
 export const contractTemplates: ContractTemplate[] = [

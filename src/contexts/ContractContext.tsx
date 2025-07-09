@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { ContractTemplate } from '../data/contractTemplates';
+import { PartyData } from '../types/template';
 
 interface ContractContextType {
   selectedTemplate: ContractTemplate | null;
@@ -10,6 +11,9 @@ interface ContractContextType {
   isAdminLoggedIn: boolean;
   customTemplates: ContractTemplate[];
   editingTemplate: ContractTemplate | null;
+  numberOfParties: number;
+  partiesData: PartyData[];
+  currentPartyIndex: number;
   selectTemplate: (template: ContractTemplate) => void;
   updateFormValue: (fieldId: string, value: string) => void;
   resetForm: () => void;
@@ -29,6 +33,11 @@ interface ContractContextType {
   finishEditingTemplate: () => void;
   saveEditingTemplate: (template: ContractTemplate) => void;
   updateSelectedTemplateField: (fieldIndex: number, updatedField: any) => void;
+  setNumberOfParties: (count: number) => void;
+  updatePartyData: (index: number, data: PartyData) => void;
+  getContractingParties: () => string;
+  getOtherInvolved: () => string;
+  getSignatures: () => string;
 }
 
 const ContractContext = createContext<ContractContextType | undefined>(undefined);
@@ -47,6 +56,9 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     return saved ? JSON.parse(saved) : [];
   });
   const [editingTemplate, setEditingTemplate] = useState<ContractTemplate | null>(null);
+  const [numberOfParties, setNumberOfParties] = useState<number>(0);
+  const [partiesData, setPartiesData] = useState<PartyData[]>([]);
+  const [currentPartyIndex, setCurrentPartyIndex] = useState<number>(0);
 
   const formatDate = (date: Date): string => {
     return date.toLocaleDateString('pt-BR', {
@@ -111,6 +123,10 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     setFormValues(initialValues);
     setCurrentQuestionIndex(-1);
     setIsQuestionnaireMode(false);
+    // Reset party data
+    setNumberOfParties(0);
+    setPartiesData([]);
+    setCurrentPartyIndex(0);
   };
 
   const updateFormValue = (fieldId: string, value: string) => {
@@ -125,11 +141,15 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     setSelectedTemplate(null);
     setCurrentQuestionIndex(-1);
     setIsQuestionnaireMode(false);
+    setNumberOfParties(0);
+    setPartiesData([]);
+    setCurrentPartyIndex(0);
   };
 
   const startQuestionnaire = () => {
     setIsQuestionnaireMode(true);
-    setCurrentQuestionIndex(0);
+    // For now, always use party system - start with party number question
+    setCurrentQuestionIndex(-2); // -2 for party number question
   };
 
   const finishQuestionnaire = () => {
@@ -138,19 +158,53 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const nextQuestion = () => {
-    if (selectedTemplate && currentQuestionIndex < selectedTemplate.fields.length - 1) {
+    if (currentQuestionIndex === -2) {
+      // From party number question to first party data
+      if (numberOfParties > 0) {
+        setCurrentQuestionIndex(-1000);
+      }
+    } else if (currentQuestionIndex >= -1000 && currentQuestionIndex < -1000 + numberOfParties - 1) {
+      // Move to next party
       setCurrentQuestionIndex(prev => prev + 1);
-    } else if (selectedTemplate && currentQuestionIndex === selectedTemplate.fields.length - 1) {
-      // Go to summary screen
-      setCurrentQuestionIndex(selectedTemplate.fields.length);
+    } else if (currentQuestionIndex === -1000 + numberOfParties - 1) {
+      // From last party to first template question
+      if (selectedTemplate && selectedTemplate.fields.length > 0) {
+        setCurrentQuestionIndex(-1000 + numberOfParties);
+      } else {
+        // No template questions, go to summary
+        setCurrentQuestionIndex(-1000 + numberOfParties + (selectedTemplate?.fields.length || 0));
+      }
+    } else if (selectedTemplate) {
+      const templateQuestionIndex = currentQuestionIndex + 1000 - numberOfParties;
+      if (templateQuestionIndex < selectedTemplate.fields.length - 1) {
+        setCurrentQuestionIndex(prev => prev + 1);
+      } else if (templateQuestionIndex === selectedTemplate.fields.length - 1) {
+        // Go to summary screen
+        setCurrentQuestionIndex(-1000 + numberOfParties + selectedTemplate.fields.length);
+      }
     }
   };
 
   const previousQuestion = () => {
-    if (currentQuestionIndex > 0) {
+    if (currentQuestionIndex === -2) {
+      // From party number back to welcome
+      setCurrentQuestionIndex(-1);
+    } else if (currentQuestionIndex === -1000) {
+      // From first party back to party number
+      setCurrentQuestionIndex(-2);
+    } else if (currentQuestionIndex > -1000 && currentQuestionIndex < -1000 + numberOfParties) {
+      // Move to previous party
       setCurrentQuestionIndex(prev => prev - 1);
-    } else if (currentQuestionIndex === 0) {
-      setCurrentQuestionIndex(-1); // Back to welcome
+    } else if (currentQuestionIndex === -1000 + numberOfParties) {
+      // From first template question back to last party
+      if (numberOfParties > 0) {
+        setCurrentQuestionIndex(-1000 + numberOfParties - 1);
+      } else {
+        setCurrentQuestionIndex(-2);
+      }
+    } else if (currentQuestionIndex > -1000 + numberOfParties) {
+      // Navigate through template questions
+      setCurrentQuestionIndex(prev => prev - 1);
     }
   };
 
@@ -299,6 +353,70 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     console.log('Selected template field updated successfully');
   };
 
+  // Party system functions
+  const handleSetNumberOfParties = (count: number) => {
+    setNumberOfParties(count);
+    // Initialize empty party data array
+    const initialParties: PartyData[] = Array.from({ length: count }, (_, index) => ({
+      id: `party-${index}`,
+      fullName: '',
+      nationality: '',
+      maritalStatus: '',
+      cpf: '',
+      address: '',
+      city: '',
+      state: '',
+      partyType: 'Contratante'
+    }));
+    setPartiesData(initialParties);
+    setCurrentPartyIndex(0);
+  };
+
+  const updatePartyData = (index: number, data: PartyData) => {
+    setPartiesData(prev => {
+      const updated = [...prev];
+      updated[index] = data;
+      return updated;
+    });
+  };
+
+  const formatPartyQualification = (party: PartyData): string => {
+    return `${party.fullName}, ${party.nationality}, ${party.maritalStatus}, inscrito(a) no CPF sob o nº ${party.cpf}, residente e domiciliado(a) na ${party.address}, ${party.city}, ${party.state}.`;
+  };
+
+  const getContractingParties = (): string => {
+    const contractingParties = partiesData.filter(party => party.partyType === 'Contratante');
+    if (contractingParties.length === 0) return '';
+    
+    const qualifications = contractingParties.map(formatPartyQualification);
+    return qualifications.join('\n\n');
+  };
+
+  const getOtherInvolved = (): string => {
+    const otherParties = partiesData.filter(party => party.partyType !== 'Contratante');
+    if (otherParties.length === 0) return '';
+    
+    const qualifications = otherParties.map(formatPartyQualification);
+    return qualifications.join('\n\n');
+  };
+
+  const formatSignatureBlock = (party: PartyData): string => {
+    return `_________________________\n${party.fullName}\nCPF: ${party.cpf}\n${party.partyType}`;
+  };
+
+  const getSignatures = (): string => {
+    if (partiesData.length === 0) return '';
+    
+    // First contratantes, then others
+    const contractingParties = partiesData.filter(party => party.partyType === 'Contratante');
+    const otherParties = partiesData.filter(party => party.partyType !== 'Contratante');
+    
+    const allParties = [...contractingParties, ...otherParties];
+    const signatures = allParties.map(formatSignatureBlock);
+    
+    return signatures.join('\n\n');
+  };
+
   return (
     <ContractContext.Provider
       value={{
@@ -329,6 +447,14 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         finishEditingTemplate,
         saveEditingTemplate,
         updateSelectedTemplateField,
+        numberOfParties,
+        partiesData,
+        currentPartyIndex,
+        setNumberOfParties: handleSetNumberOfParties,
+        updatePartyData,
+        getContractingParties,
+        getOtherInvolved,
+        getSignatures,
       }}
     >
       {children}
