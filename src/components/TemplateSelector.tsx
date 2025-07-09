@@ -1,24 +1,18 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { contractTemplates } from '../data/contractTemplates';
 import { useContract } from '../contexts/ContractContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, ArrowRight, Shield, Plus, Settings, Edit } from 'lucide-react';
-import AdminLogin from './admin/AdminLogin';
-import AddTemplateModal from './admin/AddTemplateModal';
+import { FileText, ArrowRight, Edit } from 'lucide-react';
 
 const TemplateSelector = () => {
   const { 
     selectTemplate, 
-    isAdminLoggedIn, 
     isAdminMode, 
-    toggleAdminMode, 
     customTemplates,
     startEditingTemplate,
     deleteCustomTemplate
   } = useContract();
-  const [showAdminLogin, setShowAdminLogin] = useState(false);
-  const [showAddTemplate, setShowAddTemplate] = useState(false);
 
   const getDisplayTemplate = (template: any) => {
     // Check if there's a custom version of this template
@@ -29,14 +23,6 @@ const TemplateSelector = () => {
   const allTemplates = contractTemplates.map(getDisplayTemplate).concat(
     customTemplates.filter(ct => !contractTemplates.some(ot => ot.id === ct.id))
   );
-
-  const handleAdminButtonClick = () => {
-    if (isAdminLoggedIn) {
-      toggleAdminMode();
-    } else {
-      setShowAdminLogin(true);
-    }
-  };
 
   const handleEditTemplate = (e: React.MouseEvent, template: any) => {
     e.stopPropagation();
@@ -52,29 +38,8 @@ const TemplateSelector = () => {
 
   return (
     <div id="templates" className="py-8">
-      <div className="flex justify-between items-center mb-8">
+      <div className="mb-8">
         <h2 className="text-3xl font-bold text-contractPrimary">Escolha um modelo de contrato</h2>
-        
-        <div className="flex gap-2">
-          <Button
-            variant={isAdminMode ? "default" : "outline"}
-            onClick={handleAdminButtonClick}
-            className="flex items-center gap-2"
-          >
-            <Shield className="w-4 h-4" />
-            {isAdminLoggedIn ? (isAdminMode ? 'Sair Admin' : 'Modo Administrador') : 'Modo Administrador'}
-          </Button>
-          
-          {isAdminMode && (
-            <Button
-              onClick={() => setShowAddTemplate(true)}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-            >
-              <Plus className="w-4 h-4" />
-              Adicionar Modelo
-            </Button>
-          )}
-        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -136,16 +101,6 @@ const TemplateSelector = () => {
           </Card>
         ))}
       </div>
-
-      <AdminLogin 
-        open={showAdminLogin} 
-        onOpenChange={setShowAdminLogin} 
-      />
-      
-      <AddTemplateModal 
-        open={showAddTemplate} 
-        onOpenChange={setShowAddTemplate} 
-      />
     </div>
   );
 };
