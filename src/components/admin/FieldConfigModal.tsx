@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Minus } from 'lucide-react';
+import HelpSectionEditor from './HelpSectionEditor';
 
 interface FieldConfigModalProps {
   open: boolean;
@@ -33,10 +34,6 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: F
     options: field?.options || []
   }));
 
-  const [showHowToFill, setShowHowToFill] = useState(!!field?.howToFill);
-  const [showWhyImportant, setShowWhyImportant] = useState(!!field?.whyImportant);
-  const [showVideoLink, setShowVideoLink] = useState(!!field?.videoLink);
-  const [showAiAssistant, setShowAiAssistant] = useState(!!field?.aiAssistantLink);
   const [newOption, setNewOption] = useState('');
 
   const generateFieldId = (label: string) => {
@@ -81,10 +78,10 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: F
       type: fieldData.type as any,
       placeholder: fieldData.placeholder || `Digite ${fieldData.label.toLowerCase()}`,
       required: fieldData.required || false,
-      ...(showHowToFill && fieldData.howToFill && { howToFill: fieldData.howToFill }),
-      ...(showWhyImportant && fieldData.whyImportant && { whyImportant: fieldData.whyImportant }),
-      ...(showVideoLink && fieldData.videoLink && { videoLink: fieldData.videoLink }),
-      ...(showAiAssistant && fieldData.aiAssistantLink && { aiAssistantLink: fieldData.aiAssistantLink }),
+      ...(fieldData.howToFill && { howToFill: fieldData.howToFill }),
+      ...(fieldData.whyImportant && { whyImportant: fieldData.whyImportant }),
+      ...(fieldData.videoLink && { videoLink: fieldData.videoLink }),
+      ...(fieldData.aiAssistantLink && { aiAssistantLink: fieldData.aiAssistantLink }),
       ...(fieldData.type === 'select' && fieldData.options && { options: fieldData.options })
     };
 
@@ -209,148 +206,36 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: F
             <CardHeader>
               <CardTitle className="text-lg">Instruções Opcionais</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {/* How to Fill */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label>Quer incluir instruções de como preencher essa cláusula?</Label>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant={showHowToFill ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setShowHowToFill(true)}
-                    >
-                      Sim
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={!showHowToFill ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        setShowHowToFill(false);
-                        setFieldData(prev => ({ ...prev, howToFill: '' }));
-                      }}
-                    >
-                      Remover
-                    </Button>
-                  </div>
-                </div>
-                {showHowToFill && (
-                  <Textarea
-                    value={fieldData.howToFill}
-                    onChange={(e) => setFieldData(prev => ({ ...prev, howToFill: e.target.value }))}
-                    placeholder="Como o usuário deve preencher este campo..."
-                    rows={3}
-                  />
-                )}
-              </div>
+            <CardContent className="space-y-6">
+              <HelpSectionEditor
+                label="Quer incluir instruções de como preencher essa cláusula?"
+                value={fieldData.howToFill || ''}
+                onChange={(value) => setFieldData(prev => ({ ...prev, howToFill: value }))}
+                placeholder="Como o usuário deve preencher este campo..."
+                multiline
+              />
 
-              {/* Why Important */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label>Quer incluir instruções de porque a parte deve preencher esse campo?</Label>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant={showWhyImportant ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setShowWhyImportant(true)}
-                    >
-                      Sim
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={!showWhyImportant ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        setShowWhyImportant(false);
-                        setFieldData(prev => ({ ...prev, whyImportant: '' }));
-                      }}
-                    >
-                      Remover
-                    </Button>
-                  </div>
-                </div>
-                {showWhyImportant && (
-                  <Textarea
-                    value={fieldData.whyImportant}
-                    onChange={(e) => setFieldData(prev => ({ ...prev, whyImportant: e.target.value }))}
-                    placeholder="Por que este campo é importante..."
-                    rows={3}
-                  />
-                )}
-              </div>
+              <HelpSectionEditor
+                label="Quer incluir instruções de porque a parte deve preencher esse campo?"
+                value={fieldData.whyImportant || ''}
+                onChange={(value) => setFieldData(prev => ({ ...prev, whyImportant: value }))}
+                placeholder="Por que este campo é importante..."
+                multiline
+              />
 
-              {/* Video Link */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label>Quer incluir o link de um vídeo explicativo?</Label>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant={showVideoLink ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setShowVideoLink(true)}
-                    >
-                      Sim
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={!showVideoLink ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        setShowVideoLink(false);
-                        setFieldData(prev => ({ ...prev, videoLink: '' }));
-                      }}
-                    >
-                      Remover
-                    </Button>
-                  </div>
-                </div>
-                {showVideoLink && (
-                  <Input
-                    value={fieldData.videoLink}
-                    onChange={(e) => setFieldData(prev => ({ ...prev, videoLink: e.target.value }))}
-                    placeholder="https://youtube.com/watch?v=..."
-                  />
-                )}
-              </div>
+              <HelpSectionEditor
+                label="Quer incluir o link de um vídeo explicativo?"
+                value={fieldData.videoLink || ''}
+                onChange={(value) => setFieldData(prev => ({ ...prev, videoLink: value }))}
+                placeholder="https://youtube.com/watch?v=..."
+              />
 
-              {/* AI Assistant Link */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label>Quer incluir um link para auxílio de IA?</Label>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant={showAiAssistant ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setShowAiAssistant(true)}
-                    >
-                      Sim
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={!showAiAssistant ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        setShowAiAssistant(false);
-                        setFieldData(prev => ({ ...prev, aiAssistantLink: '' }));
-                      }}
-                    >
-                      Remover
-                    </Button>
-                  </div>
-                </div>
-                {showAiAssistant && (
-                  <Input
-                    value={fieldData.aiAssistantLink}
-                    onChange={(e) => setFieldData(prev => ({ ...prev, aiAssistantLink: e.target.value }))}
-                    placeholder="https://chatgpt.com/g/..."
-                  />
-                )}
-              </div>
+              <HelpSectionEditor
+                label="Quer incluir um link para auxílio de IA?"
+                value={fieldData.aiAssistantLink || ''}
+                onChange={(value) => setFieldData(prev => ({ ...prev, aiAssistantLink: value }))}
+                placeholder="https://chatgpt.com/g/..."
+              />
             </CardContent>
           </Card>
 
