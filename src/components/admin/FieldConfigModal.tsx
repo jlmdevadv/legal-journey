@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ContractField } from '../../data/contractTemplates';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -21,18 +21,48 @@ interface FieldConfigModalProps {
 }
 
 const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: FieldConfigModalProps) => {
-  const [fieldData, setFieldData] = useState<Partial<ContractField>>(() => ({
-    id: field?.id || '',
-    label: field?.label || '',
-    type: field?.type || 'text',
-    placeholder: field?.placeholder || '',
-    required: field?.required || false,
-    howToFill: field?.howToFill || '',
-    whyImportant: field?.whyImportant || '',
-    videoLink: field?.videoLink || '',
-    aiAssistantLink: field?.aiAssistantLink || '',
-    options: field?.options || []
-  }));
+  const [fieldData, setFieldData] = useState<Partial<ContractField>>({
+    id: '',
+    label: '',
+    type: 'text',
+    placeholder: '',
+    required: false,
+    howToFill: '',
+    whyImportant: '',
+    videoLink: '',
+    aiAssistantLink: '',
+    options: []
+  });
+
+  useEffect(() => {
+    if (field) {
+      setFieldData({
+        id: field.id || '',
+        label: field.label || '',
+        type: field.type || 'text',
+        placeholder: field.placeholder || '',
+        required: field.required || false,
+        howToFill: field.howToFill || '',
+        whyImportant: field.whyImportant || '',
+        videoLink: field.videoLink || '',
+        aiAssistantLink: field.aiAssistantLink || '',
+        options: field.options || []
+      });
+    } else {
+      setFieldData({
+        id: '',
+        label: '',
+        type: 'text',
+        placeholder: '',
+        required: false,
+        howToFill: '',
+        whyImportant: '',
+        videoLink: '',
+        aiAssistantLink: '',
+        options: []
+      });
+    }
+  }, [field]);
 
   const [newOption, setNewOption] = useState('');
 

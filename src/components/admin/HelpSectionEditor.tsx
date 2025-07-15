@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,6 +17,10 @@ interface HelpSectionEditorProps {
 const HelpSectionEditor = ({ label, value, onChange, placeholder, multiline = false }: HelpSectionEditorProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
+
+  useEffect(() => {
+    setEditValue(value);
+  }, [value]);
 
   const hasContent = value && value.trim().length > 0;
 
