@@ -172,6 +172,11 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty }: PartyDataCardProp
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Contratante">Contratante</SelectItem>
+                  <SelectItem value="Contratado">Contratado</SelectItem>
+                  <SelectItem value="Credor">Credor</SelectItem>
+                  <SelectItem value="Devedor">Devedor</SelectItem>
+                  <SelectItem value="Notificante">Notificante</SelectItem>
+                  <SelectItem value="Notificado">Notificado</SelectItem>
                   <SelectItem value="Anuente">Anuente</SelectItem>
                   <SelectItem value="Fiador">Fiador</SelectItem>
                   <SelectItem value="Avalista">Avalista</SelectItem>
