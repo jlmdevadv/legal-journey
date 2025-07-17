@@ -68,8 +68,8 @@ const ContractPreview = () => {
           </h1>
         </div>
 
-        {/* 2. Partes Contratantes */}
-        {contractingParties && renderSection('Partes Contratantes', contractingParties)}
+        {/* 2. Partes Principais */}
+        {contractingParties && renderSection('Partes Principais', contractingParties)}
 
         {/* 3. Outros Envolvidos */}
         {otherInvolved && renderSection('Outros Envolvidos', otherInvolved)}
