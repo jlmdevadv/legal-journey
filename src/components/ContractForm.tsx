@@ -6,10 +6,20 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Printer, Download } from 'lucide-react';
+import { ArrowLeft, Printer } from 'lucide-react';
+import DocumentDownloader from './DocumentDownloader';
 
 const ContractForm = () => {
-  const { selectedTemplate, formValues, updateFormValue, resetForm } = useContract();
+  const { 
+    selectedTemplate, 
+    formValues, 
+    updateFormValue, 
+    resetForm, 
+    fillContractTemplate,
+    getContractingParties,
+    getOtherInvolved,
+    getSignatures
+  } = useContract();
 
   if (!selectedTemplate) return null;
 
@@ -17,22 +27,13 @@ const ContractForm = () => {
     window.print();
   };
 
-  const handleDownload = () => {
-    const element = document.getElementById('contract-preview');
-    if (!element) return;
-    
-    const contractContent = element.innerText;
-    const blob = new Blob([contractContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${selectedTemplate.name.replace(/\s+/g, '-').toLowerCase()}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+  const getDocumentData = () => ({
+    title: selectedTemplate.name,
+    content: fillContractTemplate(),
+    parties: getContractingParties(),
+    otherInvolved: getOtherInvolved(),
+    signatures: getSignatures()
+  });
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-100">
@@ -104,15 +105,13 @@ const ContractForm = () => {
             Imprimir
           </Button>
           
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={handleDownload}
-            className="border-blue-200 text-blue-600 hover:bg-blue-50 flex items-center gap-2"
-          >
-            <Download className="w-4 h-4" />
-            Baixar
-          </Button>
+          <DocumentDownloader
+            documentData={getDocumentData()}
+            filename={selectedTemplate.name}
+            elementId="contract-preview"
+            variant="outline"
+            className="border-blue-200 text-blue-600 hover:bg-blue-50"
+          />
         </div>
       </form>
     </div>

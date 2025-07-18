@@ -3,7 +3,8 @@ import React from 'react';
 import { useContract } from '../../contexts/ContractContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, CheckCircle, Edit, Printer, Download } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Edit, Printer } from 'lucide-react';
+import DocumentDownloader from '../DocumentDownloader';
 
 const QuestionnaireSummary = () => {
   const { 
@@ -11,7 +12,11 @@ const QuestionnaireSummary = () => {
     formValues, 
     previousQuestion, 
     goToQuestion, 
-    finishQuestionnaire 
+    finishQuestionnaire,
+    fillContractTemplate,
+    getContractingParties,
+    getOtherInvolved,
+    getSignatures
   } = useContract();
 
   if (!selectedTemplate) return null;
@@ -21,22 +26,13 @@ const QuestionnaireSummary = () => {
     setTimeout(() => window.print(), 100);
   };
 
-  const handleDownload = () => {
-    const element = document.getElementById('contract-preview');
-    if (!element) return;
-    
-    const contractContent = element.innerText;
-    const blob = new Blob([contractContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${selectedTemplate.name.replace(/\s+/g, '-').toLowerCase()}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+  const getDocumentData = () => ({
+    title: selectedTemplate.name,
+    content: fillContractTemplate(),
+    parties: getContractingParties(),
+    otherInvolved: getOtherInvolved(),
+    signatures: getSignatures()
+  });
 
   return (
     <div className="min-h-[600px] flex items-center justify-center p-6">
@@ -97,14 +93,13 @@ const QuestionnaireSummary = () => {
                 <Printer className="w-4 h-4" />
                 Imprimir
               </Button>
-              <Button 
-                onClick={handleDownload}
+              <DocumentDownloader
+                documentData={getDocumentData()}
+                filename={selectedTemplate.name}
+                elementId="contract-preview"
                 variant="outline"
-                className="border-blue-200 text-blue-600 hover:bg-blue-50 flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Baixar
-              </Button>
+                className="border-blue-200 text-blue-600 hover:bg-blue-50"
+              />
             </div>
           </div>
           
