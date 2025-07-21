@@ -1,10 +1,12 @@
 
-import React, { useState, useRef } from 'react';
-import { ContractTemplate, ContractField } from '../../data/contractTemplates';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { ContractTemplate, ContractField } from '../../types/template';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Save, Plus, Info } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Info, Keyboard } from 'lucide-react';
 import FieldConfigModal from './FieldConfigModal';
+import { useKeyboardSelection } from '../../hooks/useKeyboardSelection';
+import { detectPlaceholders, humanizeVariableName, sanitizeVariableName } from '../../utils/templateUtils';
 
 interface TemplateEditorProps {
   template: ContractTemplate;
@@ -17,49 +19,100 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
   const [selectedText, setSelectedText] = useState('');
   const [selectionRange, setSelectionRange] = useState<{ start: number; end: number } | null>(null);
   const [showFieldModal, setShowFieldModal] = useState(false);
-  const [selectionInProgress, setSelectionInProgress] = useState(false);
+  const [mouseSelectionInProgress, setMouseSelectionInProgress] = useState(false);
   const [editingFieldIndex, setEditingFieldIndex] = useState<number | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
+  // Auto-detect {{variable}} placeholders and create fields
+  const autoCreateFieldsFromPlaceholders = useCallback((templateText: string) => {
+    const detectedPlaceholders = detectPlaceholders(templateText);
+    const currentFieldIds = editingTemplate.fields.map(f => f.id);
+    
+    const newFields: ContractField[] = [];
+    
+    detectedPlaceholders.forEach(placeholder => {
+      const fieldId = sanitizeVariableName(placeholder);
+      
+      // Only create field if it doesn't already exist
+      if (!currentFieldIds.includes(fieldId)) {
+        const newField: ContractField = {
+          id: fieldId,
+          label: humanizeVariableName(placeholder),
+          type: 'text',
+          placeholder: `Digite ${humanizeVariableName(placeholder).toLowerCase()}`,
+          required: false
+        };
+        newFields.push(newField);
+      }
+    });
+
+    if (newFields.length > 0) {
+      console.log('Auto-creating fields for placeholders:', newFields);
+      setEditingTemplate(prev => ({
+        ...prev,
+        fields: [...prev.fields, ...newFields]
+      }));
+    }
+  }, [editingTemplate.fields]);
+
+  // Monitor template changes for {{variable}} detection
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      autoCreateFieldsFromPlaceholders(editingTemplate.template);
+    }, 500); // Debounce for 500ms
+
+    return () => clearTimeout(timeoutId);
+  }, [editingTemplate.template, autoCreateFieldsFromPlaceholders]);
+
+  // Handle text selection (both mouse and keyboard)
+  const handleTextSelection = useCallback((selectedText: string, range: { start: number; end: number }) => {
+    console.log('Text selection detected:', selectedText);
+    
+    if (!selectedText.trim()) return;
+    
+    // Check if the selected text is already a placeholder
+    const isExistingPlaceholder = editingTemplate.fields.some(field => 
+      selectedText.includes(`[${field.id}]`) || selectedText === `[${field.id}]`
+    );
+    
+    const isCurlyPlaceholder = /^\{\{.+\}\}$/.test(selectedText.trim());
+    
+    if (isExistingPlaceholder || isCurlyPlaceholder) {
+      console.log('Selected text is already a placeholder, ignoring');
+      return;
+    }
+    
+    setSelectedText(selectedText);
+    setSelectionRange(range);
+    setEditingFieldIndex(null); // New field
+    setShowFieldModal(true);
+  }, [editingTemplate.fields]);
+
+  // Keyboard selection hook
+  const { shiftPressed, selectionInProgress: keyboardSelectionInProgress } = useKeyboardSelection({
+    onTextSelected: handleTextSelection,
+    enabled: true
+  });
+
   const handleMouseDown = () => {
     console.log('Mouse down - starting selection');
-    setSelectionInProgress(true);
+    setMouseSelectionInProgress(true);
   };
 
-  const handleTextSelection = () => {
-    console.log('Text selection event triggered');
+  const handleMouseTextSelection = () => {
+    console.log('Mouse text selection event triggered');
     
     const selection = window.getSelection();
     console.log('Selection object:', selection);
     
     if (selection && selection.toString().trim()) {
       const selectedText = selection.toString().trim();
-      console.log('Selected text:', selectedText);
-      
-      // Check if the selected text is already a placeholder
-      const isPlaceholder = editingTemplate.fields.some(field => 
-        selectedText.includes(`[${field.id}]`) || selectedText === `[${field.id}]`
-      );
-      
-      if (isPlaceholder) {
-        console.log('Selected text is already a placeholder, ignoring');
-        return;
-      }
-      
       const range = selection.getRangeAt(0);
-      console.log('Selection range:', {
-        start: range.startOffset,
-        end: range.endOffset,
-        text: selectedText
-      });
       
-      setSelectedText(selectedText);
-      setSelectionRange({
+      handleTextSelection(selectedText, {
         start: range.startOffset,
         end: range.endOffset
       });
-      setEditingFieldIndex(null); // New field
-      setShowFieldModal(true);
       
       // Clear selection visually
       selection.removeAllRanges();
@@ -67,7 +120,7 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
       console.log('No valid text selected');
     }
     
-    setSelectionInProgress(false);
+    setMouseSelectionInProgress(false);
   };
 
   const handleFieldEdit = (fieldIndex: number) => {
@@ -136,13 +189,34 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
   };
 
   const handleSave = () => {
-    onSave(editingTemplate);
+    // Convert {{variable}} syntax to [field-id] before saving
+    let finalTemplate = editingTemplate.template;
+    const placeholders = detectPlaceholders(finalTemplate);
+    
+    placeholders.forEach(placeholder => {
+      const fieldId = sanitizeVariableName(placeholder);
+      const regex = new RegExp(`\\{\\{${placeholder}\\}\\}`, 'g');
+      finalTemplate = finalTemplate.replace(regex, `[${fieldId}]`);
+    });
+
+    const finalEditingTemplate = {
+      ...editingTemplate,
+      template: finalTemplate
+    };
+
+    onSave(finalEditingTemplate);
   };
 
   const renderPreview = () => {
     let content = editingTemplate.template;
     
-    // Highlight existing placeholders
+    // Highlight {{variable}} placeholders first
+    content = content.replace(
+      /\{\{([^}]+)\}\}/g,
+      '<span class="bg-green-100 border border-green-300 px-1 rounded transition-colors" title="Placeholder detectado: $1">{{$1}}</span>'
+    );
+    
+    // Then highlight existing [field-id] placeholders
     editingTemplate.fields.forEach(field => {
       const placeholder = `[${field.id}]`;
       content = content.replace(
@@ -165,6 +239,8 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
       }
     }
   };
+
+  const isSelectionActive = mouseSelectionInProgress || keyboardSelectionInProgress || shiftPressed;
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -197,9 +273,13 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
             <CardContent>
               <div className="space-y-3">
                 {editingTemplate.fields.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">
-                    Selecione texto no preview para criar campos editáveis
-                  </p>
+                  <div className="text-gray-500 text-center py-4">
+                    <p className="mb-2">Crie campos editáveis de duas formas:</p>
+                    <div className="text-sm space-y-1">
+                      <p>• Selecione texto no preview (mouse ou Shift+setas)</p>
+                      <p>• Digite <code className="bg-gray-100 px-1 rounded">{'{{nome_variavel}}'}</code> no template</p>
+                    </div>
+                  </div>
                 ) : (
                   editingTemplate.fields.map((field, index) => (
                     <div key={field.id} className="p-3 border rounded-lg hover:bg-gray-50 transition-colors">
@@ -250,10 +330,20 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
               <div className="space-y-2 text-sm text-gray-600">
                 <p className="flex items-center gap-2">
                   <span className="w-2 h-2 bg-blue-100 border border-blue-300 rounded"></span>
-                  Campos existentes (clique para editar)
+                  Campos configurados (clique para editar)
                 </p>
-                <p>• Selecione qualquer texto para transformar em campo editável</p>
-                <p>• Use o mouse para selecionar o texto desejado</p>
+                <p className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-green-100 border border-green-300 rounded"></span>
+                  Placeholders detectados automaticamente
+                </p>
+                <div className="space-y-1">
+                  <p className="flex items-center gap-2">
+                    <Keyboard className="w-3 h-3" />
+                    <strong>Métodos de criação:</strong>
+                  </p>
+                  <p className="ml-5">• Selecionar texto (mouse ou Shift+setas)</p>
+                  <p className="ml-5">• Digite <code className="bg-gray-100 px-1 rounded text-xs">{'{{variavel}}'}</code> no texto</p>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -261,12 +351,20 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
                 ref={previewRef}
                 className={`
                   whitespace-pre-wrap text-sm border p-4 rounded-lg cursor-text select-text
-                  ${selectionInProgress ? 'bg-blue-50' : 'bg-white'}
+                  ${isSelectionActive ? 'bg-blue-50' : 'bg-white'}
                   transition-colors
                 `}
+                contentEditable
                 onMouseDown={handleMouseDown}
-                onMouseUp={handleTextSelection}
+                onMouseUp={handleMouseTextSelection}
                 onClick={handlePreviewClick}
+                onInput={(e) => {
+                  const target = e.target as HTMLDivElement;
+                  setEditingTemplate(prev => ({
+                    ...prev,
+                    template: target.textContent || ''
+                  }));
+                }}
                 dangerouslySetInnerHTML={renderPreview()}
                 style={{ 
                   minHeight: '400px',
@@ -275,10 +373,10 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
                   MozUserSelect: 'text'
                 }}
               />
-              {selectionInProgress && (
+              {isSelectionActive && (
                 <div className="mt-2 text-sm text-blue-600 flex items-center gap-1">
                   <Info className="w-3 h-3" />
-                  Selecione o texto que deseja transformar em campo editável
+                  {shiftPressed ? 'Use as setas para selecionar texto (mantenha Shift pressionado)' : 'Selecione o texto que deseja transformar em campo editável'}
                 </div>
               )}
             </CardContent>

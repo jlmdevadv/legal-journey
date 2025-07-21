@@ -8,12 +8,16 @@ export interface TemplateVersion {
 export interface ContractField {
   id: string;
   label: string;
-  type: 'text' | 'textarea' | 'select' | 'number' | 'email' | 'tel';
+  type: 'text' | 'textarea' | 'select' | 'number' | 'email' | 'tel' | 'date';
   placeholder?: string;
   required?: boolean;
   options?: string[];
   helpText?: string;
   helpVideo?: string;
+  howToFill?: string;
+  whyImportant?: string;
+  videoLink?: string;
+  aiAssistantLink?: string;
 }
 
 export interface PartyData {
