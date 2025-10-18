@@ -523,10 +523,11 @@ export const generatePdfDocument = async (data: DocumentData, filename: string) 
   for (let i = 0; i < totalPages; i++) {
     if (i > 0) pdf.addPage();
     
-    // FASE 1: Correct yOffset calculation for proper vertical margins
-    // First page: yOffset = 0 (marginTop already applied)
-    // Next pages: adjust to show next section with proper margin
-    const yOffset = i === 0 ? 0 : -(usableHeight * i);
+    // Each page should show a unique section of content
+    // Page 1: yOffset = 0 (shows from top)
+    // Page 2: yOffset = -usableHeight (shifts up one page height)
+    // Page 3: yOffset = -2*usableHeight (shifts up two page heights)
+    const yOffset = -(usableHeight * i);
     
     // Insert image WITH margins
     pdf.addImage(
