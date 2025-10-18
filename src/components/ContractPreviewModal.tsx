@@ -107,6 +107,11 @@ const ContractPreviewModal = ({ open, onOpenChange }: ContractPreviewModalProps)
           <div 
             id="contract-preview-modal"
             className="bg-white p-8 text-gray-800"
+            style={{
+              fontFamily: 'Times New Roman, serif',
+              fontSize: '12pt',
+              lineHeight: '1.5'
+            }}
           >
             {/* Título */}
             <div className="mb-8 text-center">

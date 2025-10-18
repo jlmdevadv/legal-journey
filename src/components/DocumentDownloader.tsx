@@ -38,7 +38,12 @@ const DocumentDownloader = ({
     setDownloadingFormat(format);
 
     try {
-      await downloadDocument(format, documentData, filename, elementId);
+      // PDF no longer needs elementId, uses optimized HTML generation
+      if (format === 'pdf') {
+        await downloadDocument(format, documentData, filename);
+      } else {
+        await downloadDocument(format, documentData, filename, elementId);
+      }
       toast({
         title: 'Download concluído',
         description: `Documento baixado em formato ${format.toUpperCase()}`

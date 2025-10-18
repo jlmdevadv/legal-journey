@@ -73,6 +73,11 @@ const ContractPreview = () => {
       <div 
         id="contract-preview"
         className="contract-paper p-8 text-gray-800"
+        style={{
+          fontFamily: 'Times New Roman, serif',
+          fontSize: '12pt',
+          lineHeight: '1.5'
+        }}
       >
         {/* 1. Título */}
         <div className="mb-8 text-center">
