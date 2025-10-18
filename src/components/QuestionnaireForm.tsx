@@ -7,6 +7,8 @@ import QuestionnaireSummary from './questionnaire/QuestionnaireSummary';
 import PartyNumberQuestion from './questionnaire/PartyNumberQuestion';
 import PartyDataCard from './questionnaire/PartyDataCard';
 import LocationDateQuestion from './questionnaire/LocationDateQuestion';
+import OtherPartiesQuestion from './questionnaire/OtherPartiesQuestion';
+import OtherPartiesNumberQuestion from './questionnaire/OtherPartiesNumberQuestion';
 
 const QuestionnaireForm = () => {
   const { 
@@ -14,7 +16,9 @@ const QuestionnaireForm = () => {
     currentQuestionIndex, 
     isQuestionnaireMode, 
     numberOfParties, 
-    partiesData 
+    partiesData,
+    numberOfOtherParties,
+    otherPartiesData
   } = useContract();
 
   if (!selectedTemplate) return null;
@@ -29,7 +33,7 @@ const QuestionnaireForm = () => {
     return <PartyNumberQuestion />;
   }
 
-  // Show party data cards (indices -1000 to -1000 + numberOfParties - 1)
+  // Show main party data cards (indices -1000 to -1000 + numberOfParties - 1)
   if (currentQuestionIndex >= -1000 && currentQuestionIndex < -1000 + numberOfParties) {
     const partyIndex = currentQuestionIndex + 1000;
     const partyData = partiesData[partyIndex];
@@ -41,6 +45,36 @@ const QuestionnaireForm = () => {
           partyIndex={partyIndex}
           partyData={partyData}
           isLastParty={isLastParty}
+          category="main"
+        />
+      );
+    }
+  }
+
+  // Show "other parties" question
+  if (currentQuestionIndex === -4) {
+    return <OtherPartiesQuestion />;
+  }
+
+  // Show number of other parties question
+  if (currentQuestionIndex === -5) {
+    return <OtherPartiesNumberQuestion />;
+  }
+
+  // Show other party data cards (indices -2000 to -2000 + numberOfOtherParties - 1)
+  if (currentQuestionIndex >= -2000 && currentQuestionIndex < -2000 + numberOfOtherParties) {
+    const partyIndex = currentQuestionIndex + 2000;
+    const partyData = otherPartiesData[partyIndex];
+    const isLastParty = partyIndex === numberOfOtherParties - 1;
+    
+    if (partyData) {
+      return (
+        <PartyDataCard
+          partyIndex={partyIndex}
+          partyData={partyData}
+          isLastParty={isLastParty}
+          category="other"
+          title={`Demais Partes ${partyIndex + 1}`}
         />
       );
     }

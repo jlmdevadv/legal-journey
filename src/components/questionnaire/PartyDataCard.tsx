@@ -1,22 +1,29 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useContract } from '../../contexts/ContractContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ArrowLeft, ArrowRight, User, HelpCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
 import { PartyData } from '../../types/template';
 
 interface PartyDataCardProps {
   partyIndex: number;
   partyData: PartyData;
   isLastParty: boolean;
+  category?: 'main' | 'other';
+  title?: string;
 }
 
-const PartyDataCard = ({ partyIndex, partyData, isLastParty }: PartyDataCardProps) => {
-  const { updatePartyData, nextQuestion, previousQuestion } = useContract();
+const PartyDataCard = ({ partyIndex, partyData, isLastParty, category = 'main', title }: PartyDataCardProps) => {
+  const { updatePartyData, nextQuestion, previousQuestion, partyTypes, isAdminMode, addPartyType } = useContract();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [showAddTypeModal, setShowAddTypeModal] = useState(false);
+  const [newTypeName, setNewTypeName] = useState('');
+  const [newTypeDescription, setNewTypeDescription] = useState('');
 
   useEffect(() => {
     if (inputRef.current) {
@@ -42,7 +49,7 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty }: PartyDataCardProp
 
   const updateField = (field: keyof PartyData, value: string) => {
     const updatedParty = { ...partyData, [field]: value };
-    updatePartyData(partyIndex, updatedParty);
+    updatePartyData(partyIndex, updatedParty, category === 'other');
   };
 
   const canProceed = () => {
@@ -70,6 +77,41 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty }: PartyDataCardProp
     updateField('cpf', formatted);
   };
 
+  const handleAddNewType = async () => {
+    if (newTypeName.trim()) {
+      await addPartyType({
+        name: newTypeName.trim(),
+        category: category,
+        description: newTypeDescription.trim()
+      });
+      updateField('partyType', newTypeName.trim());
+      setShowAddTypeModal(false);
+      setNewTypeName('');
+      setNewTypeDescription('');
+    }
+  };
+
+  // Filter types by category
+  const relevantTypes = partyTypes.filter((t: any) => t.category === category);
+
+  const getHelpText = () => {
+    if (category === 'main') {
+      return {
+        fullName: "Nome completo conforme documento de identidade da parte principal",
+        cpf: "CPF necessário para identificação legal da parte contratante",
+        partyType: "Tipo de participação principal no contrato"
+      };
+    } else {
+      return {
+        fullName: "Nome completo da testemunha/fiador/avalista conforme documento",
+        cpf: "CPF necessário para validação legal do documento",
+        partyType: "Função desta parte no contrato (testemunha, fiador, etc.)"
+      };
+    }
+  };
+
+  const helpTexts = getHelpText();
+
   return (
     <div className="min-h-[600px] flex items-center justify-center p-6">
       <Card className="w-full max-w-2xl">
@@ -79,11 +121,18 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty }: PartyDataCardProp
               <User className="w-8 h-8 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl text-primary mb-2">
-            Dados da Parte {partyIndex + 1}
-          </CardTitle>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <CardTitle className="text-2xl text-primary">
+              {title || `Dados da Parte ${partyIndex + 1}`}
+            </CardTitle>
+            <Badge variant={category === 'main' ? 'default' : 'secondary'}>
+              {category === 'main' ? 'Parte Principal' : 'Demais Partes'}
+            </Badge>
+          </div>
           <p className="text-muted-foreground">
-            Preencha os dados completos desta parte do contrato
+            {category === 'main' 
+              ? 'Preencha os dados completos desta parte principal do contrato'
+              : 'Preencha os dados completos desta testemunha/fiador/avalista'}
           </p>
         </CardHeader>
         
@@ -98,7 +147,7 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty }: PartyDataCardProp
                       <HelpCircle className="w-4 h-4 text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Nome completo conforme documento de identidade</p>
+                      <p>{helpTexts.fullName}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -109,7 +158,7 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty }: PartyDataCardProp
                 onChange={(e) => updateField('fullName', e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Ex: João Silva Santos"
-                className="text-base"
+                className="text-base font-bold"
               />
             </div>
 
@@ -149,7 +198,7 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty }: PartyDataCardProp
                       <HelpCircle className="w-4 h-4 text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Informe apenas os números, a formatação é automática</p>
+                      <p>{helpTexts.cpf}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -165,22 +214,43 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty }: PartyDataCardProp
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Tipo de Parte *</label>
-              <Select value={partyData.partyType} onValueChange={(value) => updateField('partyType', value as PartyData['partyType'])}>
+              <label className="text-sm font-medium flex items-center gap-2">
+                Tipo de Parte *
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="w-4 h-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{helpTexts.partyType}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </label>
+              <Select 
+                value={partyData.partyType} 
+                onValueChange={(value) => {
+                  if (value === '__add_new__') {
+                    setShowAddTypeModal(true);
+                  } else {
+                    updateField('partyType', value);
+                  }
+                }}
+              >
                 <SelectTrigger className="text-base">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Contratante">Contratante</SelectItem>
-                  <SelectItem value="Contratado">Contratado</SelectItem>
-                  <SelectItem value="Credor">Credor</SelectItem>
-                  <SelectItem value="Devedor">Devedor</SelectItem>
-                  <SelectItem value="Notificante">Notificante</SelectItem>
-                  <SelectItem value="Notificado">Notificado</SelectItem>
-                  <SelectItem value="Anuente">Anuente</SelectItem>
-                  <SelectItem value="Fiador">Fiador</SelectItem>
-                  <SelectItem value="Avalista">Avalista</SelectItem>
-                  <SelectItem value="Testemunha">Testemunha</SelectItem>
+                  {relevantTypes.map((type: any) => (
+                    <SelectItem key={type.id} value={type.name}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                  {isAdminMode && (
+                    <SelectItem value="__add_new__" className="text-primary font-semibold">
+                      + Adicionar novo tipo
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -242,12 +312,52 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty }: PartyDataCardProp
               disabled={!canProceed()}
               className="flex items-center gap-2"
             >
-              {isLastParty ? 'Finalizar dados das partes' : 'Próxima parte'}
+              {isLastParty ? (category === 'main' ? 'Continuar' : 'Finalizar dados das partes') : `Próxima ${category === 'main' ? 'parte' : 'pessoa'}`}
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal para adicionar novo tipo */}
+      <Dialog open={showAddTypeModal} onOpenChange={setShowAddTypeModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adicionar Novo Tipo de Parte</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nome do tipo *</label>
+              <Input
+                placeholder="Ex: Procurador, Curador, Representante Legal"
+                value={newTypeName}
+                onChange={(e) => setNewTypeName(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Descrição (opcional)</label>
+              <Input
+                placeholder="Ex: Representa legalmente a parte"
+                value={newTypeDescription}
+                onChange={(e) => setNewTypeDescription(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => {
+                setShowAddTypeModal(false);
+                setNewTypeName('');
+                setNewTypeDescription('');
+              }}>
+                Cancelar
+              </Button>
+              <Button onClick={handleAddNewType} disabled={!newTypeName.trim()}>
+                Adicionar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

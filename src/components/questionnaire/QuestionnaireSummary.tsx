@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useContract } from '../../contexts/ContractContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, CheckCircle, Edit, Printer } from 'lucide-react';
 import DocumentDownloader from '../DocumentDownloader';
 import ContractPreviewModal from '../ContractPreviewModal';
@@ -19,7 +20,9 @@ const QuestionnaireSummary = () => {
     getOtherInvolved,
     getSignatures,
     locationData,
-    getLocationDate
+    getLocationDate,
+    partiesData,
+    otherPartiesData
   } = useContract();
 
   if (!selectedTemplate) return null;
@@ -56,6 +59,46 @@ const QuestionnaireSummary = () => {
         </CardHeader>
         
         <CardContent className="space-y-6">
+          {/* Partes Principais */}
+          {partiesData.length > 0 && (
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <h4 className="font-semibold text-primary">Partes Principais</h4>
+                <Badge variant="default">{partiesData.length}</Badge>
+              </div>
+              <div className="space-y-2">
+                {partiesData.map((party, index) => (
+                  <div key={party.id} className="bg-background p-3 rounded border text-sm">
+                    <p className="font-bold">{party.fullName}</p>
+                    <p className="text-muted-foreground">
+                      <span className="font-medium">{party.partyType}</span> • {party.cpf} • {party.city}/{party.state}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Demais Partes */}
+          {otherPartiesData.length > 0 && (
+            <div className="bg-secondary/10 border border-secondary/20 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <h4 className="font-semibold text-secondary-foreground">Demais Partes</h4>
+                <Badge variant="secondary">{otherPartiesData.length}</Badge>
+              </div>
+              <div className="space-y-2">
+                {otherPartiesData.map((party, index) => (
+                  <div key={party.id} className="bg-background p-3 rounded border text-sm">
+                    <p className="font-bold">{party.fullName}</p>
+                    <p className="text-muted-foreground">
+                      <span className="font-medium">{party.partyType}</span> • {party.cpf} • {party.city}/{party.state}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Location and Date Info */}
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
             <h4 className="font-semibold text-gray-900 mb-3">Local e Data do Contrato</h4>
@@ -77,26 +120,30 @@ const QuestionnaireSummary = () => {
             </div>
           </div>
 
-          <div className="grid gap-4">
-            {selectedTemplate.fields.map((field, index) => (
-              <div key={field.id} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-medium text-gray-900">{field.label}</h4>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => goToQuestion(index)}
-                    className="text-blue-600 hover:text-blue-700 p-1"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
+          {/* Template Fields */}
+          {selectedTemplate.fields.length > 0 && (
+            <div className="grid gap-4">
+              <h4 className="font-semibold text-gray-900">Informações do Contrato</h4>
+              {selectedTemplate.fields.map((field, index) => (
+                <div key={field.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-medium text-gray-900">{field.label}</h4>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => goToQuestion(index)}
+                      className="text-blue-600 hover:text-blue-700 p-1"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <p className="text-gray-700 bg-gray-50 p-2 rounded">
+                    {formValues[field.id] || <span className="text-gray-400 italic">Não preenchido</span>}
+                  </p>
                 </div>
-                <p className="text-gray-700 bg-gray-50 p-2 rounded">
-                  {formValues[field.id] || <span className="text-gray-400 italic">Não preenchido</span>}
-                </p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
           
           <div className="bg-blue-50 p-4 rounded-lg">
             <h3 className="font-semibold text-blue-800 mb-2">Próximos passos</h3>

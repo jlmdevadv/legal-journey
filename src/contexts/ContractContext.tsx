@@ -23,12 +23,15 @@ interface ContractContextType {
   numberOfParties: number;
   partiesData: PartyData[];
   currentPartyIndex: number;
+  numberOfOtherParties: number;
+  otherPartiesData: PartyData[];
+  partyTypes: any[];
   locationData: LocationData;
   selectTemplate: (template: ContractTemplate) => void;
   updateFormValue: (fieldId: string, value: string) => void;
   resetForm: () => void;
   fillContractTemplate: () => string;
-  nextQuestion: () => void;
+  nextQuestion: (option?: string) => void;
   previousQuestion: () => void;
   goToQuestion: (index: number) => void;
   startQuestionnaire: () => void;
@@ -44,7 +47,9 @@ interface ContractContextType {
   saveEditingTemplate: (template: ContractTemplate) => void;
   updateSelectedTemplateField: (fieldIndex: number, updatedField: any) => void;
   setNumberOfParties: (count: number) => void;
-  updatePartyData: (index: number, data: PartyData) => void;
+  setNumberOfOtherParties: (count: number) => void;
+  updatePartyData: (index: number, data: PartyData, isOther?: boolean) => void;
+  addPartyType: (typeData: any) => Promise<void>;
   getContractingParties: () => string;
   getOtherInvolved: () => string;
   getSignatures: () => string;
@@ -69,16 +74,36 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   const [numberOfParties, setNumberOfParties] = useState<number>(0);
   const [partiesData, setPartiesData] = useState<PartyData[]>([]);
   const [currentPartyIndex, setCurrentPartyIndex] = useState<number>(0);
+  const [numberOfOtherParties, setNumberOfOtherPartiesState] = useState<number>(0);
+  const [otherPartiesData, setOtherPartiesData] = useState<PartyData[]>([]);
+  const [partyTypes, setPartyTypes] = useState<any[]>([]);
   const [locationData, setLocationData] = useState<LocationData>({
     city: '',
     state: '',
     date: ''
   });
 
-  // Load templates from Supabase on mount
+  // Load templates and party types from Supabase on mount
   useEffect(() => {
     loadTemplatesFromSupabase();
+    loadPartyTypes();
   }, []);
+
+  const loadPartyTypes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('party_types')
+        .select('*')
+        .order('display_order');
+      
+      if (error) throw error;
+      
+      setPartyTypes(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar tipos de partes:', error);
+      toast.error('Erro ao carregar tipos de partes');
+    }
+  };
 
   const loadTemplatesFromSupabase = async () => {
     setIsLoadingTemplates(true);
@@ -238,17 +263,35 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     setCurrentQuestionIndex(-1);
   };
 
-  const nextQuestion = () => {
+  const nextQuestion = (option?: string) => {
     if (currentQuestionIndex === -2) {
       // From party number question to first party data
       if (numberOfParties > 0) {
         setCurrentQuestionIndex(-1000);
       }
     } else if (currentQuestionIndex >= -1000 && currentQuestionIndex < -1000 + numberOfParties - 1) {
-      // Move to next party
+      // Move to next main party
       setCurrentQuestionIndex(prev => prev + 1);
     } else if (currentQuestionIndex === -1000 + numberOfParties - 1) {
-      // From last party to location/date question
+      // From last main party to "other parties" question
+      setCurrentQuestionIndex(-4);
+    } else if (currentQuestionIndex === -4) {
+      // From "other parties" question
+      if (option === 'withOtherParties') {
+        setCurrentQuestionIndex(-5); // Go to number question
+      } else {
+        setCurrentQuestionIndex(-3); // Skip to location/date
+      }
+    } else if (currentQuestionIndex === -5) {
+      // From other parties number to first other party data
+      if (numberOfOtherParties > 0) {
+        setCurrentQuestionIndex(-2000);
+      }
+    } else if (currentQuestionIndex >= -2000 && currentQuestionIndex < -2000 + numberOfOtherParties - 1) {
+      // Move to next other party
+      setCurrentQuestionIndex(prev => prev + 1);
+    } else if (currentQuestionIndex === -2000 + numberOfOtherParties - 1) {
+      // From last other party to location/date
       setCurrentQuestionIndex(-3);
     } else if (currentQuestionIndex === -3) {
       // From location/date to first template question or summary
@@ -274,15 +317,33 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       // From party number back to welcome
       setCurrentQuestionIndex(-1);
     } else if (currentQuestionIndex === -1000) {
-      // From first party back to party number
+      // From first main party back to party number
       setCurrentQuestionIndex(-2);
     } else if (currentQuestionIndex > -1000 && currentQuestionIndex < -1000 + numberOfParties) {
-      // Move to previous party
+      // Move to previous main party
       setCurrentQuestionIndex(prev => prev - 1);
-    } else if (currentQuestionIndex === -3) {
-      // From location/date back to last party
+    } else if (currentQuestionIndex === -4) {
+      // From "other parties" question back to last main party
       if (numberOfParties > 0) {
         setCurrentQuestionIndex(-1000 + numberOfParties - 1);
+      }
+    } else if (currentQuestionIndex === -5) {
+      // From other parties number back to "other parties" question
+      setCurrentQuestionIndex(-4);
+    } else if (currentQuestionIndex === -2000) {
+      // From first other party back to number question
+      setCurrentQuestionIndex(-5);
+    } else if (currentQuestionIndex > -2000 && currentQuestionIndex < -2000 + numberOfOtherParties) {
+      // Move to previous other party
+      setCurrentQuestionIndex(prev => prev - 1);
+    } else if (currentQuestionIndex === -3) {
+      // From location/date back
+      if (numberOfOtherParties > 0) {
+        // Back to last other party
+        setCurrentQuestionIndex(-2000 + numberOfOtherParties - 1);
+      } else {
+        // Back to "other parties" question
+        setCurrentQuestionIndex(-4);
       }
     } else if (currentQuestionIndex === -1000 + numberOfParties) {
       // From first template question back to location/date
@@ -507,22 +568,75 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       address: '',
       city: '',
       state: '',
-      partyType: 'Contratante'
+      partyType: 'Contratante',
+      category: 'main' as const
     }));
     setPartiesData(initialParties);
     setCurrentPartyIndex(0);
   };
 
-  const updatePartyData = (index: number, data: PartyData) => {
-    setPartiesData(prev => {
-      const updated = [...prev];
-      updated[index] = data;
-      return updated;
-    });
+  const handleSetNumberOfOtherParties = (count: number) => {
+    setNumberOfOtherPartiesState(count);
+    // Initialize empty other party data array
+    const initialOtherParties: PartyData[] = Array.from({ length: count }, (_, index) => ({
+      id: `other-party-${index}`,
+      fullName: '',
+      nationality: '',
+      maritalStatus: '',
+      cpf: '',
+      address: '',
+      city: '',
+      state: '',
+      partyType: 'Testemunha',
+      category: 'other' as const
+    }));
+    setOtherPartiesData(initialOtherParties);
+  };
+
+  const updatePartyData = (index: number, data: PartyData, isOther: boolean = false) => {
+    if (isOther) {
+      setOtherPartiesData(prev => {
+        const updated = [...prev];
+        updated[index] = data;
+        return updated;
+      });
+    } else {
+      setPartiesData(prev => {
+        const updated = [...prev];
+        updated[index] = data;
+        return updated;
+      });
+    }
+  };
+
+  const addPartyType = async (typeData: any) => {
+    try {
+      const maxOrder = Math.max(...partyTypes.map((t: any) => t.display_order), 0);
+      
+      const { data, error } = await supabase
+        .from('party_types')
+        .insert([{
+          name: typeData.name,
+          category: typeData.category,
+          description: typeData.description,
+          is_default: false,
+          display_order: maxOrder + 1
+        }])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      setPartyTypes([...partyTypes, data]);
+      toast.success(`Tipo "${data.name}" adicionado com sucesso!`);
+    } catch (error) {
+      console.error('Erro ao adicionar tipo de parte:', error);
+      toast.error('Erro ao adicionar tipo de parte');
+    }
   };
 
   const formatPartyQualification = (party: PartyData): string => {
-    return `${party.fullName}, ${party.nationality}, ${party.maritalStatus}, inscrito(a) no CPF sob o nº ${party.cpf}, residente e domiciliado(a) na ${party.address}, ${party.city}, ${party.state}.`;
+    return `<strong>${party.fullName.toUpperCase()}</strong>, ${party.nationality}, ${party.maritalStatus}, inscrito(a) no CPF sob o nº ${party.cpf}, residente e domiciliado(a) na ${party.address}, ${party.city}, ${party.state}, na qualidade de <strong>${party.partyType.toUpperCase()}</strong>.`;
   };
 
   const getContractingParties = (): string => {
@@ -534,11 +648,10 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const getOtherInvolved = (): string => {
-    const otherParties = partiesData.filter(party => party.partyType !== 'Contratante');
-    if (otherParties.length === 0) return '';
+    if (otherPartiesData.length === 0) return '';
     
-    const qualifications = otherParties.map(formatPartyQualification);
-    return qualifications.join('\n\n');
+    const qualifications = otherPartiesData.map(formatPartyQualification);
+    return '\n\nE AINDA:\n\n' + qualifications.join('\n\n');
   };
 
   const formatSignatureBlock = (party: PartyData): string => {
@@ -546,15 +659,10 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const getSignatures = (): string => {
-    if (partiesData.length === 0) return '';
+    const allParties = [...partiesData, ...otherPartiesData];
+    if (allParties.length === 0) return '';
     
-    // First contratantes, then others
-    const contractingParties = partiesData.filter(party => party.partyType === 'Contratante');
-    const otherParties = partiesData.filter(party => party.partyType !== 'Contratante');
-    
-    const allParties = [...contractingParties, ...otherParties];
     const signatures = allParties.map(formatSignatureBlock);
-    
     return signatures.join('\n\n');
   };
 
@@ -606,8 +714,13 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         numberOfParties,
         partiesData,
         currentPartyIndex,
+        numberOfOtherParties,
+        otherPartiesData,
+        partyTypes,
         setNumberOfParties: handleSetNumberOfParties,
+        setNumberOfOtherParties: handleSetNumberOfOtherParties,
         updatePartyData,
+        addPartyType,
         getContractingParties,
         getOtherInvolved,
         getSignatures,

@@ -1,4 +1,13 @@
 
+export interface PartyType {
+  id: string;
+  name: string;
+  category: 'main' | 'other';
+  description?: string;
+  is_default: boolean;
+  display_order: number;
+}
+
 export interface TemplateVersion {
   version: string;
   date?: string;
@@ -35,7 +44,8 @@ export interface PartyData {
   address: string;
   city: string;
   state: string;
-  partyType: 'Contratante' | 'Anuente' | 'Fiador' | 'Avalista' | 'Testemunha';
+  partyType: string;
+  category: 'main' | 'other';
 }
 
 export interface ContractTemplate {
