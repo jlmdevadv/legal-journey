@@ -193,8 +193,8 @@ export const generateDocxDocument = async (data: DocumentData, filename: string)
           alignment: AlignmentType.JUSTIFIED,
           spacing: {
             line: 360, // 1.5 line spacing
-            after: isClauseLine ? 180 : 120, // Extra space after clauses
-            before: isClauseLine ? 180 : 0 // Extra space before clauses
+            after: 120, // 6pt after
+            before: isClauseLine ? 240 : 0 // 12pt before clauses (blank line)
           }
         })
       );
@@ -337,13 +337,15 @@ const formatHtmlContent = (content: string, alignment: string, detectClauses: bo
       // Detect clauses and make title bold
       if (detectClauses && /^Cláusula\s+\d+[ªº]?\./.test(line)) {
         formattedLine = formattedLine.replace(
-          /^(Cláusula\s+\d+[ªº]?\.)/,
-          '<strong>$1</strong>'
+          /^(Cláusula\s+\d+[ªº]?\.)(.*)$/,
+          '<strong>$1</strong>$2'
         );
-        return `<p style="text-align: ${alignment}; margin: 12pt 0; line-height: 1.5;">${formattedLine}</p>`;
+        // Clauses with extra space (equivalent to blank line)
+        return `<p style="text-align: justify; margin: 18pt 0 6pt 0; line-height: 1.5; font-family: 'Times New Roman', serif; font-size: 12pt;">${formattedLine}</p>`;
       }
       
-      return `<p style="text-align: ${alignment}; margin: 6pt 0; line-height: 1.5;">${formattedLine}</p>`;
+      // Normal paragraphs
+      return `<p style="text-align: justify; margin: 0 0 6pt 0; line-height: 1.5; font-family: 'Times New Roman', serif; font-size: 12pt;">${formattedLine}</p>`;
     })
     .join('');
 };
@@ -355,10 +357,10 @@ const formatSignatures = (signatures: string): string => {
   return blocks.map(block => {
     const lines = block.split('\n').filter(l => l.trim());
     return `
-      <div style="margin: 24pt 0;">
-        <p style="margin: 12pt 0;">_________________________________________________</p>
+      <div style="margin: 36pt 0; text-align: center;">
+        <p style="margin: 18pt 0; font-family: 'Times New Roman', serif; font-size: 12pt;">_________________________________________________</p>
         ${lines.map(line => 
-          `<p style="margin: 3pt 0;">${line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</p>`
+          `<p style="margin: 3pt 0; font-family: 'Times New Roman', serif; font-size: 12pt;">${line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</p>`
         ).join('')}
       </div>
     `;
@@ -366,12 +368,11 @@ const formatSignatures = (signatures: string): string => {
 };
 
 export const generatePdfDocument = async (data: DocumentData, filename: string) => {
-  // Create temporary invisible element with optimized formatting
+  // Create temporary invisible element WITHOUT CSS padding (margins will be applied in PDF)
   const tempDiv = document.createElement('div');
   tempDiv.style.position = 'absolute';
   tempDiv.style.left = '-9999px';
-  tempDiv.style.width = '21cm'; // A4 width
-  tempDiv.style.padding = '2.5cm'; // Margins
+  tempDiv.style.width = '16cm'; // A4 width (21cm) - 2.5cm*2 margins = 16cm
   tempDiv.style.backgroundColor = '#ffffff';
   tempDiv.style.fontFamily = 'Times New Roman, serif';
   tempDiv.style.fontSize = '12pt';
@@ -394,7 +395,7 @@ export const generatePdfDocument = async (data: DocumentData, filename: string) 
   if (data.parties) {
     htmlContent += `
       <div style="margin-bottom: 18pt;">
-        <p style="font-weight: bold; margin-bottom: 12pt;">PARTES PRINCIPAIS</p>
+        <p style="font-weight: bold; margin-bottom: 12pt; font-family: 'Times New Roman', serif; font-size: 12pt; text-align: left;">PARTES PRINCIPAIS</p>
         ${formatHtmlContent(data.parties, 'justify')}
       </div>
     `;
@@ -404,7 +405,7 @@ export const generatePdfDocument = async (data: DocumentData, filename: string) 
   if (data.otherInvolved) {
     htmlContent += `
       <div style="margin-bottom: 18pt;">
-        <p style="font-weight: bold; margin-bottom: 12pt;">OUTROS ENVOLVIDOS</p>
+        <p style="font-weight: bold; margin-bottom: 12pt; font-family: 'Times New Roman', serif; font-size: 12pt; text-align: left;">OUTROS ENVOLVIDOS</p>
         ${formatHtmlContent(data.otherInvolved, 'justify')}
       </div>
     `;
@@ -421,7 +422,7 @@ export const generatePdfDocument = async (data: DocumentData, filename: string) 
   if (data.locationDate) {
     htmlContent += `
       <div style="text-align: right; margin: 24pt 0;">
-        <p style="margin: 0;">${data.locationDate}</p>
+        <p style="margin: 0; font-family: 'Times New Roman', serif; font-size: 12pt;">${data.locationDate}</p>
       </div>
     `;
   }
@@ -453,27 +454,42 @@ export const generatePdfDocument = async (data: DocumentData, filename: string) 
   const imgData = canvas.toDataURL('image/png');
   const pdf = new jsPDF('p', 'mm', 'a4');
   
+  // Define real 2.5cm (25mm) margins
+  const marginLeft = 25;
+  const marginTop = 25;
+  const marginRight = 25;
+  const marginBottom = 25;
+  
   const pdfWidth = pdf.internal.pageSize.getWidth();
   const pdfHeight = pdf.internal.pageSize.getHeight();
+  
+  // Usable width and height (excluding margins)
+  const usableWidth = pdfWidth - marginLeft - marginRight;
+  const usableHeight = pdfHeight - marginTop - marginBottom;
+  
   const imgWidth = canvas.width;
   const imgHeight = canvas.height;
   
+  // Calculate scale to fit in usable area
+  const ratio = usableWidth / (imgWidth / 2); // divide by 2 because scale=2
+  const scaledHeight = (imgHeight / 2) * ratio;
+  
   // Calculate pages needed
-  const ratio = pdfWidth / imgWidth;
-  const scaledHeight = imgHeight * ratio;
-  const totalPages = Math.ceil(scaledHeight / pdfHeight);
+  const totalPages = Math.ceil(scaledHeight / usableHeight);
   
   for (let i = 0; i < totalPages; i++) {
     if (i > 0) pdf.addPage();
     
-    const yOffset = -(pdfHeight * i);
+    const yOffset = -(usableHeight * i);
+    
+    // Insert image WITH margins
     pdf.addImage(
-      imgData, 
-      'PNG', 
-      0, 
-      yOffset, 
-      pdfWidth, 
-      scaledHeight
+      imgData,
+      'PNG',
+      marginLeft,           // X position (left margin)
+      marginTop + yOffset,  // Y position (top margin + page offset)
+      usableWidth,          // Width (usable area)
+      scaledHeight          // Total scaled height
     );
   }
   
