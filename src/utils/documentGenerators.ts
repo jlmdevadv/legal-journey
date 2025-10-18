@@ -98,12 +98,16 @@ export const generateDocxDocument = async (data: DocumentData, filename: string)
       ],
       alignment: AlignmentType.CENTER,
       spacing: {
-        after: 240 // Extra space after title
+        after: 240, // Extra space after title
+        line: 360
       }
     })
   );
 
-  children.push(new Paragraph({ text: '' })); // Empty line
+  children.push(new Paragraph({ 
+    text: '',
+    spacing: { after: 120 }  // FASE 4: 6pt spacing
+  }));
 
   // Parties section
   if (data.parties) {
@@ -217,7 +221,7 @@ export const generateDocxDocument = async (data: DocumentData, filename: string)
         alignment: AlignmentType.RIGHT,
         spacing: {
           before: 240,
-          after: 240,
+          after: 120,  // FASE 4: 6pt spacing (reduced from 240)
           line: 360
         }
       })
@@ -241,7 +245,7 @@ export const generateDocxDocument = async (data: DocumentData, filename: string)
         ],
         alignment: AlignmentType.CENTER,
         spacing: {
-          after: 240,
+          after: 120,  // FASE 4: 6pt spacing (reduced from 240)
           line: 360
         }
       })
@@ -253,33 +257,50 @@ export const generateDocxDocument = async (data: DocumentData, filename: string)
     signatureBlocks.forEach(block => {
       const lines = block.split('\n').filter(l => l.trim());
       
-      // Signature line
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({ 
-              text: '_'.repeat(50),
-              font: "Times New Roman",
-              size: 24
-            })
-          ],
-          alignment: AlignmentType.CENTER,
-          spacing: { line: 360 }
-        })
-      );
+      // FASE 3: Check if first line is already an underscore line
+      const hasUnderscoreLine = lines.length > 0 && /^_+$/.test(lines[0].trim());
+      
+      if (!hasUnderscoreLine) {
+        // Only add signature line if not already present
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({ 
+                text: '_'.repeat(50),
+                font: "Times New Roman",
+                size: 24
+              })
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { 
+              line: 360,
+              after: 120  // FASE 4: 6pt spacing
+            }
+          })
+        );
+      }
       
       // Name, CPF, Role - all centered
-      lines.forEach(line => {
+      lines.forEach((line, index) => {
+        // FASE 3: Skip the underscore line if it was already in the data
+        if (hasUnderscoreLine && index === 0) return;
+        
         children.push(
           new Paragraph({
             children: parseTextWithBold(line),
             alignment: AlignmentType.CENTER,
-            spacing: { line: 360 }
+            spacing: { 
+              line: 360,
+              after: 120  // FASE 4: 6pt spacing
+            }
           })
         );
       });
       
-      children.push(new Paragraph({ text: '' })); // Space between signatures
+      children.push(new Paragraph({ 
+        text: '',
+        spacing: { after: 120 }  // FASE 4: 6pt spacing between signature blocks
+      }));
     });
   }
 
@@ -412,25 +433,47 @@ export const generatePdfDocument = async (data: DocumentData, filename: string) 
   }
   
   // Contract body with clause detection
+  const contentLines = data.content.split('\n').filter(line => line.trim());
+  const contentHtml = contentLines.map((line, index) => {
+    const isLastParagraph = index === contentLines.length - 1;
+    let formattedLine = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    
+    // Detect clauses and make title bold
+    if (/^Cláusula\s+\d+[ªº]?\./.test(line)) {
+      formattedLine = formattedLine.replace(
+        /^(Cláusula\s+\d+[ªº]?\.)(.*)$/,
+        '<strong>$1</strong>$2'
+      );
+      return `<p style="text-align: justify; margin: 18pt 0 6pt 0; line-height: 1.5; font-family: 'Times New Roman', serif; font-size: 12pt;">${formattedLine}</p>`;
+    }
+    
+    // FASE 2: Last paragraph gets page-break-after: avoid to stay with signatures
+    if (isLastParagraph) {
+      return `<p style="text-align: justify; margin: 0 0 6pt 0; line-height: 1.5; font-family: 'Times New Roman', serif; font-size: 12pt; page-break-after: avoid;">${formattedLine}</p>`;
+    }
+    
+    return `<p style="text-align: justify; margin: 0 0 6pt 0; line-height: 1.5; font-family: 'Times New Roman', serif; font-size: 12pt;">${formattedLine}</p>`;
+  }).join('');
+  
   htmlContent += `
     <div style="margin-bottom: 18pt;">
-      ${formatHtmlContent(data.content, 'justify', true)}
+      ${contentHtml}
     </div>
   `;
   
   // Location and Date - aligned right
   if (data.locationDate) {
     htmlContent += `
-      <div style="text-align: right; margin: 24pt 0;">
+      <div style="text-align: right; margin: 24pt 0; page-break-after: avoid;">
         <p style="margin: 0; font-family: 'Times New Roman', serif; font-size: 12pt;">${data.locationDate}</p>
       </div>
     `;
   }
   
-  // Signatures - centered
+  // FASE 2: Signatures - centered WITH page-break-inside: avoid
   if (data.signatures) {
     htmlContent += `
-      <div style="margin-top: 36pt; text-align: center;">
+      <div style="margin-top: 36pt; text-align: center; page-break-inside: avoid;">
         ${formatSignatures(data.signatures)}
       </div>
     `;
@@ -480,7 +523,10 @@ export const generatePdfDocument = async (data: DocumentData, filename: string) 
   for (let i = 0; i < totalPages; i++) {
     if (i > 0) pdf.addPage();
     
-    const yOffset = -(usableHeight * i);
+    // FASE 1: Correct yOffset calculation for proper vertical margins
+    // First page: yOffset = 0 (marginTop already applied)
+    // Next pages: adjust to show next section with proper margin
+    const yOffset = i === 0 ? 0 : -(usableHeight * i);
     
     // Insert image WITH margins
     pdf.addImage(
