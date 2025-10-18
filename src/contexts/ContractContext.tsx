@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ContractTemplate } from '../data/contractTemplates';
-import { PartyData } from '../types/template';
+import { PartyData, ContractField } from '../types/template';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface LocationData {
   city: string;
@@ -60,10 +62,8 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => {
     return localStorage.getItem('admin_logged_in') === 'true';
   });
-  const [customTemplates, setCustomTemplates] = useState<ContractTemplate[]>(() => {
-    const saved = localStorage.getItem('custom_templates');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [customTemplates, setCustomTemplates] = useState<ContractTemplate[]>([]);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
   const [editingTemplate, setEditingTemplate] = useState<ContractTemplate | null>(null);
   const [numberOfParties, setNumberOfParties] = useState<number>(0);
   const [partiesData, setPartiesData] = useState<PartyData[]>([]);
@@ -73,6 +73,62 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     state: '',
     date: ''
   });
+
+  // Load templates from Supabase on mount
+  useEffect(() => {
+    loadTemplatesFromSupabase();
+  }, []);
+
+  const loadTemplatesFromSupabase = async () => {
+    try {
+      setIsLoadingTemplates(true);
+      const { data, error } = await supabase
+        .from('contract_templates')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      if (data) {
+        // Convert Supabase data to ContractTemplate format
+        const templates = data.map(item => ({
+          ...item,
+          fields: item.fields as any as ContractField[],
+          version: item.version as any
+        })) as ContractTemplate[];
+        setCustomTemplates(templates);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar templates:', error);
+      toast.error('Erro ao carregar templates do banco de dados');
+    } finally {
+      setIsLoadingTemplates(false);
+    }
+  };
+
+  // Migrate localStorage data to Supabase (run once)
+  const migrateLocalStorageToSupabase = async () => {
+    const stored = localStorage.getItem('customTemplates');
+    if (!stored) return;
+
+    try {
+      const localTemplates = JSON.parse(stored);
+      if (localTemplates.length === 0) return;
+
+      const { error } = await supabase
+        .from('contract_templates')
+        .insert(localTemplates);
+      
+      if (error) throw error;
+
+      localStorage.removeItem('customTemplates');
+      toast.success('Templates migrados com sucesso!');
+      loadTemplatesFromSupabase();
+    } catch (error) {
+      console.error('Erro ao migrar templates:', error);
+      toast.error('Erro ao migrar templates');
+    }
+  };
 
   const formatDate = (date: Date): string => {
     return date.toLocaleDateString('pt-BR', {
@@ -281,30 +337,75 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     setIsAdminMode(prev => !prev);
   };
 
-  const addCustomTemplate = (template: ContractTemplate) => {
+  const addCustomTemplate = async (template: ContractTemplate) => {
     console.log('Adding custom template:', template);
     const templateWithVersion = initializeTemplateVersion(template);
-    const newTemplates = [...customTemplates, templateWithVersion];
-    setCustomTemplates(newTemplates);
-    localStorage.setItem('custom_templates', JSON.stringify(newTemplates));
-    console.log('Custom templates after add:', newTemplates);
+    
+    try {
+      const { data, error } = await supabase
+        .from('contract_templates')
+        .insert([templateWithVersion as any])
+        .select();
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        const newTemplate = {
+          ...data[0],
+          fields: data[0].fields as any as ContractField[],
+          version: data[0].version as any
+        } as ContractTemplate;
+        setCustomTemplates(prev => [...prev, newTemplate]);
+        toast.success('Template adicionado com sucesso!');
+        console.log('Custom templates after add:', newTemplate);
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar template:', error);
+      toast.error('Erro ao adicionar template');
+    }
   };
 
-  const updateCustomTemplate = (id: string, template: ContractTemplate) => {
+  const updateCustomTemplate = async (id: string, template: ContractTemplate) => {
     console.log('Updating custom template:', id, template);
     const templateWithVersion = updateTemplateVersion(template);
-    const newTemplates = customTemplates.map(t => t.id === id ? templateWithVersion : t);
-    setCustomTemplates(newTemplates);
-    localStorage.setItem('custom_templates', JSON.stringify(newTemplates));
-    console.log('Custom templates after update:', newTemplates);
+    
+    try {
+      const { error } = await supabase
+        .from('contract_templates')
+        .update(templateWithVersion as any)
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      setCustomTemplates(prev => 
+        prev.map(t => t.id === id ? templateWithVersion : t)
+      );
+      toast.success('Template atualizado com sucesso!');
+      console.log('Custom templates after update');
+    } catch (error) {
+      console.error('Erro ao atualizar template:', error);
+      toast.error('Erro ao atualizar template');
+    }
   };
 
-  const deleteCustomTemplate = (id: string) => {
+  const deleteCustomTemplate = async (id: string) => {
     console.log('Deleting custom template:', id);
-    const newTemplates = customTemplates.filter(t => t.id !== id);
-    setCustomTemplates(newTemplates);
-    localStorage.setItem('custom_templates', JSON.stringify(newTemplates));
-    console.log('Custom templates after delete:', newTemplates);
+    
+    try {
+      const { error } = await supabase
+        .from('contract_templates')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      setCustomTemplates(prev => prev.filter(t => t.id !== id));
+      toast.success('Template deletado com sucesso!');
+      console.log('Custom templates after delete');
+    } catch (error) {
+      console.error('Erro ao deletar template:', error);
+      toast.error('Erro ao deletar template');
+    }
   };
 
   const startEditingTemplate = (template: ContractTemplate) => {
