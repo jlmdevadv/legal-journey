@@ -1,12 +1,13 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { useContract } from '../../contexts/ContractContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, CheckCircle, Edit, Printer } from 'lucide-react';
 import DocumentDownloader from '../DocumentDownloader';
+import ContractPreviewModal from '../ContractPreviewModal';
 
 const QuestionnaireSummary = () => {
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const { 
     selectedTemplate, 
     formValues, 
@@ -104,7 +105,7 @@ const QuestionnaireSummary = () => {
             </p>
             <div className="flex flex-wrap gap-3">
               <Button 
-                onClick={finishQuestionnaire}
+                onClick={() => setShowPreviewModal(true)}
                 variant="outline"
                 className="border-blue-200 text-blue-600 hover:bg-blue-50"
               >
@@ -139,6 +140,11 @@ const QuestionnaireSummary = () => {
           </div>
         </CardContent>
       </Card>
+
+      <ContractPreviewModal 
+        open={showPreviewModal}
+        onOpenChange={setShowPreviewModal}
+      />
     </div>
   );
 };
