@@ -55,8 +55,8 @@ export const useKeyboardSelection = ({ onTextSelected, enabled }: UseKeyboardSel
             end: range.endOffset
           });
 
-          // Limpar a seleção visual
-          selection.removeAllRanges();
+          // NÃO limpar a seleção visual - deixar o usuário decidir
+          // selection.removeAllRanges();
         } else {
           console.log('No valid text selected');
         }

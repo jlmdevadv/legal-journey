@@ -4,10 +4,12 @@ import { ContractTemplate, ContractField } from '../../types/template';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, Save, Plus, Info, Keyboard, Clock } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { ArrowLeft, Save, Plus, Info, Keyboard, Clock, Eye, Edit3 } from 'lucide-react';
 import { toast } from 'sonner';
 import FieldConfigModal from './FieldConfigModal';
 import TemplateVersionHistory from './TemplateVersionHistory';
+import SelectionConfirmationModal from './SelectionConfirmationModal';
 import { useKeyboardSelection } from '../../hooks/useKeyboardSelection';
 import { detectPlaceholders, humanizeVariableName, sanitizeVariableName } from '../../utils/templateUtils';
 import { incrementVersion, createNewVersion, restoreVersion } from '../../utils/versionUtils';
@@ -20,15 +22,18 @@ interface TemplateEditorProps {
 
 const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => {
   const [editingTemplate, setEditingTemplate] = useState<ContractTemplate>(template);
+  const [editMode, setEditMode] = useState<'edit' | 'preview'>('edit');
   const [selectedText, setSelectedText] = useState('');
   const [selectionRange, setSelectionRange] = useState<{ start: number; end: number } | null>(null);
   const [showFieldModal, setShowFieldModal] = useState(false);
+  const [showSelectionConfirmation, setShowSelectionConfirmation] = useState(false);
   const [mouseSelectionInProgress, setMouseSelectionInProgress] = useState(false);
   const [editingFieldIndex, setEditingFieldIndex] = useState<number | null>(null);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [changesDescription, setChangesDescription] = useState('');
   const [showSaveVersionDialog, setShowSaveVersionDialog] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-detect {{variable}} placeholders and create fields
   const autoCreateFieldsFromPlaceholders = useCallback((templateText: string) => {
@@ -92,13 +97,24 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
     setSelectedText(selectedText);
     setSelectionRange(range);
     setEditingFieldIndex(null); // New field
-    setShowFieldModal(true);
+    setShowSelectionConfirmation(true); // Show confirmation modal first
   }, [editingTemplate.fields]);
 
-  // Keyboard selection hook
+  const handleSelectionConfirm = () => {
+    setShowSelectionConfirmation(false);
+    setShowFieldModal(true);
+  };
+
+  const handleSelectionCancel = () => {
+    setShowSelectionConfirmation(false);
+    // Keep the selection active, do NOT clear it
+    // User can now delete or edit the selected text
+  };
+
+  // Keyboard selection hook (only enabled in edit mode)
   const { shiftPressed, selectionInProgress: keyboardSelectionInProgress } = useKeyboardSelection({
     onTextSelected: handleTextSelection,
-    enabled: true
+    enabled: editMode === 'edit'
   });
 
   const handleMouseDown = () => {
@@ -293,6 +309,28 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
           )}
         </div>
         <div className="flex gap-2">
+          {/* Toggle Edit/Preview Mode */}
+          <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
+            <Button
+              variant={editMode === 'edit' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setEditMode('edit')}
+              className="flex items-center gap-1"
+            >
+              <Edit3 className="w-3 h-3" />
+              Editar
+            </Button>
+            <Button
+              variant={editMode === 'preview' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setEditMode('preview')}
+              className="flex items-center gap-1"
+            >
+              <Eye className="w-3 h-3" />
+              Preview
+            </Button>
+          </div>
+          
           <Button
             variant="outline"
             onClick={() => setShowVersionHistory(true)}
@@ -370,70 +408,100 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
           </Card>
         </div>
 
-        {/* Template Preview */}
+        {/* Template Editor/Preview */}
         <div>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                Preview do Template
-                <Info className="w-4 h-4 text-blue-500" />
+                {editMode === 'edit' ? (
+                  <>
+                    <Edit3 className="w-5 h-5" />
+                    Modo Edição
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-5 h-5" />
+                    Modo Preview
+                  </>
+                )}
               </CardTitle>
               <div className="space-y-2 text-sm text-gray-600">
-                <p className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-blue-100 border border-blue-300 rounded"></span>
-                  Campos configurados (clique para editar)
-                </p>
-                <p className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-green-100 border border-green-300 rounded"></span>
-                  Placeholders detectados automaticamente
-                </p>
-                <div className="space-y-1">
-                  <p className="flex items-center gap-2">
-                    <Keyboard className="w-3 h-3" />
-                    <strong>Métodos de criação:</strong>
-                  </p>
-                  <p className="ml-5">• Selecionar texto (mouse ou Shift+setas)</p>
-                  <p className="ml-5">• Digite <code className="bg-gray-100 px-1 rounded text-xs">{'{{variavel}}'}</code> no texto</p>
-                </div>
+                {editMode === 'edit' ? (
+                  <>
+                    <p className="text-blue-600 font-medium">Edite o texto livremente. O cursor funciona normalmente.</p>
+                    <div className="space-y-1">
+                      <p className="flex items-center gap-2">
+                        <Keyboard className="w-3 h-3" />
+                        <strong>Como criar campos editáveis:</strong>
+                      </p>
+                      <p className="ml-5">• Selecione texto (mouse ou Shift+setas)</p>
+                      <p className="ml-5">• Digite <code className="bg-gray-100 px-1 rounded text-xs">{'{{variavel}}'}</code> no texto</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-blue-100 border border-blue-300 rounded"></span>
+                      Campos configurados (clique para editar)
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-green-100 border border-green-300 rounded"></span>
+                      Placeholders detectados automaticamente
+                    </p>
+                  </>
+                )}
               </div>
             </CardHeader>
             <CardContent>
-              <div
-                ref={previewRef}
-                className={`
-                  whitespace-pre-wrap text-sm border p-4 rounded-lg cursor-text select-text
-                  ${isSelectionActive ? 'bg-blue-50' : 'bg-white'}
-                  transition-colors
-                `}
-                contentEditable
-                onMouseDown={handleMouseDown}
-                onMouseUp={handleMouseTextSelection}
-                onClick={handlePreviewClick}
-                onInput={(e) => {
-                  const target = e.target as HTMLDivElement;
-                  setEditingTemplate(prev => ({
-                    ...prev,
-                    template: target.textContent || ''
-                  }));
-                }}
-                dangerouslySetInnerHTML={renderPreview()}
-                style={{ 
-                  minHeight: '400px',
-                  userSelect: 'text',
-                  WebkitUserSelect: 'text',
-                  MozUserSelect: 'text'
-                }}
-              />
-              {isSelectionActive && (
-                <div className="mt-2 text-sm text-blue-600 flex items-center gap-1">
-                  <Info className="w-3 h-3" />
-                  {shiftPressed ? 'Use as setas para selecionar texto (mantenha Shift pressionado)' : 'Selecione o texto que deseja transformar em campo editável'}
-                </div>
+              {editMode === 'edit' ? (
+                <>
+                  <Textarea
+                    ref={textareaRef}
+                    value={editingTemplate.template}
+                    onChange={(e) => {
+                      setEditingTemplate(prev => ({
+                        ...prev,
+                        template: e.target.value
+                      }));
+                    }}
+                    onMouseDown={handleMouseDown}
+                    onMouseUp={handleMouseTextSelection}
+                    className={`
+                      w-full min-h-[400px] font-mono text-sm
+                      ${isSelectionActive ? 'bg-blue-50' : ''}
+                      transition-colors
+                    `}
+                    placeholder="Digite o texto do template aqui..."
+                  />
+                  {isSelectionActive && (
+                    <div className="mt-2 text-sm text-blue-600 flex items-center gap-1">
+                      <Info className="w-3 h-3" />
+                      {shiftPressed ? 'Use as setas para selecionar texto (mantenha Shift pressionado)' : 'Selecione o texto que deseja transformar em campo editável'}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div
+                  ref={previewRef}
+                  className="whitespace-pre-wrap text-sm border p-4 rounded-lg bg-white"
+                  onClick={handlePreviewClick}
+                  dangerouslySetInnerHTML={renderPreview()}
+                  style={{ 
+                    minHeight: '400px'
+                  }}
+                />
               )}
             </CardContent>
           </Card>
         </div>
       </div>
+
+      <SelectionConfirmationModal
+        open={showSelectionConfirmation}
+        selectedText={selectedText}
+        onConfirm={handleSelectionConfirm}
+        onCancel={handleSelectionCancel}
+      />
 
       <FieldConfigModal
         open={showFieldModal}
