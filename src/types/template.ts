@@ -1,8 +1,14 @@
 
 export interface TemplateVersion {
   version: string;
-  date: string;
+  date?: string;
   createdDate?: string;
+  history?: Array<{
+    version: string;
+    date: string;
+    changes: string;
+    template_snapshot?: string;
+  }>;
 }
 
 export interface ContractField {
@@ -40,4 +46,9 @@ export interface ContractTemplate {
   fields: ContractField[];
   version?: TemplateVersion;
   usePartySystem?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  is_default?: boolean;
+  created_by?: string;
+  last_modified_by?: string;
 }

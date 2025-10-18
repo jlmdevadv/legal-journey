@@ -18,6 +18,7 @@ interface ContractContextType {
   isAdminMode: boolean;
   isAdminLoggedIn: boolean;
   customTemplates: ContractTemplate[];
+  isLoadingTemplates: boolean;
   editingTemplate: ContractTemplate | null;
   numberOfParties: number;
   partiesData: PartyData[];
@@ -80,8 +81,8 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const loadTemplatesFromSupabase = async () => {
+    setIsLoadingTemplates(true);
     try {
-      setIsLoadingTemplates(true);
       const { data, error } = await supabase
         .from('contract_templates')
         .select('*')
@@ -89,18 +90,26 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       
       if (error) throw error;
       
-      if (data) {
-        // Convert Supabase data to ContractTemplate format
-        const templates = data.map(item => ({
-          ...item,
-          fields: item.fields as any as ContractField[],
-          version: item.version as any
+      if (data && data.length > 0) {
+        const templates = data.map(t => ({
+          ...t,
+          fields: t.fields as any as ContractField[],
+          version: t.version as any
         })) as ContractTemplate[];
+        
         setCustomTemplates(templates);
+        console.log(`✅ Carregados ${templates.length} templates do banco`);
+      } else {
+        // Se banco vazio, fazer seed automático
+        console.log('📦 Banco vazio, executando seed...');
+        const { seedDefaultTemplates } = await import('@/utils/seedDefaultTemplates');
+        await seedDefaultTemplates();
+        // Recarregar após seed
+        await loadTemplatesFromSupabase();
       }
     } catch (error) {
-      console.error('Erro ao carregar templates:', error);
-      toast.error('Erro ao carregar templates do banco de dados');
+      console.error('❌ Erro ao carregar templates:', error);
+      toast.error('Erro ao carregar templates do banco');
     } finally {
       setIsLoadingTemplates(false);
     }
@@ -573,6 +582,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         isAdminMode,
         isAdminLoggedIn,
         customTemplates,
+        isLoadingTemplates,
         editingTemplate,
         selectTemplate,
         updateFormValue,

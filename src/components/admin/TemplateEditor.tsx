@@ -3,10 +3,14 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ContractTemplate, ContractField } from '../../types/template';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Save, Plus, Info, Keyboard } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ArrowLeft, Save, Plus, Info, Keyboard, Clock } from 'lucide-react';
+import { toast } from 'sonner';
 import FieldConfigModal from './FieldConfigModal';
+import TemplateVersionHistory from './TemplateVersionHistory';
 import { useKeyboardSelection } from '../../hooks/useKeyboardSelection';
 import { detectPlaceholders, humanizeVariableName, sanitizeVariableName } from '../../utils/templateUtils';
+import { incrementVersion, createNewVersion, restoreVersion } from '../../utils/versionUtils';
 
 interface TemplateEditorProps {
   template: ContractTemplate;
@@ -21,6 +25,9 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
   const [showFieldModal, setShowFieldModal] = useState(false);
   const [mouseSelectionInProgress, setMouseSelectionInProgress] = useState(false);
   const [editingFieldIndex, setEditingFieldIndex] = useState<number | null>(null);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [changesDescription, setChangesDescription] = useState('');
+  const [showSaveVersionDialog, setShowSaveVersionDialog] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
   // Auto-detect {{variable}} placeholders and create fields
@@ -188,7 +195,12 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
     }
   };
 
-  const handleSave = () => {
+  const handleSaveWithVersion = () => {
+    if (!changesDescription.trim()) {
+      toast.error('Por favor, descreva as mudanças realizadas');
+      return;
+    }
+
     // Convert {{variable}} syntax to [field-id] before saving
     let finalTemplate = editingTemplate.template;
     const placeholders = detectPlaceholders(finalTemplate);
@@ -199,12 +211,33 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
       finalTemplate = finalTemplate.replace(regex, `[${fieldId}]`);
     });
 
+    // Criar nova versão
+    const newVersionData = createNewVersion(editingTemplate, changesDescription);
+
     const finalEditingTemplate = {
       ...editingTemplate,
-      template: finalTemplate
+      template: finalTemplate,
+      version: newVersionData
     };
 
     onSave(finalEditingTemplate);
+    setChangesDescription('');
+    setShowSaveVersionDialog(false);
+  };
+
+  const handleRestore = (version: string) => {
+    const restored = restoreVersion(editingTemplate, version);
+    if (restored) {
+      setEditingTemplate(restored);
+      setShowVersionHistory(false);
+      toast.success(`Versão ${version} restaurada. Faça as alterações necessárias e salve.`);
+    } else {
+      toast.error('Não foi possível restaurar esta versão');
+    }
+  };
+
+  const handlePreview = (version: string) => {
+    toast.info('Funcionalidade de preview em desenvolvimento');
   };
 
   const renderPreview = () => {
@@ -253,11 +286,29 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
           <h1 className="text-2xl font-bold text-contractPrimary">
             Editando: {editingTemplate.name}
           </h1>
+          {editingTemplate.version && (
+            <span className="text-sm text-gray-500">
+              (v{editingTemplate.version.version})
+            </span>
+          )}
         </div>
-        <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700">
-          <Save className="w-4 h-4 mr-2" />
-          Salvar Template
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowVersionHistory(true)}
+            className="flex items-center gap-2"
+          >
+            <Clock className="w-4 h-4" />
+            Histórico
+          </Button>
+          <Button
+            onClick={() => setShowSaveVersionDialog(true)}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <Save className="w-4 h-4 mr-2" />
+            Salvar Nova Versão
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -390,6 +441,56 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
         onSave={handleFieldSave}
         selectedText={selectedText}
         field={editingFieldIndex !== null ? editingTemplate.fields[editingFieldIndex] : undefined}
+      />
+
+      {/* Dialog para descrição de mudanças */}
+      <Dialog open={showSaveVersionDialog} onOpenChange={setShowSaveVersionDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Salvar Nova Versão</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">
+                Descreva as mudanças realizadas:
+              </label>
+              <textarea
+                className="w-full mt-2 p-2 border rounded-lg"
+                rows={4}
+                placeholder="Ex: Removido título redundante, atualizada cláusula 5ª conforme Lei X..."
+                value={changesDescription}
+                onChange={(e) => setChangesDescription(e.target.value)}
+              />
+            </div>
+            <div className="text-sm text-gray-600">
+              <p>Nova versão: <strong>{incrementVersion(editingTemplate.version?.version || "1.0")}</strong></p>
+              <p className="mt-1">Histórico manterá apenas as 2 últimas versões anteriores.</p>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setShowSaveVersionDialog(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSaveWithVersion}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                Salvar Versão
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de histórico */}
+      <TemplateVersionHistory
+        open={showVersionHistory}
+        onOpenChange={setShowVersionHistory}
+        template={editingTemplate}
+        onRestore={handleRestore}
+        onPreview={handlePreview}
       />
     </div>
   );

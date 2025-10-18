@@ -1,5 +1,4 @@
 import React from 'react';
-import { contractTemplates } from '../data/contractTemplates';
 import { useContract } from '../contexts/ContractContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,19 +9,25 @@ const TemplateSelector = () => {
     selectTemplate, 
     isAdminMode, 
     customTemplates,
+    isLoadingTemplates,
     startEditingTemplate,
     deleteCustomTemplate
   } = useContract();
 
-  const getDisplayTemplate = (template: any) => {
-    // Check if there's a custom version of this template
-    const customVersion = customTemplates.find(ct => ct.id === template.id);
-    return customVersion || template;
-  };
+  if (isLoadingTemplates) {
+    return (
+      <div id="templates" className="py-8">
+        <div className="flex justify-center items-center py-20">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-contractPrimary mx-auto"></div>
+            <p className="mt-4 text-gray-600">Carregando templates...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  const allTemplates = contractTemplates.map(getDisplayTemplate).concat(
-    customTemplates.filter(ct => !contractTemplates.some(ot => ot.id === ct.id))
-  );
+  const allTemplates = customTemplates;
 
   const handleEditTemplate = (e: React.MouseEvent, template: any) => {
     e.stopPropagation();
