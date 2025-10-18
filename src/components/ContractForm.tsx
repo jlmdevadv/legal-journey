@@ -18,7 +18,8 @@ const ContractForm = () => {
     fillContractTemplate,
     getContractingParties,
     getOtherInvolved,
-    getSignatures
+    getSignatures,
+    getLocationDate
   } = useContract();
 
   if (!selectedTemplate) return null;
@@ -32,7 +33,8 @@ const ContractForm = () => {
     content: fillContractTemplate(),
     parties: getContractingParties(),
     otherInvolved: getOtherInvolved(),
-    signatures: getSignatures()
+    signatures: getSignatures(),
+    locationDate: getLocationDate()
   });
 
   return (

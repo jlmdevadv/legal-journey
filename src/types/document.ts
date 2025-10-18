@@ -7,6 +7,7 @@ export interface DocumentData {
   parties: string;
   otherInvolved: string;
   signatures: string;
+  locationDate?: string;
 }
 
 export interface DownloadOptions {

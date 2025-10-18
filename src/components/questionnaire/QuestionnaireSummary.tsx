@@ -16,7 +16,9 @@ const QuestionnaireSummary = () => {
     fillContractTemplate,
     getContractingParties,
     getOtherInvolved,
-    getSignatures
+    getSignatures,
+    locationData,
+    getLocationDate
   } = useContract();
 
   if (!selectedTemplate) return null;
@@ -31,7 +33,8 @@ const QuestionnaireSummary = () => {
     content: fillContractTemplate(),
     parties: getContractingParties(),
     otherInvolved: getOtherInvolved(),
-    signatures: getSignatures()
+    signatures: getSignatures(),
+    locationDate: getLocationDate()
   });
 
   return (
@@ -52,6 +55,27 @@ const QuestionnaireSummary = () => {
         </CardHeader>
         
         <CardContent className="space-y-6">
+          {/* Location and Date Info */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <h4 className="font-semibold text-gray-900 mb-3">Local e Data do Contrato</h4>
+            <div className="grid gap-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Cidade:</span>
+                <span className="font-medium">{locationData.city || '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Estado:</span>
+                <span className="font-medium">{locationData.state || '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Data:</span>
+                <span className="font-medium">
+                  {locationData.date ? new Date(locationData.date).toLocaleDateString('pt-BR') : '-'}
+                </span>
+              </div>
+            </div>
+          </div>
+
           <div className="grid gap-4">
             {selectedTemplate.fields.map((field, index) => (
               <div key={field.id} className="border border-gray-200 rounded-lg p-4">

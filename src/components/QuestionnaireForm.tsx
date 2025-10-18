@@ -6,6 +6,7 @@ import QuestionnaireQuestion from './questionnaire/QuestionnaireQuestion';
 import QuestionnaireSummary from './questionnaire/QuestionnaireSummary';
 import PartyNumberQuestion from './questionnaire/PartyNumberQuestion';
 import PartyDataCard from './questionnaire/PartyDataCard';
+import LocationDateQuestion from './questionnaire/LocationDateQuestion';
 
 const QuestionnaireForm = () => {
   const { 
@@ -43,6 +44,11 @@ const QuestionnaireForm = () => {
         />
       );
     }
+  }
+
+  // Show location and date question
+  if (currentQuestionIndex === -3) {
+    return <LocationDateQuestion />;
   }
 
   // Show template questions (after parties are done)

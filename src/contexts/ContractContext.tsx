@@ -2,6 +2,12 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { ContractTemplate } from '../data/contractTemplates';
 import { PartyData } from '../types/template';
 
+interface LocationData {
+  city: string;
+  state: string;
+  date: string;
+}
+
 interface ContractContextType {
   selectedTemplate: ContractTemplate | null;
   formValues: Record<string, string>;
@@ -14,6 +20,7 @@ interface ContractContextType {
   numberOfParties: number;
   partiesData: PartyData[];
   currentPartyIndex: number;
+  locationData: LocationData;
   selectTemplate: (template: ContractTemplate) => void;
   updateFormValue: (fieldId: string, value: string) => void;
   resetForm: () => void;
@@ -38,6 +45,8 @@ interface ContractContextType {
   getContractingParties: () => string;
   getOtherInvolved: () => string;
   getSignatures: () => string;
+  updateLocationData: (field: string, value: string) => void;
+  getLocationDate: () => string;
 }
 
 const ContractContext = createContext<ContractContextType | undefined>(undefined);
@@ -59,6 +68,11 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   const [numberOfParties, setNumberOfParties] = useState<number>(0);
   const [partiesData, setPartiesData] = useState<PartyData[]>([]);
   const [currentPartyIndex, setCurrentPartyIndex] = useState<number>(0);
+  const [locationData, setLocationData] = useState<LocationData>({
+    city: '',
+    state: '',
+    date: ''
+  });
 
   const formatDate = (date: Date): string => {
     return date.toLocaleDateString('pt-BR', {
@@ -127,6 +141,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     setNumberOfParties(0);
     setPartiesData([]);
     setCurrentPartyIndex(0);
+    setLocationData({ city: '', state: '', date: '' });
   };
 
   const updateFormValue = (fieldId: string, value: string) => {
@@ -144,6 +159,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     setNumberOfParties(0);
     setPartiesData([]);
     setCurrentPartyIndex(0);
+    setLocationData({ city: '', state: '', date: '' });
   };
 
   const startQuestionnaire = () => {
@@ -167,7 +183,10 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       // Move to next party
       setCurrentQuestionIndex(prev => prev + 1);
     } else if (currentQuestionIndex === -1000 + numberOfParties - 1) {
-      // From last party to first template question
+      // From last party to location/date question
+      setCurrentQuestionIndex(-3);
+    } else if (currentQuestionIndex === -3) {
+      // From location/date to first template question or summary
       if (selectedTemplate && selectedTemplate.fields.length > 0) {
         setCurrentQuestionIndex(-1000 + numberOfParties);
       } else {
@@ -195,13 +214,14 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     } else if (currentQuestionIndex > -1000 && currentQuestionIndex < -1000 + numberOfParties) {
       // Move to previous party
       setCurrentQuestionIndex(prev => prev - 1);
-    } else if (currentQuestionIndex === -1000 + numberOfParties) {
-      // From first template question back to last party
+    } else if (currentQuestionIndex === -3) {
+      // From location/date back to last party
       if (numberOfParties > 0) {
         setCurrentQuestionIndex(-1000 + numberOfParties - 1);
-      } else {
-        setCurrentQuestionIndex(-2);
       }
+    } else if (currentQuestionIndex === -1000 + numberOfParties) {
+      // From first template question back to location/date
+      setCurrentQuestionIndex(-3);
     } else if (currentQuestionIndex > -1000 + numberOfParties) {
       // Navigate through template questions
       setCurrentQuestionIndex(prev => prev - 1);
@@ -227,7 +247,18 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       filledTemplate = filledTemplate.replace(placeholderPattern, value || `[${fieldId}]`);
     });
     
+    // Replace location and date placeholders (automatic system fields)
+    filledTemplate = filledTemplate.replace(/\[city\]/g, locationData.city || '[city]');
+    filledTemplate = filledTemplate.replace(/\[state\]/g, locationData.state || '[state]');
+    filledTemplate = filledTemplate.replace(/\[signing-date\]/g, locationData.date ? formatDateToBrazilian(locationData.date) : '[signing-date]');
+    
     return filledTemplate;
+  };
+
+  const formatDateToBrazilian = (dateString: string): string => {
+    if (!dateString) return '';
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
   };
 
   // Admin functions
@@ -417,6 +448,20 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     return signatures.join('\n\n');
   };
 
+  const updateLocationDataFunc = (field: string, value: string) => {
+    setLocationData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const getLocationDate = (): string => {
+    if (!locationData.city || !locationData.state || !locationData.date) return '';
+    
+    const formattedDate = formatDateToBrazilian(locationData.date);
+    return `${locationData.city}, ${locationData.state}, ${formattedDate}`;
+  };
+
   return (
     <ContractContext.Provider
       value={{
@@ -455,6 +500,9 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         getContractingParties,
         getOtherInvolved,
         getSignatures,
+        locationData,
+        updateLocationData: updateLocationDataFunc,
+        getLocationDate,
       }}
     >
       {children}

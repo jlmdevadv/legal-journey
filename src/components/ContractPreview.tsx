@@ -8,7 +8,8 @@ const ContractPreview = () => {
     fillContractTemplate, 
     getContractingParties, 
     getOtherInvolved, 
-    getSignatures 
+    getSignatures,
+    getLocationDate
   } = useContract();
 
   if (!selectedTemplate) return null;
@@ -17,6 +18,7 @@ const ContractPreview = () => {
   const contractingParties = getContractingParties();
   const otherInvolved = getOtherInvolved();
   const signatures = getSignatures();
+  const locationDate = getLocationDate();
 
   const renderContractText = (text: string) => {
     // Replace placeholders with highlighted spans
@@ -77,7 +79,14 @@ const ContractPreview = () => {
         {/* 4. Corpo do Contrato */}
         {renderSection('', filledTemplate)}
 
-        {/* 5. Assinaturas */}
+        {/* 5. Local e Data */}
+        {locationDate && (
+          <div className="mb-8 text-right">
+            <p className="text-gray-800">{locationDate}</p>
+          </div>
+        )}
+
+        {/* 6. Assinaturas */}
         {signatures && renderSection('Assinaturas', signatures)}
       </div>
     </div>

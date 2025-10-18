@@ -13,6 +13,8 @@ export const generateTxtDocument = (data: DocumentData, filename: string) => {
     '',
     data.content,
     '',
+    data.locationDate ? `${data.locationDate}` : '',
+    '',
     data.signatures ? `ASSINATURAS\n${data.signatures}` : ''
   ].filter(Boolean).join('\n');
 
@@ -84,6 +86,17 @@ export const generateDocxDocument = async (data: DocumentData, filename: string)
   });
 
   children.push(new Paragraph({ text: '' }));
+
+  // Location and Date
+  if (data.locationDate) {
+    children.push(
+      new Paragraph({
+        children: [new TextRun({ text: data.locationDate })],
+        alignment: 'right'
+      })
+    );
+    children.push(new Paragraph({ text: '' }));
+  }
 
   // Signatures section
   if (data.signatures) {
