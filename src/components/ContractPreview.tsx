@@ -21,19 +21,30 @@ const ContractPreview = () => {
   const locationDate = getLocationDate();
 
   const renderContractText = (text: string) => {
-    // Replace placeholders with highlighted spans
+    // First handle bold markers (**text**)
+    const boldRegex = /\*\*(.*?)\*\*/g;
     const placeholderRegex = /\[([\w-]+)\]/g;
-    const parts = text.split(placeholderRegex);
+    
+    // Split by both bold and placeholder patterns
+    const combinedRegex = /(\*\*.*?\*\*|\[[\w-]+\])/g;
+    const parts = text.split(combinedRegex);
     
     if (parts.length <= 1) return text;
     
     return parts.map((part, i) => {
-      // Even indexes are normal text, odd indexes are the captured groups from regex
-      if (i % 2 === 0) {
+      // Check if it's a bold marker
+      if (part.startsWith('**') && part.endsWith('**')) {
+        const boldText = part.slice(2, -2);
+        return <strong key={i} className="font-bold">{boldText}</strong>;
+      }
+      // Check if it's a placeholder
+      else if (part.startsWith('[') && part.endsWith(']')) {
+        const fieldName = part.slice(1, -1);
+        return <span key={i} className="bg-yellow-50 px-1 rounded border border-yellow-200 text-yellow-800">[{fieldName}]</span>;
+      }
+      // Regular text
+      else {
         return part;
-      } else {
-        // This is a placeholder field
-        return <span key={i} className="bg-yellow-50 px-1 rounded border border-yellow-200 text-yellow-800">[{part}]</span>;
       }
     });
   };

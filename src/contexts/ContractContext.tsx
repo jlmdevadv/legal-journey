@@ -636,7 +636,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const formatPartyQualification = (party: PartyData): string => {
-    return `<strong>${party.fullName.toUpperCase()}</strong>, ${party.nationality}, ${party.maritalStatus}, inscrito(a) no CPF sob o nº ${party.cpf}, residente e domiciliado(a) na ${party.address}, ${party.city}, ${party.state}, na qualidade de <strong>${party.partyType.toUpperCase()}</strong>.`;
+    return `**${party.fullName.toUpperCase()}**, ${party.nationality}, ${party.maritalStatus}, inscrito(a) no CPF sob o nº ${party.cpf}, residente e domiciliado(a) na ${party.address}, ${party.city}, ${party.state}, na qualidade de **${party.partyType.toUpperCase()}**.`;
   };
 
   const getContractingParties = (): string => {

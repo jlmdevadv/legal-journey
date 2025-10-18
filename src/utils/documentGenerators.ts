@@ -3,19 +3,24 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { DocumentData, DocumentFormat } from '../types/document';
 
+// Helper to remove bold markers for plain text
+const removeBoldMarkers = (text: string): string => {
+  return text.replace(/\*\*(.*?)\*\*/g, '$1');
+};
+
 export const generateTxtDocument = (data: DocumentData, filename: string) => {
   const fullContent = [
     data.title,
     '',
-    data.parties ? `PARTES PRINCIPAIS\n${data.parties}` : '',
+    data.parties ? `PARTES PRINCIPAIS\n${removeBoldMarkers(data.parties)}` : '',
     '',
-    data.otherInvolved ? `OUTROS ENVOLVIDOS\n${data.otherInvolved}` : '',
+    data.otherInvolved ? `OUTROS ENVOLVIDOS\n${removeBoldMarkers(data.otherInvolved)}` : '',
     '',
-    data.content,
+    removeBoldMarkers(data.content),
     '',
     data.locationDate ? `${data.locationDate}` : '',
     '',
-    data.signatures ? `ASSINATURAS\n${data.signatures}` : ''
+    data.signatures ? `ASSINATURAS\n${removeBoldMarkers(data.signatures)}` : ''
   ].filter(Boolean).join('\n');
 
   const blob = new Blob([fullContent], { type: 'text/plain' });
@@ -28,6 +33,19 @@ export const generateTxtDocument = (data: DocumentData, filename: string) => {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+};
+
+// Helper to parse bold markers and create TextRuns
+const parseTextWithBold = (text: string): TextRun[] => {
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return parts
+    .filter(part => part.length > 0)
+    .map(part => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return new TextRun({ text: part.slice(2, -2), bold: true });
+      }
+      return new TextRun({ text: part });
+    });
 };
 
 export const generateDocxDocument = async (data: DocumentData, filename: string) => {
@@ -55,7 +73,7 @@ export const generateDocxDocument = async (data: DocumentData, filename: string)
     
     data.parties.split('\n').forEach(line => {
       if (line.trim()) {
-        children.push(new Paragraph({ text: line }));
+        children.push(new Paragraph({ children: parseTextWithBold(line) }));
       }
     });
     
@@ -73,7 +91,7 @@ export const generateDocxDocument = async (data: DocumentData, filename: string)
     
     data.otherInvolved.split('\n').forEach(line => {
       if (line.trim()) {
-        children.push(new Paragraph({ text: line }));
+        children.push(new Paragraph({ children: parseTextWithBold(line) }));
       }
     });
     
@@ -82,7 +100,7 @@ export const generateDocxDocument = async (data: DocumentData, filename: string)
 
   // Main content
   data.content.split('\n').forEach(line => {
-    children.push(new Paragraph({ text: line }));
+    children.push(new Paragraph({ children: parseTextWithBold(line) }));
   });
 
   children.push(new Paragraph({ text: '' }));
@@ -109,7 +127,7 @@ export const generateDocxDocument = async (data: DocumentData, filename: string)
     
     data.signatures.split('\n').forEach(line => {
       if (line.trim()) {
-        children.push(new Paragraph({ text: line }));
+        children.push(new Paragraph({ children: parseTextWithBold(line) }));
       }
     });
   }
