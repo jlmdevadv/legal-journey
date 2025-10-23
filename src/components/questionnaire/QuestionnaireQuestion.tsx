@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useContract } from '../../contexts/ContractContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,7 @@ import { ArrowLeft, ArrowRight, Edit } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import QuestionnaireHelp from './QuestionnaireHelp';
 import FieldConfigModal from '../admin/FieldConfigModal';
+import { getVisibleFields } from '@/utils/conditionalLogic';
 
 const QuestionnaireQuestion = () => {
   const { 
@@ -27,17 +28,23 @@ const QuestionnaireQuestion = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [showEditModal, setShowEditModal] = useState(false);
 
+  // Calculate visible fields dynamically based on conditional logic
+  const visibleFields = useMemo(() => {
+    if (!selectedTemplate) return [];
+    return getVisibleFields(selectedTemplate.fields, formValues);
+  }, [selectedTemplate, formValues]);
+
   // Calculate the actual template question index
   const templateQuestionIndex = currentQuestionIndex + 1000 - numberOfParties;
   
-  if (!selectedTemplate || templateQuestionIndex < 0 || templateQuestionIndex >= selectedTemplate.fields.length) {
+  if (!selectedTemplate || templateQuestionIndex < 0 || templateQuestionIndex >= visibleFields.length) {
     return null;
   }
 
-  const currentField = selectedTemplate.fields[templateQuestionIndex];
+  const currentField = visibleFields[templateQuestionIndex];
   const currentValue = formValues[currentField.id] || '';
-  const progress = ((templateQuestionIndex + 1) / selectedTemplate.fields.length) * 100;
-  const isLastQuestion = templateQuestionIndex === selectedTemplate.fields.length - 1;
+  const progress = ((templateQuestionIndex + 1) / visibleFields.length) * 100;
+  const isLastQuestion = templateQuestionIndex === visibleFields.length - 1;
   const canProceed = !currentField.required || currentValue.trim() !== '';
 
   useEffect(() => {
@@ -75,7 +82,7 @@ const QuestionnaireQuestion = () => {
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm text-gray-500">
-                Pergunta {templateQuestionIndex + 1} de {selectedTemplate.fields.length}
+                Pergunta {templateQuestionIndex + 1} de {visibleFields.length}
               </span>
               <div className="flex items-center gap-2">
                 {isAdminMode && (

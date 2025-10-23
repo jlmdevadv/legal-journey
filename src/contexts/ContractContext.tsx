@@ -3,6 +3,7 @@ import { ContractTemplate } from '../data/contractTemplates';
 import { PartyData, ContractField } from '../types/template';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { getVisibleFields } from '@/utils/conditionalLogic';
 
 interface LocationData {
   city: string;
@@ -295,19 +296,23 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       setCurrentQuestionIndex(-3);
     } else if (currentQuestionIndex === -3) {
       // From location/date to first template question or summary
-      if (selectedTemplate && selectedTemplate.fields.length > 0) {
-        setCurrentQuestionIndex(-1000 + numberOfParties);
-      } else {
-        // No template questions, go to summary
-        setCurrentQuestionIndex(-1000 + numberOfParties + (selectedTemplate?.fields.length || 0));
+      if (selectedTemplate) {
+        const visibleFields = getVisibleFields(selectedTemplate.fields, formValues);
+        if (visibleFields.length > 0) {
+          setCurrentQuestionIndex(-1000 + numberOfParties);
+        } else {
+          // No visible fields, go to summary
+          setCurrentQuestionIndex(-1000 + numberOfParties);
+        }
       }
     } else if (selectedTemplate) {
+      const visibleFields = getVisibleFields(selectedTemplate.fields, formValues);
       const templateQuestionIndex = currentQuestionIndex + 1000 - numberOfParties;
-      if (templateQuestionIndex < selectedTemplate.fields.length - 1) {
+      if (templateQuestionIndex < visibleFields.length - 1) {
         setCurrentQuestionIndex(prev => prev + 1);
-      } else if (templateQuestionIndex === selectedTemplate.fields.length - 1) {
+      } else if (templateQuestionIndex === visibleFields.length - 1) {
         // Go to summary screen
-        setCurrentQuestionIndex(-1000 + numberOfParties + selectedTemplate.fields.length);
+        setCurrentQuestionIndex(-1000 + numberOfParties + visibleFields.length);
       }
     }
   };

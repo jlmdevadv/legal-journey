@@ -8,6 +8,18 @@ export interface PartyType {
   display_order: number;
 }
 
+export interface FieldCondition {
+  fieldId: string;           // ID do campo que controla a visibilidade
+  operator: 'equals' | 'notEquals' | 'contains' | 'greaterThan' | 'lessThan';
+  value: string | number;    // Valor que dispara a condição
+  logicOperator?: 'AND' | 'OR'; // Para múltiplas condições
+}
+
+export interface ConditionalLogic {
+  conditions: FieldCondition[];
+  action: 'show' | 'hide';   // Ação quando condições forem satisfeitas
+}
+
 export interface TemplateVersion {
   version: string;
   date?: string;
@@ -33,6 +45,7 @@ export interface ContractField {
   whyImportant?: string;
   videoLink?: string;
   aiAssistantLink?: string;
+  conditionalLogic?: ConditionalLogic; // Lógica de visibilidade condicional
 }
 
 export interface PartyData {

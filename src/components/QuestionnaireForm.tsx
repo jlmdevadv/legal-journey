@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useContract } from '../contexts/ContractContext';
 import QuestionnaireWelcome from './questionnaire/QuestionnaireWelcome';
 import QuestionnaireQuestion from './questionnaire/QuestionnaireQuestion';
@@ -9,6 +9,7 @@ import PartyDataCard from './questionnaire/PartyDataCard';
 import LocationDateQuestion from './questionnaire/LocationDateQuestion';
 import OtherPartiesQuestion from './questionnaire/OtherPartiesQuestion';
 import OtherPartiesNumberQuestion from './questionnaire/OtherPartiesNumberQuestion';
+import { getVisibleFields } from '@/utils/conditionalLogic';
 
 const QuestionnaireForm = () => {
   const { 
@@ -18,8 +19,15 @@ const QuestionnaireForm = () => {
     numberOfParties, 
     partiesData,
     numberOfOtherParties,
-    otherPartiesData
+    otherPartiesData,
+    formValues
   } = useContract();
+
+  // Calculate visible fields based on conditional logic
+  const visibleFields = useMemo(() => {
+    if (!selectedTemplate) return [];
+    return getVisibleFields(selectedTemplate.fields, formValues);
+  }, [selectedTemplate, formValues]);
 
   if (!selectedTemplate) return null;
 
@@ -87,12 +95,12 @@ const QuestionnaireForm = () => {
 
   // Show template questions (after parties are done)
   const templateQuestionIndex = currentQuestionIndex + 1000 - numberOfParties;
-  if (templateQuestionIndex >= 0 && templateQuestionIndex < selectedTemplate.fields.length) {
+  if (templateQuestionIndex >= 0 && templateQuestionIndex < visibleFields.length) {
     return <QuestionnaireQuestion />;
   }
 
   // Show summary screen
-  if (templateQuestionIndex === selectedTemplate.fields.length) {
+  if (templateQuestionIndex === visibleFields.length) {
     return <QuestionnaireSummary />;
   }
 
