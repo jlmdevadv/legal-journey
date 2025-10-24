@@ -652,10 +652,9 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const getContractingParties = (): string => {
-    const contractingParties = partiesData.filter(party => party.partyType === 'Contratante');
-    if (contractingParties.length === 0) return '';
+    if (partiesData.length === 0) return '';
     
-    const qualifications = contractingParties.map(formatPartyQualification);
+    const qualifications = partiesData.map(formatPartyQualification);
     return qualifications.join('\n\n');
   };
 
