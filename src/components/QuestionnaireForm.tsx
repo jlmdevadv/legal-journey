@@ -31,7 +31,7 @@ const QuestionnaireForm = () => {
   }, [selectedTemplate, formValues]);
 
   // Auto-scroll preview to match current question
-  useContractPreviewScroll(currentQuestionIndex, numberOfParties, numberOfOtherParties);
+  useContractPreviewScroll(currentQuestionIndex, numberOfParties, numberOfOtherParties, selectedTemplate, formValues);
 
   if (!selectedTemplate) return null;
 

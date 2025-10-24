@@ -1,9 +1,13 @@
 import { useEffect } from 'react';
+import { ContractTemplate } from '@/types/template';
+import { getVisibleFields } from '@/utils/conditionalLogic';
 
 export const useContractPreviewScroll = (
   currentQuestionIndex: number, 
   numberOfParties: number, 
-  numberOfOtherParties: number
+  numberOfOtherParties: number,
+  selectedTemplate: ContractTemplate | null,
+  formValues: Record<string, string>
 ) => {
   useEffect(() => {
     const scrollToSection = (sectionId: string) => {
@@ -42,8 +46,35 @@ export const useContractPreviewScroll = (
       // Local e data -> seção de local/data
       scrollToSection('preview-section-location');
     } else if (currentQuestionIndex >= -1000 + numberOfParties) {
-      // Perguntas do template (índices começam em -1000 + numberOfParties) -> corpo do contrato
-      scrollToSection('preview-section-body');
+      // Perguntas do template - scroll proporcional dentro do corpo
+      const section = document.getElementById('preview-section-body');
+      const scrollArea = document.querySelector('[data-contract-preview-scroll]');
+      
+      if (section && scrollArea && selectedTemplate) {
+        const scrollViewport = scrollArea.querySelector('[data-radix-scroll-area-viewport]');
+        const visibleFields = getVisibleFields(selectedTemplate.fields, formValues);
+        const templateQuestionIndex = currentQuestionIndex + 1000 - numberOfParties;
+        
+        if (scrollViewport && templateQuestionIndex >= 0 && templateQuestionIndex < visibleFields.length) {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.offsetHeight;
+          const progress = templateQuestionIndex / visibleFields.length;
+          const targetPosition = sectionTop + (sectionHeight * progress);
+          
+          scrollViewport.scrollTo({
+            top: Math.max(0, targetPosition - 100),
+            behavior: 'smooth'
+          });
+        } else if (scrollViewport && templateQuestionIndex === visibleFields.length) {
+          // Summary screen - scroll to end
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.offsetHeight;
+          scrollViewport.scrollTo({
+            top: sectionTop + sectionHeight - 100,
+            behavior: 'smooth'
+          });
+        }
+      }
     }
-  }, [currentQuestionIndex, numberOfParties, numberOfOtherParties]);
+  }, [currentQuestionIndex, numberOfParties, numberOfOtherParties, selectedTemplate, formValues]);
 };
