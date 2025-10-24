@@ -12,6 +12,7 @@ import { HelpCircle, Info, PlayCircle, Bot, ChevronDown, ChevronUp, BookOpen, Gr
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // FAQ data
 const faqData = [
@@ -239,7 +240,11 @@ const ContractContent = () => {
             <QuestionnaireForm />
           </div>
           <div className="md:w-1/2 print:w-full">
-            <ContractPreview />
+            <div className="sticky top-6">
+              <ScrollArea className="h-[calc(100vh-8rem)]" data-contract-preview-scroll>
+                <ContractPreview />
+              </ScrollArea>
+            </div>
           </div>
         </div>
       </div>

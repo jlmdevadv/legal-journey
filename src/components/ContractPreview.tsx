@@ -80,30 +80,40 @@ const ContractPreview = () => {
         }}
       >
         {/* 1. Título */}
-        <div className="mb-8 text-center">
+        <div id="preview-section-title" className="mb-8 text-center">
           <h1 className="font-bold text-xl text-blue-800 uppercase">
             {selectedTemplate.name}
           </h1>
         </div>
 
         {/* 2. Partes Principais */}
-        {contractingParties && renderSection('Partes Principais', contractingParties)}
+        <div id="preview-section-parties">
+          {contractingParties && renderSection('Partes Principais', contractingParties)}
+        </div>
 
         {/* 3. Outros Envolvidos */}
-        {otherInvolved && renderSection('Outros Envolvidos', otherInvolved)}
+        <div id="preview-section-other-parties">
+          {otherInvolved && renderSection('Outros Envolvidos', otherInvolved)}
+        </div>
 
         {/* 4. Corpo do Contrato */}
-        {renderSection('', filledTemplate)}
+        <div id="preview-section-body">
+          {renderSection('', filledTemplate)}
+        </div>
 
         {/* 5. Local e Data */}
-        {locationDate && (
-          <div className="mb-8 text-right">
-            <p className="text-gray-800">{locationDate}</p>
-          </div>
-        )}
+        <div id="preview-section-location">
+          {locationDate && (
+            <div className="mb-8 text-right">
+              <p className="text-gray-800">{locationDate}</p>
+            </div>
+          )}
+        </div>
 
         {/* 6. Assinaturas */}
-        {signatures && renderSection('Assinaturas', signatures)}
+        <div id="preview-section-signatures">
+          {signatures && renderSection('Assinaturas', signatures)}
+        </div>
       </div>
     </div>
   );

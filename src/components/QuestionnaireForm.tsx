@@ -10,6 +10,7 @@ import LocationDateQuestion from './questionnaire/LocationDateQuestion';
 import OtherPartiesQuestion from './questionnaire/OtherPartiesQuestion';
 import OtherPartiesNumberQuestion from './questionnaire/OtherPartiesNumberQuestion';
 import { getVisibleFields } from '@/utils/conditionalLogic';
+import { useContractPreviewScroll } from '@/hooks/useContractPreviewScroll';
 
 const QuestionnaireForm = () => {
   const { 
@@ -28,6 +29,9 @@ const QuestionnaireForm = () => {
     if (!selectedTemplate) return [];
     return getVisibleFields(selectedTemplate.fields, formValues);
   }, [selectedTemplate, formValues]);
+
+  // Auto-scroll preview to match current question
+  useContractPreviewScroll(currentQuestionIndex, numberOfParties, numberOfOtherParties);
 
   if (!selectedTemplate) return null;
 
