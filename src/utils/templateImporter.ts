@@ -127,7 +127,8 @@ export const convertJSONToTemplate = (json: TemplateImportJSON): ContractTemplat
     whyImportant: card.helpText?.why,
     videoLink: card.videoLink,
     aiAssistantLink: card.aiAssistantLink,
-    conditionalLogic: card.conditionalLogic
+    conditionalLogic: card.conditionalLogic,
+    repeatPerParty: card.repeatPerParty || false
   }));
   
   // Converter {{placeholders}} para [field-id] no texto do contrato

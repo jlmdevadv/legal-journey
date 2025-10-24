@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { ContractTemplate } from '../data/contractTemplates';
-import { PartyData, ContractField } from '../types/template';
+import { ContractTemplate as DataContractTemplate } from '../data/contractTemplates';
+import { PartyData, ContractField, RepeatableFieldResponse, ContractTemplate } from '../types/template';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { getVisibleFields } from '@/utils/conditionalLogic';
+import { getVisibleFields, getRepeatableFields } from '@/utils/conditionalLogic';
 
 interface LocationData {
   city: string;
@@ -28,6 +28,7 @@ interface ContractContextType {
   otherPartiesData: PartyData[];
   partyTypes: any[];
   locationData: LocationData;
+  repeatableFieldsData: RepeatableFieldResponse[];
   selectTemplate: (template: ContractTemplate) => void;
   updateFormValue: (fieldId: string, value: string) => void;
   resetForm: () => void;
@@ -56,6 +57,9 @@ interface ContractContextType {
   getSignatures: () => string;
   updateLocationData: (field: string, value: string) => void;
   getLocationDate: () => string;
+  updateRepeatableFieldValue: (fieldId: string, partyId: string, value: string) => void;
+  getRepeatableFieldValue: (fieldId: string, partyId: string) => string;
+  getRepeatableFieldFormattedText: (fieldId: string) => string;
 }
 
 const ContractContext = createContext<ContractContextType | undefined>(undefined);
@@ -83,6 +87,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     state: '',
     date: ''
   });
+  const [repeatableFieldsData, setRepeatableFieldsData] = useState<RepeatableFieldResponse[]>([]);
 
   // Load templates and party types from Supabase on mount
   useEffect(() => {
@@ -233,6 +238,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     setPartiesData([]);
     setCurrentPartyIndex(0);
     setLocationData({ city: '', state: '', date: '' });
+    setRepeatableFieldsData([]);
   };
 
   const updateFormValue = (fieldId: string, value: string) => {
@@ -251,6 +257,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     setPartiesData([]);
     setCurrentPartyIndex(0);
     setLocationData({ city: '', state: '', date: '' });
+    setRepeatableFieldsData([]);
   };
 
   const startQuestionnaire = () => {
@@ -281,7 +288,17 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       if (option === 'withOtherParties') {
         setCurrentQuestionIndex(-5); // Go to number question
       } else {
-        setCurrentQuestionIndex(-3); // Skip to location/date
+        // Check if there are repeatable fields
+        if (selectedTemplate) {
+          const repeatableFields = getRepeatableFields(selectedTemplate.fields);
+          if (repeatableFields.length > 0 && numberOfParties > 0) {
+            setCurrentQuestionIndex(-3000); // Go to first repeatable field
+          } else {
+            setCurrentQuestionIndex(-3); // Skip to location/date
+          }
+        } else {
+          setCurrentQuestionIndex(-3);
+        }
       }
     } else if (currentQuestionIndex === -5) {
       // From other parties number to first other party data
@@ -292,12 +309,39 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       // Move to next other party
       setCurrentQuestionIndex(prev => prev + 1);
     } else if (currentQuestionIndex === -2000 + numberOfOtherParties - 1) {
-      // From last other party to location/date
-      setCurrentQuestionIndex(-3);
-    } else if (currentQuestionIndex === -3) {
-      // From location/date to first template question or summary
+      // From last other party to repeatable fields (if any)
       if (selectedTemplate) {
-        const visibleFields = getVisibleFields(selectedTemplate.fields, formValues);
+        const repeatableFields = getRepeatableFields(selectedTemplate.fields);
+        if (repeatableFields.length > 0 && numberOfParties > 0) {
+          setCurrentQuestionIndex(-3000);
+        } else {
+          setCurrentQuestionIndex(-3);
+        }
+      } else {
+        setCurrentQuestionIndex(-3);
+      }
+    } else if (currentQuestionIndex >= -3000) {
+      // Navigating through repeatable fields
+      if (selectedTemplate) {
+        const repeatableFields = getRepeatableFields(selectedTemplate.fields);
+        const totalRepeatableSteps = numberOfParties * repeatableFields.length;
+        const repeatableIndex = currentQuestionIndex + 3000;
+        
+        if (repeatableIndex < totalRepeatableSteps - 1) {
+          // Next repeatable field
+          setCurrentQuestionIndex(prev => prev + 1);
+        } else {
+          // Finished repeatable fields, go to location/date
+          setCurrentQuestionIndex(-3);
+        }
+      } else {
+        setCurrentQuestionIndex(-3);
+      }
+    } else if (currentQuestionIndex === -3) {
+      // From location/date to first non-repeatable template question
+      if (selectedTemplate) {
+        const nonRepeatableFields = selectedTemplate.fields.filter(f => !f.repeatPerParty);
+        const visibleFields = getVisibleFields(nonRepeatableFields, formValues);
         if (visibleFields.length > 0) {
           setCurrentQuestionIndex(-1000 + numberOfParties);
         } else {
@@ -306,7 +350,8 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     } else if (selectedTemplate) {
-      const visibleFields = getVisibleFields(selectedTemplate.fields, formValues);
+      const nonRepeatableFields = selectedTemplate.fields.filter(f => !f.repeatPerParty);
+      const visibleFields = getVisibleFields(nonRepeatableFields, formValues);
       const templateQuestionIndex = currentQuestionIndex + 1000 - numberOfParties;
       if (templateQuestionIndex < visibleFields.length - 1) {
         setCurrentQuestionIndex(prev => prev + 1);
@@ -341,14 +386,33 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     } else if (currentQuestionIndex > -2000 && currentQuestionIndex < -2000 + numberOfOtherParties) {
       // Move to previous other party
       setCurrentQuestionIndex(prev => prev - 1);
-    } else if (currentQuestionIndex === -3) {
-      // From location/date back
+    } else if (currentQuestionIndex === -3000) {
+      // From first repeatable field back to previous section
       if (numberOfOtherParties > 0) {
         // Back to last other party
         setCurrentQuestionIndex(-2000 + numberOfOtherParties - 1);
       } else {
         // Back to "other parties" question
         setCurrentQuestionIndex(-4);
+      }
+    } else if (currentQuestionIndex > -3000 && currentQuestionIndex < -3000 + (selectedTemplate ? numberOfParties * getRepeatableFields(selectedTemplate.fields).length : 0)) {
+      // Navigate back through repeatable fields
+      setCurrentQuestionIndex(prev => prev - 1);
+    } else if (currentQuestionIndex === -3) {
+      // From location/date back
+      if (selectedTemplate) {
+        const repeatableFields = getRepeatableFields(selectedTemplate.fields);
+        if (repeatableFields.length > 0 && numberOfParties > 0) {
+          // Back to last repeatable field
+          const lastRepeatableIndex = -3000 + (numberOfParties * repeatableFields.length) - 1;
+          setCurrentQuestionIndex(lastRepeatableIndex);
+        } else if (numberOfOtherParties > 0) {
+          // Back to last other party
+          setCurrentQuestionIndex(-2000 + numberOfOtherParties - 1);
+        } else {
+          // Back to "other parties" question
+          setCurrentQuestionIndex(-4);
+        }
       }
     } else if (currentQuestionIndex === -1000 + numberOfParties) {
       // From first template question back to location/date
@@ -365,12 +429,84 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Funções para campos repetíveis
+  const updateRepeatableFieldValue = (fieldId: string, partyId: string, value: string) => {
+    setRepeatableFieldsData(prev => {
+      const existingFieldIndex = prev.findIndex(f => f.fieldId === fieldId);
+      
+      if (existingFieldIndex === -1) {
+        // Campo ainda não existe, criar novo
+        const party = partiesData.find(p => p.id === partyId);
+        return [...prev, {
+          fieldId,
+          responses: [{
+            partyId,
+            partyName: party?.fullName || '',
+            value
+          }]
+        }];
+      } else {
+        // Campo existe, atualizar ou adicionar resposta da parte
+        const updated = [...prev];
+        const field = { ...updated[existingFieldIndex] };
+        const responseIndex = field.responses.findIndex(r => r.partyId === partyId);
+        
+        if (responseIndex === -1) {
+          // Parte ainda não respondeu, adicionar
+          const party = partiesData.find(p => p.id === partyId);
+          field.responses.push({
+            partyId,
+            partyName: party?.fullName || '',
+            value
+          });
+        } else {
+          // Atualizar resposta existente
+          field.responses[responseIndex].value = value;
+        }
+        
+        updated[existingFieldIndex] = field;
+        return updated;
+      }
+    });
+  };
+
+  const getRepeatableFieldValue = (fieldId: string, partyId: string): string => {
+    const field = repeatableFieldsData.find(f => f.fieldId === fieldId);
+    if (!field) return '';
+    
+    const response = field.responses.find(r => r.partyId === partyId);
+    return response?.value || '';
+  };
+
+  const getRepeatableFieldFormattedText = (fieldId: string): string => {
+    const field = repeatableFieldsData.find(f => f.fieldId === fieldId);
+    if (!field || field.responses.length === 0) return `[${fieldId}]`;
+    
+    // Formatar: "Nome da Parte: Resposta\n"
+    return field.responses
+      .filter(r => r.value.trim() !== '') // Ignorar respostas vazias
+      .map(r => `${r.partyName}: ${r.value}`)
+      .join('\n');
+  };
+
   const fillContractTemplate = (): string => {
     if (!selectedTemplate) return '';
     
     let filledTemplate = selectedTemplate.template;
     
-    // Replace all field placeholders with their values
+    // 1. Replace campos repetíveis PRIMEIRO
+    if (selectedTemplate.fields) {
+      selectedTemplate.fields
+        .filter(field => field.repeatPerParty === true)
+        .forEach(field => {
+          const formattedText = getRepeatableFieldFormattedText(field.id);
+          const escapedFieldId = field.id.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+          const placeholderPattern = new RegExp(`\\[${escapedFieldId}\\]`, 'g');
+          filledTemplate = filledTemplate.replace(placeholderPattern, formattedText);
+        });
+    }
+    
+    // 2. Replace campos normais
     Object.entries(formValues).forEach(([fieldId, value]) => {
       // Escape special regex characters in fieldId to use as literal string
       const escapedFieldId = fieldId.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
@@ -378,7 +514,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       filledTemplate = filledTemplate.replace(placeholderPattern, value || `[${fieldId}]`);
     });
     
-    // Replace location and date placeholders (automatic system fields)
+    // 3. Replace location and date placeholders (automatic system fields)
     filledTemplate = filledTemplate.replace(/\[city\]/g, locationData.city || '[city]');
     filledTemplate = filledTemplate.replace(/\[state\]/g, locationData.state || '[state]');
     filledTemplate = filledTemplate.replace(/\[signing-date\]/g, locationData.date ? formatDateToBrazilian(locationData.date) : '[signing-date]');
@@ -738,6 +874,10 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         locationData,
         updateLocationData: updateLocationDataFunc,
         getLocationDate,
+        repeatableFieldsData,
+        updateRepeatableFieldValue,
+        getRepeatableFieldValue,
+        getRepeatableFieldFormattedText,
       }}
     >
       {children}

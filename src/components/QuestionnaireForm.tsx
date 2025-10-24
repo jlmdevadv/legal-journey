@@ -27,8 +27,13 @@ const QuestionnaireForm = () => {
   // Calculate visible fields based on conditional logic
   const visibleFields = useMemo(() => {
     if (!selectedTemplate) return [];
-    return getVisibleFields(selectedTemplate.fields, formValues);
+    return getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
   }, [selectedTemplate, formValues]);
+
+  const repeatableFields = useMemo(() => {
+    if (!selectedTemplate) return [];
+    return getRepeatableFields(selectedTemplate.fields);
+  }, [selectedTemplate]);
 
   // Auto-scroll preview to match current question
   useContractPreviewScroll(currentQuestionIndex, numberOfParties, numberOfOtherParties, selectedTemplate, formValues);

@@ -268,6 +268,20 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: F
                 <Label htmlFor="field-required">Campo obrigatório</Label>
               </div>
 
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="repeat-per-party"
+                  checked={fieldData.repeatPerParty || false}
+                  onCheckedChange={(checked) => setFieldData(prev => ({ ...prev, repeatPerParty: !!checked }))}
+                />
+                <Label htmlFor="repeat-per-party" className="cursor-pointer">
+                  <span className="font-medium">Repetir esta pergunta para cada Parte Principal</span>
+                  <span className="block text-xs text-muted-foreground mt-1">
+                    O campo será exibido uma vez para cada parte do contrato
+                  </span>
+                </Label>
+              </div>
+
               {/* Options for select type */}
               {fieldData.type === 'select' && (
                 <div>

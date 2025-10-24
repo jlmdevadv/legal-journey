@@ -27,6 +27,8 @@ export interface ContractField {
   aiAssistantLink?: string;
   helpText?: string;
   helpVideo?: string;
+  conditionalLogic?: any;
+  repeatPerParty?: boolean;
 }
 
 export const contractTemplates: ContractTemplate[] = [

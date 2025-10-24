@@ -46,6 +46,16 @@ export interface ContractField {
   videoLink?: string;
   aiAssistantLink?: string;
   conditionalLogic?: ConditionalLogic; // Lógica de visibilidade condicional
+  repeatPerParty?: boolean; // Campo repetível para cada parte principal
+}
+
+export interface RepeatableFieldResponse {
+  fieldId: string;
+  responses: {
+    partyId: string;
+    partyName: string;
+    value: string;
+  }[];
 }
 
 export interface PartyData {

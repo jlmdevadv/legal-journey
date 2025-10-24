@@ -64,3 +64,20 @@ export const getVisibleFields = (
     evaluateConditionalLogic(field.conditionalLogic, formValues)
   );
 };
+
+/**
+ * Retorna apenas os campos marcados para repetição por parte
+ */
+export const getRepeatableFields = (fields: ContractField[]): ContractField[] => {
+  return fields.filter(field => field.repeatPerParty === true);
+};
+
+/**
+ * Retorna campos visíveis E não repetíveis
+ */
+export const getNonRepeatableVisibleFields = (
+  fields: ContractField[],
+  formValues: Record<string, string>
+): ContractField[] => {
+  return getVisibleFields(fields, formValues).filter(field => !field.repeatPerParty);
+};

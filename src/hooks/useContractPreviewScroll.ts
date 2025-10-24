@@ -42,6 +42,9 @@ export const useContractPreviewScroll = (
     } else if (currentQuestionIndex >= -2000 && currentQuestionIndex < -2000 + numberOfOtherParties) {
       // Preenchendo dados de outras partes -> seção de outras partes
       scrollToSection('preview-section-other-parties');
+    } else if (currentQuestionIndex >= -3000 && currentQuestionIndex < -3) {
+      // Campos repetíveis -> corpo do contrato
+      scrollToSection('preview-section-body');
     } else if (currentQuestionIndex === -3) {
       // Local e data -> seção de local/data
       scrollToSection('preview-section-location');
