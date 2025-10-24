@@ -3,7 +3,7 @@ import { ContractTemplate as DataContractTemplate } from '../data/contractTempla
 import { PartyData, ContractField, RepeatableFieldResponse, ContractTemplate } from '../types/template';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { getVisibleFields, getRepeatableFields } from '@/utils/conditionalLogic';
+import { getVisibleFields, getRepeatableFields, getNonRepeatableVisibleFields } from '@/utils/conditionalLogic';
 
 interface LocationData {
   city: string;
@@ -338,15 +338,15 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         setCurrentQuestionIndex(-3);
       }
     } else if (currentQuestionIndex === -3) {
-      // From location/date to first non-repeatable template question
+      // From location/date to first non-repeatable template question or summary
       if (selectedTemplate) {
         const nonRepeatableFields = selectedTemplate.fields.filter(f => !f.repeatPerParty);
-        const visibleFields = getVisibleFields(nonRepeatableFields, formValues);
+        const visibleFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
         if (visibleFields.length > 0) {
           setCurrentQuestionIndex(-1000 + numberOfParties);
         } else {
-          // No visible fields, go to summary
-          setCurrentQuestionIndex(-1000 + numberOfParties);
+          // No visible fields, go directly to summary
+          setCurrentQuestionIndex(-1000 + numberOfParties + visibleFields.length);
         }
       }
     } else if (selectedTemplate) {

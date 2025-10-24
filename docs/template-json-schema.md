@@ -2,7 +2,7 @@
 
 ## Visão Geral
 
-Este documento descreve o formato JSON utilizado para importar templates de contratos na plataforma. Com este formato, você pode criar templates complexos em segundos, incluindo campos, textos de ajuda, lógica condicional e muito mais.
+Este documento descreve o formato JSON utilizado para importar templates de contratos na plataforma. Com este formato, você pode criar templates complexos em segundos, incluindo campos, textos de ajuda, lógica condicional, **campos repetíveis por parte** e muito mais.
 
 ## Estrutura Completa do JSON
 
@@ -25,6 +25,7 @@ Este documento descreve o formato JSON utilizado para importar templates de cont
       },
       "videoLink": "string (opcional)",
       "aiAssistantLink": "string (opcional)",
+      "repeatPerParty": "boolean (opcional, padrão: false)",
       "conditionalLogic": {
         "conditions": [
           {
@@ -67,6 +68,7 @@ Este documento descreve o formato JSON utilizado para importar templates de cont
 | `helpText` | object | ❌ Não | Textos de ajuda "como preencher" e "por que é importante" |
 | `videoLink` | string | ❌ Não | URL de vídeo explicativo |
 | `aiAssistantLink` | string | ❌ Não | URL para assistente de IA |
+| `repeatPerParty` | boolean | ❌ Não | Se `true`, campo será preenchido uma vez por parte principal (padrão: `false`) |
 | `conditionalLogic` | object | ❌ Não | Regras de visibilidade condicional |
 
 ### Tipos de Campo Válidos
@@ -121,6 +123,62 @@ A lógica condicional permite mostrar ou ocultar campos baseado nas respostas de
 - `AND` - Todas as condições devem ser verdadeiras
 - `OR` - Pelo menos uma condição deve ser verdadeira
 
+### Campos Repetíveis por Parte (repeatPerParty)
+
+Campos marcados com `repeatPerParty: true` são preenchidos **individualmente para cada parte principal do contrato**.
+
+**Como funciona:**
+1. O usuário primeiro define quantas partes principais terá o contrato
+2. Preenche os dados básicos de cada parte (nome, CPF, endereço, etc.)
+3. **Depois**, para cada campo com `repeatPerParty: true`, o sistema apresenta uma tela para cada parte
+
+**Quando usar:**
+- ✅ Dados bancários individuais
+- ✅ E-mails específicos de cada parte
+- ✅ Telefones de contato individuais
+- ✅ Qualificações profissionais de cada parte
+- ✅ Endereços de entrega específicos
+- ❌ Não use para informações gerais do contrato (valor total, prazo, objeto, etc.)
+
+**No texto do contrato:**
+- Use `{{campo_id_formatted}}` para inserir os valores formatados automaticamente
+- O sistema gera automaticamente uma lista formatada com o nome de cada parte e seu valor
+
+**Exemplo prático:**
+
+```json
+{
+  "id": "dados_bancarios",
+  "title": "Dados Bancários para Recebimento",
+  "type": "text",
+  "repeatPerParty": true,
+  "placeholder": "Banco, Agência, Conta",
+  "helpText": {
+    "how": "Informe banco, agência e número da conta corrente",
+    "why": "Necessário para que cada parte receba seus pagamentos"
+  }
+}
+```
+
+No `contractText`, use:
+```
+CLÁUSULA X - PAGAMENTOS
+
+Os pagamentos serão realizados conforme dados bancários abaixo:
+
+{{dados_bancarios_formatted}}
+```
+
+**Resultado no contrato gerado:**
+```
+CLÁUSULA X - PAGAMENTOS
+
+Os pagamentos serão realizados conforme dados bancários abaixo:
+
+- João Silva: Banco Itaú, Agência 1234, Conta 56789-0
+- Maria Santos: Banco Bradesco, Agência 9876, Conta 54321-1
+```
+
 ## Exemplos Práticos
 
 ### Exemplo 1: Template Básico (MOU para Startups)
@@ -166,7 +224,63 @@ A lógica condicional permite mostrar ou ocultar campos baseado nas respostas de
 }
 ```
 
-### Exemplo 2: Template com Lógica Condicional (NDA)
+### Exemplo 2: Template com Campos Repetíveis
+
+```json
+{
+  "templateName": "Contrato de Prestação de Serviços",
+  "templateDescription": "Contrato com informações específicas para cada contratante",
+  "contractText": "CONTRATO DE PRESTAÇÃO DE SERVIÇOS\n\n{{contracting_parties}}\n\nOBJETO\n\nO presente contrato tem por objeto: {{objeto_servico}}\n\nDADOS PARA PAGAMENTO\n\n{{dados_bancarios_formatted}}\n\nVALOR E FORMA DE PAGAMENTO\n\nO valor total é de {{valor_total}} a ser pago conforme: {{forma_pagamento}}\n\n{{location_date}}\n\n{{signatures}}",
+  "cards": [
+    {
+      "id": "objeto_servico",
+      "title": "Descreva o objeto/escopo dos serviços",
+      "type": "textarea",
+      "required": true,
+      "placeholder": "Ex: Desenvolvimento de aplicativo mobile...",
+      "helpText": {
+        "how": "Descreva detalhadamente quais serviços serão prestados",
+        "why": "Define claramente o escopo do contrato e evita mal-entendidos"
+      }
+    },
+    {
+      "id": "dados_bancarios",
+      "title": "Dados Bancários para Pagamento",
+      "type": "text",
+      "required": true,
+      "repeatPerParty": true,
+      "placeholder": "Banco, Agência, Conta",
+      "helpText": {
+        "how": "Informe: Banco, Agência (com dígito) e Conta Corrente (com dígito)",
+        "why": "Cada contratante receberá pagamentos em sua conta individual. Informações incorretas podem atrasar pagamentos."
+      }
+    },
+    {
+      "id": "valor_total",
+      "title": "Valor total do contrato",
+      "type": "text",
+      "required": true,
+      "placeholder": "R$ 15.000,00",
+      "helpText": {
+        "how": "Informe o valor total em reais, com vírgula para centavos",
+        "why": "Define a remuneração total pelos serviços prestados"
+      }
+    },
+    {
+      "id": "forma_pagamento",
+      "title": "Forma e condições de pagamento",
+      "type": "textarea",
+      "required": true,
+      "placeholder": "Ex: 30% na assinatura, 40% na entrega do protótipo, 30% na conclusão",
+      "helpText": {
+        "how": "Descreva como e quando os pagamentos serão realizados",
+        "why": "Estabelece clareza sobre o cronograma financeiro do projeto"
+      }
+    }
+  ],
+  "usePartySystem": true
+}
+```
 
 ```json
 {
@@ -236,7 +350,7 @@ A lógica condicional permite mostrar ou ocultar campos baseado nas respostas de
 }
 ```
 
-### Exemplo 3: Template com Múltiplas Condições
+### Exemplo 3: Template com Lógica Condicional (NDA)
 
 ```json
 {
@@ -420,7 +534,7 @@ Você é um especialista em criar templates de contratos. Gere um arquivo JSON c
 {
   "templateName": "Nome do Contrato",
   "templateDescription": "Descrição breve",
-  "contractText": "Texto do contrato com {{placeholders}}",
+  "contractText": "Texto do contrato com {{placeholders}} e {{campo_repetivel_formatted}} para campos repetíveis",
   "cards": [
     {
       "id": "identificador_unico",
@@ -428,6 +542,7 @@ Você é um especialista em criar templates de contratos. Gere um arquivo JSON c
       "type": "text|textarea|select|number|email|tel|date",
       "placeholder": "Exemplo de preenchimento (opcional)",
       "required": true,
+      "repeatPerParty": false,
       "helpText": {
         "how": "Como preencher este campo",
         "why": "Por que este campo é importante"
@@ -436,12 +551,20 @@ Você é um especialista em criar templates de contratos. Gere um arquivo JSON c
   ]
 }
 
+IMPORTANTE - Campos Repetíveis:
+- Use "repeatPerParty": true para informações que devem ser coletadas de cada parte individualmente
+- Exemplos: dados bancários, e-mails específicos, telefones individuais, qualificações
+- No contractText, use {{campo_id_formatted}} para campos repetíveis
+- Campos não repetíveis são preenchidos uma única vez no fluxo geral
+
 Crie um template completo para: [TIPO DE CONTRATO DESEJADO]
 
 Requisitos:
 - Mínimo de 5 campos relevantes
 - Incluir helpText em todos os campos
 - Usar placeholders {{id}} no contractText
+- Identificar corretamente quais campos devem ser repetPerParty
+- Para campos repetíveis, usar {{id_formatted}} no texto do contrato
 - Garantir que todos os placeholders tenham cards correspondentes
 - Usar tipos de campo apropriados
 ```
@@ -476,7 +599,13 @@ Requisitos:
    - Teste todas as combinações de condições
    - Prefira lógica simples (poucas condições)
 
-5. **Validação antes da Importação:**
+5. **Campos Repetíveis:**
+   - Identifique informações que devem ser coletadas individualmente
+   - Use `repeatPerParty: true` apenas para dados específicos de cada parte
+   - No texto do contrato, lembre-se de usar `{{campo_id_formatted}}` para campos repetíveis
+   - Teste o fluxo com diferentes números de partes
+
+6. **Validação antes da Importação:**
    - Valide o JSON em JSONLint.com
    - Revise todos os IDs e placeholders
    - Teste o template após importar
@@ -490,6 +619,10 @@ Requisitos:
 
 ## Changelog
 
+- **v1.1** (2025-01) - Adição de campos repetíveis por parte
+  - Novo campo `repeatPerParty` para coletar informações individuais
+  - Suporte a formatação automática com `{{campo_id_formatted}}`
+  - Documentação e exemplos atualizados
 - **v1.0** (2025-01) - Versão inicial da especificação
   - Suporte completo a lógica condicional
   - Validação automática de placeholders
