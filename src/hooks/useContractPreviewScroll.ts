@@ -41,8 +41,8 @@ export const useContractPreviewScroll = (
     } else if (currentQuestionIndex === -3) {
       // Local e data -> seção de local/data
       scrollToSection('preview-section-location');
-    } else if (currentQuestionIndex >= 0) {
-      // Perguntas do template -> corpo do contrato
+    } else if (currentQuestionIndex >= -1000 + numberOfParties) {
+      // Perguntas do template (índices começam em -1000 + numberOfParties) -> corpo do contrato
       scrollToSection('preview-section-body');
     }
   }, [currentQuestionIndex, numberOfParties, numberOfOtherParties]);
