@@ -9,7 +9,8 @@ import PartyDataCard from './questionnaire/PartyDataCard';
 import LocationDateQuestion from './questionnaire/LocationDateQuestion';
 import OtherPartiesQuestion from './questionnaire/OtherPartiesQuestion';
 import OtherPartiesNumberQuestion from './questionnaire/OtherPartiesNumberQuestion';
-import { getVisibleFields } from '@/utils/conditionalLogic';
+import RepeatableFieldCard from './questionnaire/RepeatableFieldCard';
+import { getNonRepeatableVisibleFields, getRepeatableFields } from '@/utils/conditionalLogic';
 import { useContractPreviewScroll } from '@/hooks/useContractPreviewScroll';
 
 const QuestionnaireForm = () => {
@@ -94,6 +95,38 @@ const QuestionnaireForm = () => {
           title={`Demais Partes ${partyIndex + 1}`}
         />
       );
+    }
+  }
+
+  // Show repeatable fields (indices -3000 to -3000 + totalRepeatableSteps - 1)
+  if (currentQuestionIndex >= -3000) {
+    const totalRepeatableSteps = numberOfParties * repeatableFields.length;
+    const repeatableIndex = currentQuestionIndex + 3000;
+    
+    if (repeatableIndex >= 0 && repeatableIndex < totalRepeatableSteps) {
+      const partyIndex = Math.floor(repeatableIndex / repeatableFields.length);
+      const fieldIndex = repeatableIndex % repeatableFields.length;
+      const currentField = repeatableFields[fieldIndex];
+      const currentParty = partiesData[partyIndex];
+      
+      if (currentField && currentParty) {
+        const isLastField = fieldIndex === repeatableFields.length - 1;
+        const isLastParty = partyIndex === numberOfParties - 1;
+        
+        return (
+          <RepeatableFieldCard
+            field={currentField}
+            partyId={currentParty.id}
+            partyName={currentParty.fullName}
+            partyIndex={partyIndex}
+            totalParties={numberOfParties}
+            fieldIndex={fieldIndex}
+            totalFields={repeatableFields.length}
+            isLastField={isLastField}
+            isLastParty={isLastParty}
+          />
+        );
+      }
     }
   }
 

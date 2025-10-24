@@ -28,6 +28,7 @@ export interface TemplateImportJSON {
       }>;
       action: 'show' | 'hide';
     };
+    repeatPerParty?: boolean;
   }>;
   usePartySystem?: boolean;
 }
