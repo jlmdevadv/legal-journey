@@ -417,9 +417,16 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     const templateWithVersion = initializeTemplateVersion(template);
     
     try {
+      // Converter camelCase para snake_case para o Supabase
+      const supabaseTemplate = {
+        ...templateWithVersion,
+        use_party_system: templateWithVersion.usePartySystem,
+      };
+      delete (supabaseTemplate as any).usePartySystem;
+      
       const { data, error } = await supabase
         .from('contract_templates')
-        .insert([templateWithVersion as any])
+        .insert([supabaseTemplate as any])
         .select();
       
       if (error) throw error;

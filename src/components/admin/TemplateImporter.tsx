@@ -74,9 +74,7 @@ const TemplateImporter = ({ open, onOpenChange }: TemplateImporterProps) => {
       
       await addCustomTemplate(template);
       
-      toast.success(`Template "${template.name}" importado com sucesso!`);
-      
-      // Reset e fechar
+      // Reset e fechar - o toast de sucesso já é mostrado pelo addCustomTemplate
       setJsonContent('');
       setValidationResult(null);
       onOpenChange(false);
