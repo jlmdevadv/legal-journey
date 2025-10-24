@@ -340,14 +340,18 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     } else if (currentQuestionIndex === -3) {
       // From location/date to first non-repeatable template question or summary
       if (selectedTemplate) {
-        const nonRepeatableFields = selectedTemplate.fields.filter(f => !f.repeatPerParty);
         const visibleFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
-        if (visibleFields.length > 0) {
-          setCurrentQuestionIndex(-1000 + numberOfParties);
-        } else {
-          // No visible fields, go directly to summary
-          setCurrentQuestionIndex(-1000 + numberOfParties + visibleFields.length);
-        }
+        const nextIndex = -1000 + numberOfParties;
+        
+        console.log('[DEBUG] After location/date:', {
+          visibleFieldsLength: visibleFields.length,
+          numberOfParties,
+          nextIndex,
+          calculatedTemplateIndex: nextIndex + 1000 - numberOfParties
+        });
+        
+        // Always go to the same index - QuestionnaireForm will decide whether to show question or summary
+        setCurrentQuestionIndex(nextIndex);
       }
     } else if (selectedTemplate) {
       const nonRepeatableFields = selectedTemplate.fields.filter(f => !f.repeatPerParty);

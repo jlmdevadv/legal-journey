@@ -132,19 +132,40 @@ const QuestionnaireForm = () => {
 
   // Show location and date question
   if (currentQuestionIndex === -3) {
+    console.log('[DEBUG] Showing LocationDateQuestion');
     return <LocationDateQuestion />;
   }
 
-  // Show template questions (after parties are done)
+  // Calculate template question index
   const templateQuestionIndex = currentQuestionIndex + 1000 - numberOfParties;
+  
+  console.log('[DEBUG] QuestionnaireForm render:', {
+    currentQuestionIndex,
+    templateQuestionIndex,
+    visibleFieldsLength: visibleFields.length,
+    repeatableFieldsLength: repeatableFields.length,
+    numberOfParties,
+    shouldShowQuestion: templateQuestionIndex >= 0 && templateQuestionIndex < visibleFields.length,
+    shouldShowSummary: templateQuestionIndex === visibleFields.length
+  });
+
+  // Show template questions (after parties are done)
   if (templateQuestionIndex >= 0 && templateQuestionIndex < visibleFields.length) {
+    console.log('[DEBUG] Showing QuestionnaireQuestion');
     return <QuestionnaireQuestion />;
   }
 
   // Show summary screen
   if (templateQuestionIndex === visibleFields.length) {
+    console.log('[DEBUG] Showing QuestionnaireSummary');
     return <QuestionnaireSummary />;
   }
+
+  console.warn('[DEBUG] No component matched! Returning null', {
+    currentQuestionIndex,
+    templateQuestionIndex,
+    visibleFieldsLength: visibleFields.length
+  });
 
   return null;
 };
