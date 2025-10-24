@@ -149,7 +149,7 @@ export const convertJSONToTemplate = (json: TemplateImportJSON): ContractTemplat
     template: templateText,
     fields,
     version: {
-      version: '1.0',
+      version: 'v. 1.0',
       date: today,
       createdDate: today
     },

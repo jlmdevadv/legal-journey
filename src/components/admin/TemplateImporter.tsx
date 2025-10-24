@@ -82,7 +82,22 @@ const TemplateImporter = ({ open, onOpenChange }: TemplateImporterProps) => {
       onOpenChange(false);
     } catch (error) {
       console.error('Erro ao importar template:', error);
-      toast.error('Erro ao importar template: ' + (error as Error).message);
+      
+      // Extrair mensagem de erro mais específica
+      let errorMessage = 'Erro desconhecido ao importar template';
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Se for erro do Supabase, tentar extrair detalhes
+        if (error.message.includes('duplicate key') || error.message.includes('unique constraint')) {
+          errorMessage = 'Template com este nome já existe. Por favor, use outro nome.';
+        } else if (error.message.includes('foreign key') || error.message.includes('violates')) {
+          errorMessage = 'Erro de validação no banco de dados. Verifique os dados do template.';
+        }
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsImporting(false);
     }
