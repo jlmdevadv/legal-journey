@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Save, Plus, Info, Keyboard, Clock, Eye, Edit3 } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Info, Keyboard, Clock, Eye, Edit3, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import FieldConfigModal from './FieldConfigModal';
 import TemplateVersionHistory from './TemplateVersionHistory';
@@ -13,6 +13,7 @@ import SelectionConfirmationModal from './SelectionConfirmationModal';
 import { useKeyboardSelection } from '../../hooks/useKeyboardSelection';
 import { detectPlaceholders, humanizeVariableName, sanitizeVariableName } from '../../utils/templateUtils';
 import { incrementVersion, createNewVersion, restoreVersion } from '../../utils/versionUtils';
+import { downloadTemplateJSON } from '../../utils/templateExporter';
 
 interface TemplateEditorProps {
   template: ContractTemplate;
@@ -338,6 +339,17 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
           >
             <Clock className="w-4 h-4" />
             Histórico
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              downloadTemplateJSON(editingTemplate);
+              toast.success('JSON exportado com sucesso!');
+            }}
+            className="flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            Exportar JSON
           </Button>
           <Button
             onClick={() => setShowSaveVersionDialog(true)}

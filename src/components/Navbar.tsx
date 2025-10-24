@@ -1,10 +1,11 @@
 
 import React, { useState } from 'react';
-import { FileText, Shield, Plus } from 'lucide-react';
+import { FileText, Shield, Plus, FileJson } from 'lucide-react';
 import { useContract } from '../contexts/ContractContext';
 import { Button } from '@/components/ui/button';
 import AdminLogin from './admin/AdminLogin';
 import AddTemplateModal from './admin/AddTemplateModal';
+import TemplateImporter from './admin/TemplateImporter';
 
 const Navbar = () => {
   const { 
@@ -14,6 +15,7 @@ const Navbar = () => {
   } = useContract();
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [showAddTemplate, setShowAddTemplate] = useState(false);
+  const [showImporter, setShowImporter] = useState(false);
 
   const handleAdminButtonClick = () => {
     if (isAdminLoggedIn) {
@@ -65,14 +67,25 @@ const Navbar = () => {
               </Button>
               
               {isAdminMode && (
-                <Button
-                  onClick={() => setShowAddTemplate(true)}
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-                  size="sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  Adicionar Modelo
-                </Button>
+                <>
+                  <Button
+                    onClick={() => setShowAddTemplate(true)}
+                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                    size="sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Adicionar Modelo
+                  </Button>
+                  <Button
+                    onClick={() => setShowImporter(true)}
+                    variant="secondary"
+                    className="flex items-center gap-2"
+                    size="sm"
+                  >
+                    <FileJson className="w-4 h-4" />
+                    Importar JSON
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -87,6 +100,11 @@ const Navbar = () => {
       <AddTemplateModal 
         open={showAddTemplate} 
         onOpenChange={setShowAddTemplate} 
+      />
+      
+      <TemplateImporter 
+        open={showImporter} 
+        onOpenChange={setShowImporter}
       />
     </>
   );
