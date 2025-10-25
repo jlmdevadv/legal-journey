@@ -158,8 +158,17 @@ const QuestionnaireForm = () => {
 
   // Show summary screen
   if (templateQuestionIndex === visibleFields.length) {
-    console.log('[DEBUG] Showing QuestionnaireSummary');
+    console.log('[DEBUG] Showing QuestionnaireSummary (calculated)');
     return <QuestionnaireSummary />;
+  }
+
+  if (templateQuestionIndex > visibleFields.length) {
+    console.error('[DEBUG] ERROR: templateQuestionIndex exceeds visibleFields!', {
+      currentQuestionIndex,
+      templateQuestionIndex,
+      visibleFieldsLength: visibleFields.length,
+      numberOfParties
+    });
   }
 
   console.warn('[DEBUG] No component matched! Returning null', {

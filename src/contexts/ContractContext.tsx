@@ -369,8 +369,15 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         setCurrentQuestionIndex(prev => prev + 1);
       } else if (templateQuestionIndex >= 0 && templateQuestionIndex === visibleFields.length - 1) {
         // Última pergunta não-repetível, ir para o sumário
-        const summaryIndex = -1000 + numberOfParties + visibleFields.length;
-        console.log('[DEBUG] Going to summary, index:', summaryIndex);
+        // Formula: templateQuestionIndex = currentQuestionIndex + 1000 - numberOfParties
+        // Para sumário: templateQuestionIndex === visibleFields.length
+        // Logo: currentQuestionIndex = visibleFields.length + numberOfParties - 1000
+        const summaryIndex = visibleFields.length + numberOfParties - 1000;
+        console.log('[DEBUG] Going to summary, index:', summaryIndex, {
+          visibleFieldsLength: visibleFields.length,
+          numberOfParties,
+          expectedTemplateIndex: visibleFields.length
+        });
         setCurrentQuestionIndex(summaryIndex);
       }
     }

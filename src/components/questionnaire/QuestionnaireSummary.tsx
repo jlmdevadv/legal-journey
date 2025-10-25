@@ -44,14 +44,23 @@ const QuestionnaireSummary = () => {
     locationDate: getLocationDate()
   });
 
-  const navigateToRepeatableField = (fieldId: string, partyIndex: number) => {
+  const navigateToRepeatableField = (fieldId: string, partyId: string) => {
     const repeatableFields = getRepeatableFields(selectedTemplate.fields);
     const fieldIndex = repeatableFields.findIndex(f => f.id === fieldId);
     
-    if (fieldIndex >= 0) {
-      // Calcular índice correto: -3000 + (partyIndex * totalFields) + fieldIndex
+    // Encontrar o índice real da parte no array partiesData
+    const partyIndex = partiesData.findIndex(p => p.id === partyId);
+    
+    if (fieldIndex >= 0 && partyIndex >= 0) {
       const index = -3000 + (partyIndex * repeatableFields.length) + fieldIndex;
-      console.log('[DEBUG] Navigating to repeatable field:', { fieldId, partyIndex, fieldIndex, calculatedIndex: index });
+      console.log('[DEBUG] Navigating to repeatable field:', { 
+        fieldId, 
+        partyId, 
+        partyIndex, 
+        fieldIndex, 
+        totalRepeatableFields: repeatableFields.length,
+        calculatedIndex: index 
+      });
       goToQuestion(index);
     }
   };
@@ -159,7 +168,7 @@ const QuestionnaireSummary = () => {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => navigateToRepeatableField(field.id, idx)}
+                                    onClick={() => navigateToRepeatableField(field.id, response.partyId)}
                                     className="text-purple-600 hover:text-purple-700 p-1"
                                   >
                                     <Edit className="w-4 h-4" />
