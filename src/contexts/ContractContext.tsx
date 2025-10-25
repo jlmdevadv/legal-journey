@@ -85,7 +85,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   const [locationData, setLocationData] = useState<LocationData>({
     city: '',
     state: '',
-    date: ''
+    date: new Date().toISOString().split('T')[0]
   });
   const [repeatableFieldsData, setRepeatableFieldsData] = useState<RepeatableFieldResponse[]>([]);
 
@@ -320,23 +320,6 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setCurrentQuestionIndex(-3);
       }
-    } else if (currentQuestionIndex >= -3000) {
-      // Navigating through repeatable fields
-      if (selectedTemplate) {
-        const repeatableFields = getRepeatableFields(selectedTemplate.fields);
-        const totalRepeatableSteps = numberOfParties * repeatableFields.length;
-        const repeatableIndex = currentQuestionIndex + 3000;
-        
-        if (repeatableIndex < totalRepeatableSteps - 1) {
-          // Next repeatable field
-          setCurrentQuestionIndex(prev => prev + 1);
-        } else {
-          // Finished repeatable fields, go to location/date
-          setCurrentQuestionIndex(-3);
-        }
-      } else {
-        setCurrentQuestionIndex(-3);
-      }
     } else if (currentQuestionIndex === -3) {
       // From location/date to first non-repeatable template question or summary
       if (selectedTemplate) {
@@ -352,6 +335,23 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         
         // Always go to the same index - QuestionnaireForm will decide whether to show question or summary
         setCurrentQuestionIndex(nextIndex);
+      }
+    } else if (currentQuestionIndex >= -3000 && currentQuestionIndex < -3) {
+      // Navigating through repeatable fields
+      if (selectedTemplate) {
+        const repeatableFields = getRepeatableFields(selectedTemplate.fields);
+        const totalRepeatableSteps = numberOfParties * repeatableFields.length;
+        const repeatableIndex = currentQuestionIndex + 3000;
+        
+        if (repeatableIndex < totalRepeatableSteps - 1) {
+          // Next repeatable field
+          setCurrentQuestionIndex(prev => prev + 1);
+        } else {
+          // Finished repeatable fields, go to location/date
+          setCurrentQuestionIndex(-3);
+        }
+      } else {
+        setCurrentQuestionIndex(-3);
       }
     } else if (selectedTemplate) {
       const nonRepeatableFields = selectedTemplate.fields.filter(f => !f.repeatPerParty);
