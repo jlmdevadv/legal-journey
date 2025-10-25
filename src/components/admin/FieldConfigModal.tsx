@@ -168,6 +168,7 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: F
       type: fieldData.type as any,
       placeholder: fieldData.placeholder || `Digite ${fieldData.label.toLowerCase()}`,
       required: fieldData.required || false,
+      repeatPerParty: fieldData.repeatPerParty || false,
       ...(fieldData.howToFill && { howToFill: fieldData.howToFill }),
       ...(fieldData.whyImportant && { whyImportant: fieldData.whyImportant }),
       ...(fieldData.videoLink && { videoLink: fieldData.videoLink }),
