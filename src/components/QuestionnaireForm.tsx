@@ -98,8 +98,15 @@ const QuestionnaireForm = () => {
     }
   }
 
+  // Show location and date question (MUST be checked BEFORE repeatable fields!)
+  if (currentQuestionIndex === -3) {
+    console.log('[DEBUG] Showing LocationDateQuestion');
+    return <LocationDateQuestion />;
+  }
+
   // Show repeatable fields (indices -3000 to -3000 + totalRepeatableSteps - 1)
-  if (currentQuestionIndex >= -3000) {
+  // IMPORTANT: Check currentQuestionIndex < -3 to avoid capturing the location/date question
+  if (currentQuestionIndex >= -3000 && currentQuestionIndex < -3) {
     const totalRepeatableSteps = numberOfParties * repeatableFields.length;
     const repeatableIndex = currentQuestionIndex + 3000;
     
@@ -128,12 +135,6 @@ const QuestionnaireForm = () => {
         );
       }
     }
-  }
-
-  // Show location and date question
-  if (currentQuestionIndex === -3) {
-    console.log('[DEBUG] Showing LocationDateQuestion');
-    return <LocationDateQuestion />;
   }
 
   // Calculate template question index

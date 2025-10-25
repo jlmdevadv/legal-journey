@@ -58,7 +58,7 @@ const LocationDateQuestion = () => {
       const today = new Date().toISOString().split('T')[0];
       updateLocationData('date', today);
     }
-  }, []);
+  }, [locationData.date, updateLocationData]);
 
   return (
     <div className="min-h-[600px] flex items-center justify-center p-6">
