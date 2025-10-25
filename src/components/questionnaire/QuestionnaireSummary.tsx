@@ -44,6 +44,18 @@ const QuestionnaireSummary = () => {
     locationDate: getLocationDate()
   });
 
+  const navigateToRepeatableField = (fieldId: string, partyIndex: number) => {
+    const repeatableFields = getRepeatableFields(selectedTemplate.fields);
+    const fieldIndex = repeatableFields.findIndex(f => f.id === fieldId);
+    
+    if (fieldIndex >= 0) {
+      // Calcular índice correto: -3000 + (partyIndex * totalFields) + fieldIndex
+      const index = -3000 + (partyIndex * repeatableFields.length) + fieldIndex;
+      console.log('[DEBUG] Navigating to repeatable field:', { fieldId, partyIndex, fieldIndex, calculatedIndex: index });
+      goToQuestion(index);
+    }
+  };
+
   return (
     <div className="min-h-[600px] flex items-center justify-center p-6">
       <Card className="w-full max-w-3xl">
@@ -138,10 +150,20 @@ const QuestionnaireSummary = () => {
                           <h5 className="font-medium text-purple-900 mb-2">{field.label}</h5>
                           {fieldData?.responses && fieldData.responses.length > 0 ? (
                             <div className="space-y-2">
-                              {fieldData.responses.map((response) => (
-                                <div key={response.partyId} className="text-sm bg-purple-50 p-2 rounded">
-                                  <span className="font-medium text-purple-800">{response.partyName}:</span>{' '}
-                                  <span className="text-gray-700">{response.value || <span className="text-gray-400 italic">Não preenchido</span>}</span>
+                              {fieldData.responses.map((response, idx) => (
+                                <div key={response.partyId} className="text-sm bg-purple-50 p-2 rounded flex justify-between items-center">
+                                  <div>
+                                    <span className="font-medium text-purple-800">{response.partyName}:</span>{' '}
+                                    <span className="text-gray-700">{response.value || <span className="text-gray-400 italic">Não preenchido</span>}</span>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => navigateToRepeatableField(field.id, idx)}
+                                    className="text-purple-600 hover:text-purple-700 p-1"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
                                 </div>
                               ))}
                             </div>

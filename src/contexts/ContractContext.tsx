@@ -356,11 +356,22 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     } else if (selectedTemplate) {
       const visibleFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
       const templateQuestionIndex = currentQuestionIndex + 1000 - numberOfParties;
-      if (templateQuestionIndex < visibleFields.length - 1) {
+      
+      console.log('[DEBUG] nextQuestion - non-repeatable section:', {
+        currentQuestionIndex,
+        templateQuestionIndex,
+        visibleFieldsLength: visibleFields.length,
+        isLastQuestion: templateQuestionIndex === visibleFields.length - 1
+      });
+      
+      if (templateQuestionIndex >= 0 && templateQuestionIndex < visibleFields.length - 1) {
+        // Ainda há mais perguntas não-repetíveis
         setCurrentQuestionIndex(prev => prev + 1);
-      } else if (templateQuestionIndex === visibleFields.length - 1) {
-        // Go to summary screen
-        setCurrentQuestionIndex(-1000 + numberOfParties + visibleFields.length);
+      } else if (templateQuestionIndex >= 0 && templateQuestionIndex === visibleFields.length - 1) {
+        // Última pergunta não-repetível, ir para o sumário
+        const summaryIndex = -1000 + numberOfParties + visibleFields.length;
+        console.log('[DEBUG] Going to summary, index:', summaryIndex);
+        setCurrentQuestionIndex(summaryIndex);
       }
     }
   };
