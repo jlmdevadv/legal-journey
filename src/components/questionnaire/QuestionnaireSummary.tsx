@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, CheckCircle, Edit, Printer } from 'lucide-react';
 import DocumentDownloader from '../DocumentDownloader';
 import ContractPreviewModal from '../ContractPreviewModal';
+import { getRepeatableFields, getNonRepeatableVisibleFields } from '@/utils/conditionalLogic';
 
 const QuestionnaireSummary = () => {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -22,7 +23,9 @@ const QuestionnaireSummary = () => {
     locationData,
     getLocationDate,
     partiesData,
-    otherPartiesData
+    otherPartiesData,
+    repeatableFieldsData,
+    numberOfParties
   } = useContract();
 
   if (!selectedTemplate) return null;
@@ -120,30 +123,71 @@ const QuestionnaireSummary = () => {
             </div>
           </div>
 
-          {/* Template Fields */}
-          {selectedTemplate.fields.length > 0 && (
-            <div className="grid gap-4">
-              <h4 className="font-semibold text-gray-900">Informações do Contrato</h4>
-              {selectedTemplate.fields.map((field, index) => (
-                <div key={field.id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-medium text-gray-900">{field.label}</h4>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => goToQuestion(index)}
-                      className="text-blue-600 hover:text-blue-700 p-1"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
+          {/* Campos Repetíveis por Parte */}
+          {(() => {
+            const repeatableFields = getRepeatableFields(selectedTemplate.fields);
+            if (repeatableFields.length > 0) {
+              return (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-purple-900 mb-3">Informações por Parte Principal</h4>
+                  <div className="space-y-4">
+                    {repeatableFields.map((field) => {
+                      const fieldData = repeatableFieldsData.find(f => f.fieldId === field.id);
+                      return (
+                        <div key={field.id} className="border border-purple-200 rounded-lg p-3 bg-white">
+                          <h5 className="font-medium text-purple-900 mb-2">{field.label}</h5>
+                          {fieldData?.responses && fieldData.responses.length > 0 ? (
+                            <div className="space-y-2">
+                              {fieldData.responses.map((response) => (
+                                <div key={response.partyId} className="text-sm bg-purple-50 p-2 rounded">
+                                  <span className="font-medium text-purple-800">{response.partyName}:</span>{' '}
+                                  <span className="text-gray-700">{response.value || <span className="text-gray-400 italic">Não preenchido</span>}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-400 italic">Nenhuma resposta registrada</p>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                  <p className="text-gray-700 bg-gray-50 p-2 rounded">
-                    {formValues[field.id] || <span className="text-gray-400 italic">Não preenchido</span>}
-                  </p>
                 </div>
-              ))}
-            </div>
-          )}
+              );
+            }
+            return null;
+          })()}
+
+          {/* Campos Não-Repetíveis */}
+          {(() => {
+            const nonRepeatableFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
+            if (nonRepeatableFields.length > 0) {
+              return (
+                <div className="grid gap-4">
+                  <h4 className="font-semibold text-gray-900">Informações Gerais do Contrato</h4>
+                  {nonRepeatableFields.map((field, index) => (
+                    <div key={field.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-medium text-gray-900">{field.label}</h4>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => goToQuestion(-1000 + numberOfParties + index)}
+                          className="text-blue-600 hover:text-blue-700 p-1"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <p className="text-gray-700 bg-gray-50 p-2 rounded">
+                        {formValues[field.id] || <span className="text-gray-400 italic">Não preenchido</span>}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              );
+            }
+            return null;
+          })()}
           
           <div className="bg-blue-50 p-4 rounded-lg">
             <h3 className="font-semibold text-blue-800 mb-2">Próximos passos</h3>

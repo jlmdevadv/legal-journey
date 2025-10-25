@@ -354,8 +354,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         setCurrentQuestionIndex(-3);
       }
     } else if (selectedTemplate) {
-      const nonRepeatableFields = selectedTemplate.fields.filter(f => !f.repeatPerParty);
-      const visibleFields = getVisibleFields(nonRepeatableFields, formValues);
+      const visibleFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
       const templateQuestionIndex = currentQuestionIndex + 1000 - numberOfParties;
       if (templateQuestionIndex < visibleFields.length - 1) {
         setCurrentQuestionIndex(prev => prev + 1);

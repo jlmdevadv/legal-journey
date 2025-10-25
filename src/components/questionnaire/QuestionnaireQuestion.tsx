@@ -10,7 +10,7 @@ import { ArrowLeft, ArrowRight, Edit } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import QuestionnaireHelp from './QuestionnaireHelp';
 import FieldConfigModal from '../admin/FieldConfigModal';
-import { getVisibleFields } from '@/utils/conditionalLogic';
+import { getNonRepeatableVisibleFields } from '@/utils/conditionalLogic';
 
 const QuestionnaireQuestion = () => {
   const { 
@@ -31,7 +31,7 @@ const QuestionnaireQuestion = () => {
   // Calculate visible fields dynamically based on conditional logic
   const visibleFields = useMemo(() => {
     if (!selectedTemplate) return [];
-    return getVisibleFields(selectedTemplate.fields, formValues);
+    return getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
   }, [selectedTemplate, formValues]);
 
   // Calculate the actual template question index
