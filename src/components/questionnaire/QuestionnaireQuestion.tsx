@@ -34,8 +34,8 @@ const QuestionnaireQuestion = () => {
     return getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
   }, [selectedTemplate, formValues]);
 
-  // Calculate the actual template question index
-  const templateQuestionIndex = currentQuestionIndex + 1000 - numberOfParties;
+  // Calculate the actual template question index (BLOCO 3: 1000-9998)
+  const templateQuestionIndex = currentQuestionIndex - 1000;
   
   if (!selectedTemplate || templateQuestionIndex < 0 || templateQuestionIndex >= visibleFields.length) {
     return null;

@@ -272,175 +272,256 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const nextQuestion = (option?: string) => {
+    // ============ HELPER FUNCTION ============
+    // Helper function: transição de outras partes para próximo bloco
+    const transitionFromOtherPartiesToNext = () => {
+      if (!selectedTemplate) return;
+      
+      const repeatableFields = getRepeatableFields(selectedTemplate.fields);
+      if (repeatableFields.length > 0 && numberOfParties > 0) {
+        setCurrentQuestionIndex(0); // → BLOCO 2: Primeira Repetível
+      } else {
+        setCurrentQuestionIndex(-3); // → Location/Date
+      }
+    };
+    
+    // ============ BLOCO 1: SISTEMA (Índices Negativos) ============
+    
+    // Welcome (-1) → Party Number (-2)
+    if (currentQuestionIndex === -1) {
+      setCurrentQuestionIndex(-2);
+      return;
+    }
+    
+    // Party Number (-2) → First Main Party (-1000)
     if (currentQuestionIndex === -2) {
-      // From party number question to first party data
       if (numberOfParties > 0) {
         setCurrentQuestionIndex(-1000);
       }
-    } else if (currentQuestionIndex >= -1000 && currentQuestionIndex < -1000 + numberOfParties - 1) {
-      // Move to next main party
+      return;
+    }
+    
+    // Navegação entre Main Parties (-1000 a -1000 + N - 1)
+    if (currentQuestionIndex >= -1000 && currentQuestionIndex < -1000 + numberOfParties - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
-    } else if (currentQuestionIndex === -1000 + numberOfParties - 1) {
-      // From last main party to "other parties" question
+      return;
+    }
+    
+    // Last Main Party → Other Parties Question (-4)
+    if (currentQuestionIndex === -1000 + numberOfParties - 1) {
       setCurrentQuestionIndex(-4);
-    } else if (currentQuestionIndex === -4) {
-      // From "other parties" question
+      return;
+    }
+    
+    // Other Parties Question (-4) → Other Parties Number (-5) ou pular
+    if (currentQuestionIndex === -4) {
       if (option === 'withOtherParties') {
-        setCurrentQuestionIndex(-5); // Go to number question
+        setCurrentQuestionIndex(-5);
       } else {
-        // Check if there are repeatable fields
-        if (selectedTemplate) {
-          const repeatableFields = getRepeatableFields(selectedTemplate.fields);
-          if (repeatableFields.length > 0 && numberOfParties > 0) {
-            setCurrentQuestionIndex(-3000); // Go to first repeatable field
-          } else {
-            setCurrentQuestionIndex(-3); // Skip to location/date
-          }
-        } else {
-          setCurrentQuestionIndex(-3);
-        }
+        // Pular outras partes, ir para repeatable fields ou location
+        transitionFromOtherPartiesToNext();
       }
-    } else if (currentQuestionIndex === -5) {
-      // From other parties number to first other party data
+      return;
+    }
+    
+    // Other Parties Number (-5) → First Other Party (-2000)
+    if (currentQuestionIndex === -5) {
       if (numberOfOtherParties > 0) {
         setCurrentQuestionIndex(-2000);
       }
-    } else if (currentQuestionIndex >= -2000 && currentQuestionIndex < -2000 + numberOfOtherParties - 1) {
-      // Move to next other party
+      return;
+    }
+    
+    // Navegação entre Other Parties (-2000 a -2000 + M - 1)
+    if (currentQuestionIndex >= -2000 && currentQuestionIndex < -2000 + numberOfOtherParties - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
-    } else if (currentQuestionIndex === -2000 + numberOfOtherParties - 1) {
-      // From last other party to repeatable fields (if any)
-      if (selectedTemplate) {
-        const repeatableFields = getRepeatableFields(selectedTemplate.fields);
-        if (repeatableFields.length > 0 && numberOfParties > 0) {
-          setCurrentQuestionIndex(-3000);
-        } else {
-          setCurrentQuestionIndex(-3);
-        }
-      } else {
-        setCurrentQuestionIndex(-3);
-      }
-    } else if (currentQuestionIndex === -3) {
-      // From location/date to first non-repeatable template question or summary
-      if (selectedTemplate) {
-        const visibleFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
-        const nextIndex = -1000 + numberOfParties;
-        
-        console.log('[DEBUG] After location/date:', {
-          visibleFieldsLength: visibleFields.length,
-          numberOfParties,
-          nextIndex,
-          calculatedTemplateIndex: nextIndex + 1000 - numberOfParties
-        });
-        
-        // Always go to the same index - QuestionnaireForm will decide whether to show question or summary
-        setCurrentQuestionIndex(nextIndex);
-      }
-    } else if (currentQuestionIndex >= -3000 && currentQuestionIndex < -3) {
-      // Navigating through repeatable fields
-      if (selectedTemplate) {
-        const repeatableFields = getRepeatableFields(selectedTemplate.fields);
-        const totalRepeatableSteps = numberOfParties * repeatableFields.length;
-        const repeatableIndex = currentQuestionIndex + 3000;
-        
-        if (repeatableIndex < totalRepeatableSteps - 1) {
-          // Next repeatable field
-          setCurrentQuestionIndex(prev => prev + 1);
-        } else {
-          // Finished repeatable fields, go to location/date
-          setCurrentQuestionIndex(-3);
-        }
-      } else {
-        setCurrentQuestionIndex(-3);
-      }
-    } else if (selectedTemplate) {
-      const visibleFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
-      const templateQuestionIndex = currentQuestionIndex + 1000 - numberOfParties;
+      return;
+    }
+    
+    // Last Other Party → Repeatable fields ou Location/Date
+    if (currentQuestionIndex === -2000 + numberOfOtherParties - 1) {
+      transitionFromOtherPartiesToNext();
+      return;
+    }
+    
+    // ============ BLOCO 2: PERGUNTAS REPETÍVEIS (0 - 999) ============
+    if (currentQuestionIndex >= 0 && currentQuestionIndex < 1000) {
+      if (!selectedTemplate) return;
       
-      console.log('[DEBUG] nextQuestion - non-repeatable section:', {
+      const repeatableFields = getRepeatableFields(selectedTemplate.fields);
+      const totalRepeatableQuestions = numberOfParties * repeatableFields.length;
+      const isLastRepeatable = (currentQuestionIndex === totalRepeatableQuestions - 1);
+      
+      console.log('[DEBUG] BLOCO 2 - Repeatable navigation:', {
         currentQuestionIndex,
-        templateQuestionIndex,
-        visibleFieldsLength: visibleFields.length,
-        isLastQuestion: templateQuestionIndex === visibleFields.length - 1
+        totalRepeatableQuestions,
+        isLastRepeatable
       });
       
-      if (templateQuestionIndex >= 0 && templateQuestionIndex < visibleFields.length - 1) {
-        // Ainda há mais perguntas não-repetíveis
+      if (isLastRepeatable) {
+        // Terminamos as repetíveis, ir para Location/Date
+        setCurrentQuestionIndex(-3);
+      } else {
+        // Próxima pergunta repetível
         setCurrentQuestionIndex(prev => prev + 1);
-      } else if (templateQuestionIndex >= 0 && templateQuestionIndex === visibleFields.length - 1) {
-        // Última pergunta não-repetível, ir para o sumário
-        // Formula: templateQuestionIndex = currentQuestionIndex + 1000 - numberOfParties
-        // Para sumário: templateQuestionIndex === visibleFields.length
-        // Logo: currentQuestionIndex = visibleFields.length + numberOfParties - 1000
-        const summaryIndex = visibleFields.length + numberOfParties - 1000;
-        console.log('[DEBUG] Going to summary, index:', summaryIndex, {
-          visibleFieldsLength: visibleFields.length,
-          numberOfParties,
-          expectedTemplateIndex: visibleFields.length
-        });
-        setCurrentQuestionIndex(summaryIndex);
       }
+      return;
     }
+    
+    // ============ Location/Date (-3) → BLOCO 3 ou BLOCO 4 ============
+    if (currentQuestionIndex === -3) {
+      if (!selectedTemplate) return;
+      
+      const nonRepeatableFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
+      
+      console.log('[DEBUG] After location/date:', {
+        nonRepeatableFieldsLength: nonRepeatableFields.length
+      });
+      
+      if (nonRepeatableFields.length > 0) {
+        setCurrentQuestionIndex(1000); // → BLOCO 3: Primeira Não-Repetível
+      } else {
+        setCurrentQuestionIndex(9999); // → BLOCO 4: Sumário
+      }
+      return;
+    }
+    
+    // ============ BLOCO 3: PERGUNTAS NÃO-REPETÍVEIS (1000 - 9998) ============
+    if (currentQuestionIndex >= 1000 && currentQuestionIndex < 9999) {
+      if (!selectedTemplate) return;
+      
+      const nonRepeatableFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
+      const currentTemplateIndex = currentQuestionIndex - 1000;
+      const isLastNonRepeatable = (currentTemplateIndex === nonRepeatableFields.length - 1);
+      
+      console.log('[DEBUG] BLOCO 3 - Non-repeatable navigation:', {
+        currentQuestionIndex,
+        currentTemplateIndex,
+        totalNonRepeatableFields: nonRepeatableFields.length,
+        isLastNonRepeatable
+      });
+      
+      if (isLastNonRepeatable) {
+        // Última pergunta não-repetível, ir para o Sumário
+        setCurrentQuestionIndex(9999); // → BLOCO 4: Sumário
+      } else {
+        // Próxima pergunta não-repetível
+        setCurrentQuestionIndex(prev => prev + 1);
+      }
+      return;
+    }
+    
+    // ============ BLOCO 4: SUMÁRIO (9999) ============
+    // Não há próximo após o sumário
   };
 
   const previousQuestion = () => {
+    // ============ BLOCO 4: SUMÁRIO (9999) ============
+    if (currentQuestionIndex === 9999) {
+      if (!selectedTemplate) return;
+      
+      const nonRepeatableFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
+      if (nonRepeatableFields.length > 0) {
+        // Voltar para última não-repetível
+        setCurrentQuestionIndex(1000 + nonRepeatableFields.length - 1);
+      } else {
+        // Voltar para Location/Date
+        setCurrentQuestionIndex(-3);
+      }
+      return;
+    }
+    
+    // ============ BLOCO 3: PERGUNTAS NÃO-REPETÍVEIS (1000 - 9998) ============
+    if (currentQuestionIndex >= 1000 && currentQuestionIndex < 9999) {
+      if (currentQuestionIndex === 1000) {
+        // Primeira não-repetível, voltar para Location/Date
+        setCurrentQuestionIndex(-3);
+      } else {
+        // Voltar para pergunta anterior
+        setCurrentQuestionIndex(prev => prev - 1);
+      }
+      return;
+    }
+    
+    // ============ Location/Date (-3) ============
+    if (currentQuestionIndex === -3) {
+      if (!selectedTemplate) return;
+      
+      const repeatableFields = getRepeatableFields(selectedTemplate.fields);
+      const totalRepeatableQuestions = numberOfParties * repeatableFields.length;
+      
+      if (totalRepeatableQuestions > 0) {
+        // Voltar para última repetível
+        setCurrentQuestionIndex(totalRepeatableQuestions - 1);
+      } else if (numberOfOtherParties > 0) {
+        // Voltar para última other party
+        setCurrentQuestionIndex(-2000 + numberOfOtherParties - 1);
+      } else {
+        // Voltar para "other parties" question
+        setCurrentQuestionIndex(-4);
+      }
+      return;
+    }
+    
+    // ============ BLOCO 2: PERGUNTAS REPETÍVEIS (0 - 999) ============
+    if (currentQuestionIndex >= 0 && currentQuestionIndex < 1000) {
+      if (currentQuestionIndex === 0) {
+        // Primeira repetível, voltar para outras partes ou main parties
+        if (numberOfOtherParties > 0) {
+          setCurrentQuestionIndex(-2000 + numberOfOtherParties - 1);
+        } else {
+          setCurrentQuestionIndex(-4);
+        }
+      } else {
+        setCurrentQuestionIndex(prev => prev - 1);
+      }
+      return;
+    }
+    
+    // ============ BLOCO 1: SISTEMA (Índices Negativos) ============
+    
+    // Party Number (-2) → Welcome (-1)
     if (currentQuestionIndex === -2) {
-      // From party number back to welcome
       setCurrentQuestionIndex(-1);
-    } else if (currentQuestionIndex === -1000) {
-      // From first main party back to party number
+      return;
+    }
+    
+    // First Main Party (-1000) → Party Number (-2)
+    if (currentQuestionIndex === -1000) {
       setCurrentQuestionIndex(-2);
-    } else if (currentQuestionIndex > -1000 && currentQuestionIndex < -1000 + numberOfParties) {
-      // Move to previous main party
+      return;
+    }
+    
+    // Navegação entre Main Parties
+    if (currentQuestionIndex > -1000 && currentQuestionIndex < -1000 + numberOfParties) {
       setCurrentQuestionIndex(prev => prev - 1);
-    } else if (currentQuestionIndex === -4) {
-      // From "other parties" question back to last main party
+      return;
+    }
+    
+    // Other Parties Question (-4) → Last Main Party
+    if (currentQuestionIndex === -4) {
       if (numberOfParties > 0) {
         setCurrentQuestionIndex(-1000 + numberOfParties - 1);
       }
-    } else if (currentQuestionIndex === -5) {
-      // From other parties number back to "other parties" question
+      return;
+    }
+    
+    // Other Parties Number (-5) → Other Parties Question (-4)
+    if (currentQuestionIndex === -5) {
       setCurrentQuestionIndex(-4);
-    } else if (currentQuestionIndex === -2000) {
-      // From first other party back to number question
+      return;
+    }
+    
+    // First Other Party (-2000) → Other Parties Number (-5)
+    if (currentQuestionIndex === -2000) {
       setCurrentQuestionIndex(-5);
-    } else if (currentQuestionIndex > -2000 && currentQuestionIndex < -2000 + numberOfOtherParties) {
-      // Move to previous other party
+      return;
+    }
+    
+    // Navegação entre Other Parties
+    if (currentQuestionIndex > -2000 && currentQuestionIndex < -2000 + numberOfOtherParties) {
       setCurrentQuestionIndex(prev => prev - 1);
-    } else if (currentQuestionIndex === -3000) {
-      // From first repeatable field back to previous section
-      if (numberOfOtherParties > 0) {
-        // Back to last other party
-        setCurrentQuestionIndex(-2000 + numberOfOtherParties - 1);
-      } else {
-        // Back to "other parties" question
-        setCurrentQuestionIndex(-4);
-      }
-    } else if (currentQuestionIndex > -3000 && currentQuestionIndex < -3000 + (selectedTemplate ? numberOfParties * getRepeatableFields(selectedTemplate.fields).length : 0)) {
-      // Navigate back through repeatable fields
-      setCurrentQuestionIndex(prev => prev - 1);
-    } else if (currentQuestionIndex === -3) {
-      // From location/date back
-      if (selectedTemplate) {
-        const repeatableFields = getRepeatableFields(selectedTemplate.fields);
-        if (repeatableFields.length > 0 && numberOfParties > 0) {
-          // Back to last repeatable field
-          const lastRepeatableIndex = -3000 + (numberOfParties * repeatableFields.length) - 1;
-          setCurrentQuestionIndex(lastRepeatableIndex);
-        } else if (numberOfOtherParties > 0) {
-          // Back to last other party
-          setCurrentQuestionIndex(-2000 + numberOfOtherParties - 1);
-        } else {
-          // Back to "other parties" question
-          setCurrentQuestionIndex(-4);
-        }
-      }
-    } else if (currentQuestionIndex === -1000 + numberOfParties) {
-      // From first template question back to location/date
-      setCurrentQuestionIndex(-3);
-    } else if (currentQuestionIndex > -1000 + numberOfParties) {
-      // Navigate through template questions
-      setCurrentQuestionIndex(prev => prev - 1);
+      return;
     }
   };
 

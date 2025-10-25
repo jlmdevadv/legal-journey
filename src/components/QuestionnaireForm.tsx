@@ -104,77 +104,79 @@ const QuestionnaireForm = () => {
     return <LocationDateQuestion />;
   }
 
-  // Show repeatable fields (indices -3000 to -3000 + totalRepeatableSteps - 1)
-  // IMPORTANT: Check currentQuestionIndex < -3 to avoid capturing the location/date question
-  if (currentQuestionIndex >= -3000 && currentQuestionIndex < -3) {
-    const totalRepeatableSteps = numberOfParties * repeatableFields.length;
-    const repeatableIndex = currentQuestionIndex + 3000;
+  // ============ BLOCO 2: PERGUNTAS REPETÍVEIS (0 - 999) ============
+  if (currentQuestionIndex >= 0 && currentQuestionIndex < 1000) {
+    const partyIndex = Math.floor(currentQuestionIndex / repeatableFields.length);
+    const fieldIndex = currentQuestionIndex % repeatableFields.length;
+    const currentField = repeatableFields[fieldIndex];
+    const currentParty = partiesData[partyIndex];
     
-    if (repeatableIndex >= 0 && repeatableIndex < totalRepeatableSteps) {
-      const partyIndex = Math.floor(repeatableIndex / repeatableFields.length);
-      const fieldIndex = repeatableIndex % repeatableFields.length;
-      const currentField = repeatableFields[fieldIndex];
-      const currentParty = partiesData[partyIndex];
+    console.log('[DEBUG] BLOCO 2 - Rendering repeatable field:', {
+      currentQuestionIndex,
+      partyIndex,
+      fieldIndex,
+      hasField: !!currentField,
+      hasParty: !!currentParty
+    });
+    
+    if (currentField && currentParty) {
+      const isLastField = fieldIndex === repeatableFields.length - 1;
+      const isLastParty = partyIndex === numberOfParties - 1;
       
-      if (currentField && currentParty) {
-        const isLastField = fieldIndex === repeatableFields.length - 1;
-        const isLastParty = partyIndex === numberOfParties - 1;
-        
-        return (
-          <RepeatableFieldCard
-            field={currentField}
-            partyId={currentParty.id}
-            partyName={currentParty.fullName}
-            partyIndex={partyIndex}
-            totalParties={numberOfParties}
-            fieldIndex={fieldIndex}
-            totalFields={repeatableFields.length}
-            isLastField={isLastField}
-            isLastParty={isLastParty}
-          />
-        );
-      }
+      return (
+        <RepeatableFieldCard
+          field={currentField}
+          partyId={currentParty.id}
+          partyName={currentParty.fullName}
+          partyIndex={partyIndex}
+          totalParties={numberOfParties}
+          fieldIndex={fieldIndex}
+          totalFields={repeatableFields.length}
+          isLastField={isLastField}
+          isLastParty={isLastParty}
+        />
+      );
     }
   }
 
-  // Calculate template question index
-  const templateQuestionIndex = currentQuestionIndex + 1000 - numberOfParties;
-  
-  console.log('[DEBUG] QuestionnaireForm render:', {
-    currentQuestionIndex,
-    templateQuestionIndex,
-    visibleFieldsLength: visibleFields.length,
-    repeatableFieldsLength: repeatableFields.length,
-    numberOfParties,
-    shouldShowQuestion: templateQuestionIndex >= 0 && templateQuestionIndex < visibleFields.length,
-    shouldShowSummary: templateQuestionIndex === visibleFields.length
-  });
-
-  // Show template questions (after parties are done)
-  if (templateQuestionIndex >= 0 && templateQuestionIndex < visibleFields.length) {
-    console.log('[DEBUG] Showing QuestionnaireQuestion');
-    return <QuestionnaireQuestion />;
+  // ============ Location/Date (-3) - TRANSIÇÃO ENTRE BLOCOS ============
+  if (currentQuestionIndex === -3) {
+    console.log('[DEBUG] Showing LocationDateQuestion');
+    return <LocationDateQuestion />;
   }
 
-  // Show summary screen
-  if (templateQuestionIndex === visibleFields.length) {
-    console.log('[DEBUG] Showing QuestionnaireSummary (calculated)');
-    return <QuestionnaireSummary />;
-  }
-
-  if (templateQuestionIndex > visibleFields.length) {
-    console.error('[DEBUG] ERROR: templateQuestionIndex exceeds visibleFields!', {
+  // ============ BLOCO 3: PERGUNTAS NÃO-REPETÍVEIS (1000 - 9998) ============
+  if (currentQuestionIndex >= 1000 && currentQuestionIndex < 9999) {
+    const templateIndex = currentQuestionIndex - 1000;
+    
+    console.log('[DEBUG] BLOCO 3 - Rendering non-repeatable question:', {
       currentQuestionIndex,
-      templateQuestionIndex,
-      visibleFieldsLength: visibleFields.length,
-      numberOfParties
+      templateIndex,
+      visibleFieldsLength: visibleFields.length
+    });
+    
+    if (templateIndex >= 0 && templateIndex < visibleFields.length) {
+      return <QuestionnaireQuestion />;
+    }
+    
+    console.error('[DEBUG] ERROR: templateIndex out of bounds!', {
+      currentQuestionIndex,
+      templateIndex,
+      visibleFieldsLength: visibleFields.length
     });
   }
 
-  console.warn('[DEBUG] No component matched! Returning null', {
+  // ============ BLOCO 4: SUMÁRIO (9999) ============
+  if (currentQuestionIndex === 9999) {
+    console.log('[DEBUG] BLOCO 4 - Showing QuestionnaireSummary');
+    return <QuestionnaireSummary />;
+  }
+
+  // ============ ERRO: Índice não reconhecido ============
+  console.error('[DEBUG] ERROR: Invalid currentQuestionIndex!', {
     currentQuestionIndex,
-    templateQuestionIndex,
-    visibleFieldsLength: visibleFields.length
+    visibleFieldsLength: visibleFields.length,
+    repeatableFieldsLength: repeatableFields.length
   });
 
   return null;

@@ -52,8 +52,9 @@ const QuestionnaireSummary = () => {
     const partyIndex = partiesData.findIndex(p => p.id === partyId);
     
     if (fieldIndex >= 0 && partyIndex >= 0) {
-      const index = -3000 + (partyIndex * repeatableFields.length) + fieldIndex;
-      console.log('[DEBUG] Navigating to repeatable field:', { 
+      // NOVA FÓRMULA SIMPLES: índice linear no Bloco 2 (0-999)
+      const index = (partyIndex * repeatableFields.length) + fieldIndex;
+      console.log('[DEBUG] Navigating to repeatable field (BLOCO 2):', { 
         fieldId, 
         partyId, 
         partyIndex, 
@@ -203,7 +204,7 @@ const QuestionnaireSummary = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => goToQuestion(-1000 + numberOfParties + index)}
+                          onClick={() => goToQuestion(1000 + index)}
                           className="text-blue-600 hover:text-blue-700 p-1"
                         >
                           <Edit className="w-4 h-4" />
