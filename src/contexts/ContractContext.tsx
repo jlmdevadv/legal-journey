@@ -251,6 +251,47 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     }));
   };
 
+  // 🛡️ FASE 1: Limpeza de valores de campos ocultos
+  const cleanHiddenFieldValues = () => {
+    if (!selectedTemplate) return;
+    
+    const visibleNonRepeatableFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
+    const visibleRepeatableFields = getRepeatableVisibleFields(selectedTemplate.fields, formValues);
+    const visibleFieldIds = new Set([
+      ...visibleNonRepeatableFields.map(f => f.id),
+      ...visibleRepeatableFields.map(f => f.id)
+    ]);
+    
+    // Limpar formValues
+    setFormValues(prev => {
+      const cleaned: Record<string, string> = {};
+      let hasChanges = false;
+      
+      Object.entries(prev).forEach(([fieldId, value]) => {
+        if (visibleFieldIds.has(fieldId)) {
+          cleaned[fieldId] = value;
+        } else {
+          hasChanges = true;
+          console.log(`[CLEANUP] Removendo valor de campo oculto: ${fieldId}`);
+        }
+      });
+      
+      return hasChanges ? cleaned : prev; // Só atualiza se houver mudanças
+    });
+    
+    // Limpar repeatableFieldsData
+    setRepeatableFieldsData(prev => {
+      const cleaned = prev.filter(fieldData => visibleFieldIds.has(fieldData.fieldId));
+      
+      if (cleaned.length !== prev.length) {
+        const removed = prev.filter(f => !visibleFieldIds.has(f.fieldId));
+        removed.forEach(f => console.log(`[CLEANUP] Removendo dados repetíveis: ${f.fieldId}`));
+      }
+      
+      return cleaned.length !== prev.length ? cleaned : prev;
+    });
+  };
+
   const resetForm = () => {
     setFormValues({});
     setSelectedTemplate(null);
@@ -548,11 +589,70 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const saveAndReturnToSummary = () => {
-    console.log('[UX] Salvando e retornando ao sumário');
+    console.log('[UX] Salvando e processando navegação inteligente...');
+    
+    // 🛡️ SEGURANÇA: Limpar valores de campos ocultos
+    cleanHiddenFieldValues();
+    
     // Resetar o estado de edição
     setIsEditingFromSummary(false);
-    // Navegar para o índice fixo do sumário (9999)
-    setCurrentQuestionIndex(9999);
+    
+    // 🧠 INTELIGÊNCIA: Verificar se há campos obrigatórios vazios agora visíveis
+    const unansweredField = findFirstUnansweredRequiredField();
+    
+    if (unansweredField) {
+      console.log(`[UX] Navegando para campo obrigatório vazio: índice ${unansweredField.index} (${unansweredField.blockType})`);
+      toast.info('Um novo campo obrigatório precisa ser preenchido');
+      setCurrentQuestionIndex(unansweredField.index);
+    } else {
+      console.log('[UX] Todos os campos obrigatórios preenchidos, retornando ao sumário');
+      setCurrentQuestionIndex(9999);
+    }
+  };
+
+  // 🧠 FASE 2: Detectar campos obrigatórios visíveis sem resposta
+  const findFirstUnansweredRequiredField = (): { 
+    index: number, 
+    blockType: 'repeatable' | 'nonRepeatable' 
+  } | null => {
+    if (!selectedTemplate) return null;
+    
+    // 1. Verificar campos repetíveis
+    const visibleRepeatableFields = getRepeatableVisibleFields(selectedTemplate.fields, formValues);
+    const requiredRepeatableFields = visibleRepeatableFields.filter(f => f.required === true);
+    
+    for (let partyIdx = 0; partyIdx < numberOfParties; partyIdx++) {
+      for (let fieldIdx = 0; fieldIdx < requiredRepeatableFields.length; fieldIdx++) {
+        const field = requiredRepeatableFields[fieldIdx];
+        const value = getRepeatableFieldValue(field.id, partiesData[partyIdx].id);
+        
+        if (!value || value.trim() === '') {
+          // Calcular índice linear no Bloco 2
+          const globalFieldIndex = visibleRepeatableFields.findIndex(f => f.id === field.id);
+          const index = (partyIdx * visibleRepeatableFields.length) + globalFieldIndex;
+          console.log(`[UX] Campo repetível obrigatório vazio encontrado: ${field.id} (parte ${partyIdx})`);
+          return { index, blockType: 'repeatable' };
+        }
+      }
+    }
+    
+    // 2. Verificar campos não-repetíveis
+    const visibleNonRepeatableFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
+    const requiredNonRepeatableFields = visibleNonRepeatableFields.filter(f => f.required === true);
+    
+    for (let fieldIdx = 0; fieldIdx < requiredNonRepeatableFields.length; fieldIdx++) {
+      const field = requiredNonRepeatableFields[fieldIdx];
+      const value = formValues[field.id];
+      
+      if (!value || value.trim() === '') {
+        const globalFieldIndex = visibleNonRepeatableFields.findIndex(f => f.id === field.id);
+        const index = 1000 + globalFieldIndex; // Índice no Bloco 3
+        console.log(`[UX] Campo não-repetível obrigatório vazio encontrado: ${field.id}`);
+        return { index, blockType: 'nonRepeatable' };
+      }
+    }
+    
+    return null; // Todos os campos obrigatórios preenchidos
   };
 
   // Funções para campos repetíveis
@@ -625,34 +725,43 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   const fillContractTemplate = (): string => {
     if (!selectedTemplate) return '';
     
+    // 🛡️ SEGURANÇA: Limpar valores de campos ocultos antes de gerar documento
+    cleanHiddenFieldValues();
+    
     let filledTemplate = selectedTemplate.template;
     
-    // 1. Replace campos repetíveis PRIMEIRO
-    if (selectedTemplate.fields) {
-      selectedTemplate.fields
-        .filter(field => field.repeatPerParty === true)
-        .forEach(field => {
-          const formattedText = getRepeatableFieldFormattedText(field.id);
-          const escapedFieldId = field.id.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-          
-          // Substituir AMBOS os padrões: [field_id] e [field_id_formatted]
-          const placeholderPattern = new RegExp(`\\[${escapedFieldId}\\]`, 'g');
-          const formattedPlaceholderPattern = new RegExp(`\\[${escapedFieldId}_formatted\\]`, 'g');
-          
-          filledTemplate = filledTemplate.replace(placeholderPattern, formattedText);
-          filledTemplate = filledTemplate.replace(formattedPlaceholderPattern, formattedText);
-        });
-    }
+    // Obter campos visíveis
+    const visibleNonRepeatableFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
+    const visibleRepeatableFields = getRepeatableVisibleFields(selectedTemplate.fields, formValues);
+    const visibleFieldIds = new Set([
+      ...visibleNonRepeatableFields.map(f => f.id),
+      ...visibleRepeatableFields.map(f => f.id)
+    ]);
     
-    // 2. Replace campos normais
+    // 1. Replace campos repetíveis VISÍVEIS
+    selectedTemplate.fields
+      .filter(field => field.repeatPerParty === true && visibleFieldIds.has(field.id))
+      .forEach(field => {
+        const formattedText = getRepeatableFieldFormattedText(field.id);
+        const escapedFieldId = field.id.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const placeholderPattern = new RegExp(`\\[${escapedFieldId}\\]`, 'g');
+        const formattedPlaceholderPattern = new RegExp(`\\[${escapedFieldId}_formatted\\]`, 'g');
+        
+        filledTemplate = filledTemplate.replace(placeholderPattern, formattedText);
+        filledTemplate = filledTemplate.replace(formattedPlaceholderPattern, formattedText);
+      });
+    
+    // 2. Replace campos normais VISÍVEIS
     Object.entries(formValues).forEach(([fieldId, value]) => {
-      // Escape special regex characters in fieldId to use as literal string
-      const escapedFieldId = fieldId.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-      const placeholderPattern = new RegExp(`\\[${escapedFieldId}\\]`, 'g');
-      filledTemplate = filledTemplate.replace(placeholderPattern, value || `[${fieldId}]`);
+      // Apenas substituir se o campo estiver visível
+      if (visibleFieldIds.has(fieldId)) {
+        const escapedFieldId = fieldId.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const placeholderPattern = new RegExp(`\\[${escapedFieldId}\\]`, 'g');
+        filledTemplate = filledTemplate.replace(placeholderPattern, value || `[${fieldId}]`);
+      }
     });
     
-    // 3. Replace location and date placeholders (automatic system fields)
+    // 3. Replace location and date placeholders
     filledTemplate = filledTemplate.replace(/\[city\]/g, locationData.city || '[city]');
     filledTemplate = filledTemplate.replace(/\[state\]/g, locationData.state || '[state]');
     filledTemplate = filledTemplate.replace(/\[signing-date\]/g, locationData.date ? formatDateToBrazilian(locationData.date) : '[signing-date]');
