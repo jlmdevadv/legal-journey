@@ -526,9 +526,9 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const goToQuestion = (index: number) => {
-    if (selectedTemplate && index >= -1 && index <= selectedTemplate.fields.length) {
-      setCurrentQuestionIndex(index);
-    }
+    // Permite navegação para todos os blocos: Bloco 1 (negativo), Bloco 2 (0-999), Bloco 3 (>=1000)
+    // A validação de índices válidos é feita pela renderização condicional no QuestionnaireForm.tsx
+    setCurrentQuestionIndex(index);
   };
 
   // Funções para campos repetíveis

@@ -94,10 +94,22 @@ const QuestionnaireSummary = () => {
               <div className="space-y-2">
                 {partiesData.map((party, index) => (
                   <div key={party.id} className="bg-background p-3 rounded border text-sm">
-                    <p className="font-bold">{party.fullName}</p>
-                    <p className="text-muted-foreground">
-                      <span className="font-medium">{party.partyType}</span> • {party.cpf} • {party.city}/{party.state}
-                    </p>
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <p className="font-bold">{party.fullName}</p>
+                        <p className="text-muted-foreground">
+                          <span className="font-medium">{party.partyType}</span> • {party.cpf} • {party.city}/{party.state}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => goToQuestion(-1000 + index)}
+                        className="text-primary hover:text-primary/80 p-1"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -114,10 +126,22 @@ const QuestionnaireSummary = () => {
               <div className="space-y-2">
                 {otherPartiesData.map((party, index) => (
                   <div key={party.id} className="bg-background p-3 rounded border text-sm">
-                    <p className="font-bold">{party.fullName}</p>
-                    <p className="text-muted-foreground">
-                      <span className="font-medium">{party.partyType}</span> • {party.cpf} • {party.city}/{party.state}
-                    </p>
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <p className="font-bold">{party.fullName}</p>
+                        <p className="text-muted-foreground">
+                          <span className="font-medium">{party.partyType}</span> • {party.cpf} • {party.city}/{party.state}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => goToQuestion(-2000 + index)}
+                        className="text-secondary-foreground hover:text-secondary-foreground/80 p-1"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -126,7 +150,17 @@ const QuestionnaireSummary = () => {
 
           {/* Location and Date Info */}
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <h4 className="font-semibold text-gray-900 mb-3">Local e Data do Contrato</h4>
+            <div className="flex justify-between items-center mb-3">
+              <h4 className="font-semibold text-gray-900">Local e Data do Contrato</h4>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => goToQuestion(-3)}
+                className="text-gray-600 hover:text-gray-700 p-1"
+              >
+                <Edit className="w-4 h-4" />
+              </Button>
+            </div>
             <div className="grid gap-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Cidade:</span>
