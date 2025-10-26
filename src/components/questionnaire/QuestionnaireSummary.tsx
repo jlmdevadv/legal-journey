@@ -17,6 +17,7 @@ const QuestionnaireSummary = () => {
     goToQuestion, 
     finishQuestionnaire,
     fillContractTemplate,
+    generateFinalDocument,
     getContractingParties,
     getOtherInvolved,
     getSignatures,
@@ -37,7 +38,7 @@ const QuestionnaireSummary = () => {
 
   const getDocumentData = () => ({
     title: selectedTemplate.name,
-    content: fillContractTemplate(),
+    content: generateFinalDocument(), // Usar generateFinalDocument para download
     parties: getContractingParties(),
     otherInvolved: getOtherInvolved(),
     signatures: getSignatures(),

@@ -5,7 +5,7 @@ import { useContract } from '../contexts/ContractContext';
 const ContractPreview = () => {
   const { 
     selectedTemplate, 
-    fillContractTemplate, 
+    generatePreviewText, 
     getContractingParties, 
     getOtherInvolved, 
     getSignatures,
@@ -14,7 +14,7 @@ const ContractPreview = () => {
 
   if (!selectedTemplate) return null;
 
-  const filledTemplate = fillContractTemplate();
+  const filledTemplate = generatePreviewText();
   const contractingParties = getContractingParties();
   const otherInvolved = getOtherInvolved();
   const signatures = getSignatures();

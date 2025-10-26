@@ -192,7 +192,7 @@ const QuestionnaireQuestion = () => {
               <Button 
                 onClick={() => {
                   if (isEditingFromSummary) {
-                    saveAndReturnToSummary(currentField.id, localValue);
+                    saveAndReturnToSummary();
                   } else {
                     handleNext();
                   }

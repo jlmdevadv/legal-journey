@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { ContractTemplate as DataContractTemplate } from '../data/contractTemplates';
 import { PartyData, ContractField, RepeatableFieldResponse, ContractTemplate } from '../types/template';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,10 +34,12 @@ interface ContractContextType {
   updateFormValue: (fieldId: string, value: string) => void;
   resetForm: () => void;
   fillContractTemplate: () => string;
+  generatePreviewText: () => string;
+  generateFinalDocument: () => string;
   nextQuestion: (option?: string) => void;
   previousQuestion: () => void;
   goToQuestion: (index: number, triggeredFromSummary?: boolean) => void;
-  saveAndReturnToSummary: (editedFieldId?: string, newValue?: string) => void;
+  saveAndReturnToSummary: () => void;
   startQuestionnaire: () => void;
   finishQuestionnaire: () => void;
   loginAdmin: (username: string, password: string) => boolean;
@@ -97,6 +99,64 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     loadTemplatesFromSupabase();
     loadPartyTypes();
   }, []);
+
+  // 🛡️ CORREÇÃO 1: useEffect com debounce para cleanup controlado
+  const prevFormValuesRef = useRef(formValues);
+
+  useEffect(() => {
+    // Só executar se formValues realmente mudou (comparação superficial de chaves)
+    const prevKeys = Object.keys(prevFormValuesRef.current).sort().join(',');
+    const currentKeys = Object.keys(formValues).sort().join(',');
+    
+    if (prevKeys !== currentKeys || JSON.stringify(prevFormValuesRef.current) !== JSON.stringify(formValues)) {
+      // Agendar limpeza para o próximo tick (evitar atualização durante render)
+      const timer = setTimeout(() => {
+        cleanHiddenFieldValues();
+      }, 0);
+      
+      prevFormValuesRef.current = formValues;
+      
+      return () => clearTimeout(timer);
+    }
+  }, [formValues, selectedTemplate]);
+
+  // 🧠 CORREÇÃO 3: Hook customizado para rastrear valor anterior
+  const usePrevious = <T,>(value: T): T | undefined => {
+    const ref = useRef<T>();
+    useEffect(() => {
+      ref.current = value;
+    });
+    return ref.current;
+  };
+
+  const prevIsEditingFromSummary = usePrevious(isEditingFromSummary);
+
+  // 🧠 CORREÇÃO 3: useEffect para navegação inteligente pós-edição
+  useEffect(() => {
+    // Detectar: voltou ao sumário (9999) vindo de uma edição (isEditingFromSummary passou de true → false)
+    if (
+      currentQuestionIndex === 9999 && 
+      prevIsEditingFromSummary === true && 
+      isEditingFromSummary === false
+    ) {
+      console.log('[UX] Verificando se há novos campos obrigatórios após edição...');
+      
+      // Aguardar próximo tick para garantir que formValues foi atualizado
+      const timer = setTimeout(() => {
+        const unansweredField = findFirstUnansweredRequiredField();
+        
+        if (unansweredField) {
+          console.log(`[UX] Campo obrigatório vazio encontrado após edição: índice ${unansweredField.index}`);
+          toast.info('Um novo campo obrigatório precisa ser preenchido');
+          setCurrentQuestionIndex(unansweredField.index);
+        } else {
+          console.log('[UX] Todos os campos obrigatórios preenchidos');
+        }
+      }, 100); // Pequeno delay para garantir que state foi atualizado
+      
+      return () => clearTimeout(timer);
+    }
+  }, [currentQuestionIndex, isEditingFromSummary, prevIsEditingFromSummary, formValues]);
 
   const loadPartyTypes = async () => {
     try {
@@ -588,48 +648,25 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     setCurrentQuestionIndex(index);
   };
 
-  const saveAndReturnToSummary = (editedFieldId?: string, newValue?: string) => {
-    console.log('[UX] Salvando e processando navegação inteligente...', { editedFieldId, newValue });
+  // 🧠 CORREÇÃO 3: Simplificar saveAndReturnToSummary
+  const saveAndReturnToSummary = () => {
+    console.log('[UX] Salvando e retornando ao sumário...');
     
-    // Criar snapshot do estado futuro
-    const futureFormValues = { ...formValues };
-    if (editedFieldId && newValue !== undefined) {
-      futureFormValues[editedFieldId] = newValue;
-    }
-    
-    // 🛡️ SEGURANÇA: Limpar valores de campos ocultos (com estado futuro)
-    cleanHiddenFieldValues();
-    
-    // Resetar o estado de edição
+    // Apenas resetar flag de edição e voltar ao sumário
+    // O useEffect acima fará a navegação inteligente
     setIsEditingFromSummary(false);
-    
-    // 🧠 INTELIGÊNCIA: Verificar se há campos obrigatórios vazios agora visíveis
-    const unansweredField = findFirstUnansweredRequiredField(futureFormValues);
-    
-    if (unansweredField) {
-      console.log(`[UX] Navegando para campo obrigatório vazio: índice ${unansweredField.index} (${unansweredField.blockType})`);
-      toast.info('Um novo campo obrigatório precisa ser preenchido');
-      setCurrentQuestionIndex(unansweredField.index);
-    } else {
-      console.log('[UX] Todos os campos obrigatórios preenchidos, retornando ao sumário');
-      setCurrentQuestionIndex(9999);
-    }
+    setCurrentQuestionIndex(9999);
   };
 
   // 🧠 FASE 2: Detectar campos obrigatórios visíveis sem resposta
-  const findFirstUnansweredRequiredField = (
-    customFormValues?: Record<string, string>
-  ): { 
+  const findFirstUnansweredRequiredField = (): { 
     index: number, 
     blockType: 'repeatable' | 'nonRepeatable' 
   } | null => {
     if (!selectedTemplate) return null;
     
-    // Usar formValues customizados (estado futuro) se fornecidos
-    const currentFormValues = customFormValues || formValues;
-    
     // 1. Verificar campos repetíveis
-    const visibleRepeatableFields = getRepeatableVisibleFields(selectedTemplate.fields, currentFormValues);
+    const visibleRepeatableFields = getRepeatableVisibleFields(selectedTemplate.fields, formValues);
     const requiredRepeatableFields = visibleRepeatableFields.filter(f => f.required === true);
     
     for (let partyIdx = 0; partyIdx < numberOfParties; partyIdx++) {
@@ -648,12 +685,12 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     }
     
     // 2. Verificar campos não-repetíveis
-    const visibleNonRepeatableFields = getNonRepeatableVisibleFields(selectedTemplate.fields, currentFormValues);
+    const visibleNonRepeatableFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
     const requiredNonRepeatableFields = visibleNonRepeatableFields.filter(f => f.required === true);
     
     for (let fieldIdx = 0; fieldIdx < requiredNonRepeatableFields.length; fieldIdx++) {
       const field = requiredNonRepeatableFields[fieldIdx];
-      const value = currentFormValues[field.id];
+      const value = formValues[field.id];
       
       if (!value || value.trim() === '') {
         const globalFieldIndex = visibleNonRepeatableFields.findIndex(f => f.id === field.id);
@@ -733,11 +770,81 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       .join('\n');
   };
 
-  const fillContractTemplate = (): string => {
+  // 🎨 CORREÇÃO 2: Função para PREVIEW (mantém placeholders visíveis)
+  const generatePreviewText = (): string => {
     if (!selectedTemplate) return '';
     
-    // 🛡️ SEGURANÇA: Limpar valores de campos ocultos antes de gerar documento
-    cleanHiddenFieldValues();
+    let filledTemplate = selectedTemplate.template;
+    
+    // Obter campos visíveis ATUAIS (sem chamar cleanup)
+    const visibleNonRepeatableFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
+    const visibleRepeatableFields = getRepeatableVisibleFields(selectedTemplate.fields, formValues);
+    const visibleFieldIds = new Set([
+      ...visibleNonRepeatableFields.map(f => f.id),
+      ...visibleRepeatableFields.map(f => f.id)
+    ]);
+    
+    // 1. Replace campos repetíveis VISÍVEIS
+    selectedTemplate.fields
+      .filter(field => field.repeatPerParty === true && visibleFieldIds.has(field.id))
+      .forEach(field => {
+        const formattedText = getRepeatableFieldFormattedText(field.id);
+        const escapedFieldId = field.id.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const placeholderPattern = new RegExp(`\\[${escapedFieldId}\\]`, 'g');
+        const formattedPlaceholderPattern = new RegExp(`\\[${escapedFieldId}_formatted\\]`, 'g');
+        
+        // Se vazio, manter placeholder [fieldId] para indicar que precisa preencher
+        const replacement = formattedText || `[${field.id}]`;
+        filledTemplate = filledTemplate.replace(placeholderPattern, replacement);
+        filledTemplate = filledTemplate.replace(formattedPlaceholderPattern, replacement);
+      });
+    
+    // 2. Replace campos normais VISÍVEIS (mantendo placeholders para campos vazios)
+    Object.entries(formValues).forEach(([fieldId, value]) => {
+      if (visibleFieldIds.has(fieldId)) {
+        const escapedFieldId = fieldId.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const placeholderPattern = new RegExp(`\\[${escapedFieldId}\\]`, 'g');
+        
+        // Se vazio, manter [fieldId] visível no preview
+        const replacement = value.trim() ? value : `[${fieldId}]`;
+        filledTemplate = filledTemplate.replace(placeholderPattern, replacement);
+      }
+    });
+    
+    // 3. Remover APENAS placeholders de campos OCULTOS (não visíveis)
+    const placeholderRegex = /\[([a-zA-Z0-9_-]+)\]/g;
+    const remainingPlaceholders = new Set<string>();
+    let match;
+    
+    while ((match = placeholderRegex.exec(filledTemplate)) !== null) {
+      remainingPlaceholders.add(match[1]);
+    }
+    
+    remainingPlaceholders.forEach(fieldId => {
+      if (['city', 'state', 'signing-date'].includes(fieldId)) return;
+      
+      const field = selectedTemplate.fields.find(f => f.id === fieldId);
+      const isHidden = field && !visibleFieldIds.has(fieldId);
+      
+      // Só remover se o campo estiver OCULTO (não visível)
+      if (isHidden) {
+        const escapedFieldId = fieldId.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const lineRemovalPattern = new RegExp(`^.*\\[${escapedFieldId}\\].*\\n?`, 'gm');
+        filledTemplate = filledTemplate.replace(lineRemovalPattern, '');
+      }
+    });
+    
+    // 4. Replace location and date placeholders
+    filledTemplate = filledTemplate.replace(/\[city\]/g, locationData.city || '[city]');
+    filledTemplate = filledTemplate.replace(/\[state\]/g, locationData.state || '[state]');
+    filledTemplate = filledTemplate.replace(/\[signing-date\]/g, locationData.date ? formatDateToBrazilian(locationData.date) : '[signing-date]');
+    
+    return filledTemplate;
+  };
+
+  // 📄 CORREÇÃO 2: Função para DOCUMENTO FINAL (aplica Smart Replacement)
+  const generateFinalDocument = (): string => {
+    if (!selectedTemplate) return '';
     
     let filledTemplate = selectedTemplate.template;
     
@@ -824,6 +931,9 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     
     return filledTemplate;
   };
+
+  // Manter fillContractTemplate para compatibilidade (aponta para preview)
+  const fillContractTemplate = generatePreviewText;
 
   const formatDateToBrazilian = (dateString: string): string => {
     if (!dateString) return '';
@@ -1147,6 +1257,8 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         updateFormValue,
         resetForm,
         fillContractTemplate,
+        generatePreviewText,
+        generateFinalDocument,
         nextQuestion,
         previousQuestion,
         goToQuestion,

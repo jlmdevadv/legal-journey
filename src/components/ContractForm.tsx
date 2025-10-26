@@ -16,6 +16,7 @@ const ContractForm = () => {
     updateFormValue, 
     resetForm, 
     fillContractTemplate,
+    generateFinalDocument,
     getContractingParties,
     getOtherInvolved,
     getSignatures,
@@ -30,7 +31,7 @@ const ContractForm = () => {
 
   const getDocumentData = () => ({
     title: selectedTemplate.name,
-    content: fillContractTemplate(),
+    content: generateFinalDocument(), // Usar generateFinalDocument para download
     parties: getContractingParties(),
     otherInvolved: getOtherInvolved(),
     signatures: getSignatures(),

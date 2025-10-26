@@ -66,6 +66,11 @@ const RepeatableFieldCard = ({
     updateRepeatableFieldValue(field.id, partyId, value);
   };
 
+  // Sincronizar localValue quando o valor muda externamente
+  useEffect(() => {
+    setLocalValue(currentValue);
+  }, [currentValue]);
+
   const handleNext = () => {
     if (field.required && !localValue.trim()) return;
     nextQuestion();
@@ -159,7 +164,7 @@ const RepeatableFieldCard = ({
           <Button
             onClick={() => {
               if (isEditingFromSummary) {
-                saveAndReturnToSummary(field.id, localValue);
+                saveAndReturnToSummary();
               } else {
                 handleNext();
               }
