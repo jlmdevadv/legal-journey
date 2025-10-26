@@ -610,8 +610,13 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         .forEach(field => {
           const formattedText = getRepeatableFieldFormattedText(field.id);
           const escapedFieldId = field.id.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+          
+          // Substituir AMBOS os padrões: [field_id] e [field_id_formatted]
           const placeholderPattern = new RegExp(`\\[${escapedFieldId}\\]`, 'g');
+          const formattedPlaceholderPattern = new RegExp(`\\[${escapedFieldId}_formatted\\]`, 'g');
+          
           filledTemplate = filledTemplate.replace(placeholderPattern, formattedText);
+          filledTemplate = filledTemplate.replace(formattedPlaceholderPattern, formattedText);
         });
     }
     
