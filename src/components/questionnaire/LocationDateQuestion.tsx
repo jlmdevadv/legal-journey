@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, ArrowRight, MapPin, Calendar } from 'lucide-react';
 
 const LocationDateQuestion = () => {
-  const { locationData, updateLocationData, nextQuestion, previousQuestion } = useContract();
+  const { locationData, updateLocationData, nextQuestion, previousQuestion, isEditingFromSummary, saveAndReturnToSummary } = useContract();
   
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -38,7 +38,12 @@ const LocationDateQuestion = () => {
     }
     
     setErrors({});
-    nextQuestion();
+    
+    if (isEditingFromSummary) {
+      saveAndReturnToSummary();
+    } else {
+      nextQuestion();
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -146,7 +151,7 @@ const LocationDateQuestion = () => {
               onClick={validateAndProceed}
               className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
             >
-              Próximo
+              {isEditingFromSummary ? 'Salvar e Voltar ao Sumário' : 'Próximo'}
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>

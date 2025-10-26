@@ -19,7 +19,7 @@ interface PartyDataCardProps {
 }
 
 const PartyDataCard = ({ partyIndex, partyData, isLastParty, category = 'main', title }: PartyDataCardProps) => {
-  const { updatePartyData, nextQuestion, previousQuestion, partyTypes, isAdminMode, addPartyType } = useContract();
+  const { updatePartyData, nextQuestion, previousQuestion, partyTypes, isAdminMode, addPartyType, isEditingFromSummary, saveAndReturnToSummary } = useContract();
   const inputRef = useRef<HTMLInputElement>(null);
   const [showAddTypeModal, setShowAddTypeModal] = useState(false);
   const [newTypeName, setNewTypeName] = useState('');
@@ -33,7 +33,11 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty, category = 'main', 
 
   const handleNext = () => {
     if (canProceed()) {
-      nextQuestion();
+      if (isEditingFromSummary) {
+        saveAndReturnToSummary();
+      } else {
+        nextQuestion();
+      }
     }
   };
 
@@ -312,7 +316,12 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty, category = 'main', 
               disabled={!canProceed()}
               className="flex items-center gap-2"
             >
-              {isLastParty ? (category === 'main' ? 'Continuar' : 'Finalizar dados das partes') : `Próxima ${category === 'main' ? 'parte' : 'pessoa'}`}
+              {isEditingFromSummary 
+                ? 'Salvar e Voltar ao Sumário'
+                : (isLastParty 
+                    ? (category === 'main' ? 'Continuar' : 'Finalizar dados das partes') 
+                    : `Próxima ${category === 'main' ? 'parte' : 'pessoa'}`)
+              }
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
