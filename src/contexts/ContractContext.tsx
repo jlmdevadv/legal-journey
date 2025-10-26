@@ -556,14 +556,21 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         if (responseIndex === -1) {
           // Parte ainda não respondeu, adicionar
           const party = partiesData.find(p => p.id === partyId);
-          field.responses.push({
+          // ⚠️ IMPORTANTE: Criar novo array para garantir que React detecte a mudança
+          field.responses = [...field.responses, {
             partyId,
             partyName: party?.fullName || '',
             value
-          });
+          }];
         } else {
           // Atualizar resposta existente
-          field.responses[responseIndex].value = value;
+          // ⚠️ IMPORTANTE: Criar novo array para garantir que React detecte a mudança
+          // Cópia shallow de 'field' NÃO copia o array 'responses' aninhado
+          field.responses = field.responses.map((response, idx) =>
+            idx === responseIndex
+              ? { ...response, value } // Criar novo objeto com valor atualizado
+              : response
+          );
         }
         
         updated[existingFieldIndex] = field;
