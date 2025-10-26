@@ -20,9 +20,11 @@ const QuestionnaireQuestion = () => {
     currentQuestionIndex, 
     numberOfParties,
     isAdminMode,
+    isEditingFromSummary,
     updateFormValue, 
     nextQuestion, 
     previousQuestion,
+    saveAndReturnToSummary,
     updateSelectedTemplateField
   } = useContract();
   
@@ -177,11 +179,14 @@ const QuestionnaireQuestion = () => {
               </Button>
               
               <Button 
-                onClick={handleNext}
+                onClick={isEditingFromSummary ? saveAndReturnToSummary : handleNext}
                 disabled={!canProceed}
                 className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 flex items-center gap-2"
               >
-                {isLastQuestion ? 'Finalizar' : 'Próxima'}
+                {isEditingFromSummary 
+                  ? 'Salvar e Voltar ao Sumário' 
+                  : (isLastQuestion ? 'Finalizar' : 'Próxima')
+                }
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </div>

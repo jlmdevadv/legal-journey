@@ -38,7 +38,9 @@ const RepeatableFieldCard = ({
     getRepeatableFieldValue, 
     updateRepeatableFieldValue, 
     previousQuestion,
-    nextQuestion 
+    nextQuestion,
+    isEditingFromSummary,
+    saveAndReturnToSummary
   } = useContract();
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -144,11 +146,14 @@ const RepeatableFieldCard = ({
             Anterior
           </Button>
           <Button
-            onClick={handleNext}
+            onClick={isEditingFromSummary ? saveAndReturnToSummary : handleNext}
             disabled={!canProceed}
             className="flex items-center gap-2"
           >
-            {isLastField && isLastParty ? 'Finalizar' : 'Próxima'}
+            {isEditingFromSummary 
+              ? 'Salvar e Voltar ao Sumário' 
+              : (isLastField && isLastParty ? 'Finalizar' : 'Próxima')
+            }
             <ArrowRight className="w-4 h-4" />
           </Button>
         </div>

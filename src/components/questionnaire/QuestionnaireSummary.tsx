@@ -62,7 +62,7 @@ const QuestionnaireSummary = () => {
         totalRepeatableFields: repeatableFields.length,
         calculatedIndex: index 
       });
-      goToQuestion(index);
+      goToQuestion(index, true);
     }
   };
 
@@ -104,7 +104,7 @@ const QuestionnaireSummary = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => goToQuestion(-1000 + index)}
+                        onClick={() => goToQuestion(-1000 + index, true)}
                         className="text-primary hover:text-primary/80 p-1"
                       >
                         <Edit className="w-4 h-4" />
@@ -136,7 +136,7 @@ const QuestionnaireSummary = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => goToQuestion(-2000 + index)}
+                        onClick={() => goToQuestion(-2000 + index, true)}
                         className="text-secondary-foreground hover:text-secondary-foreground/80 p-1"
                       >
                         <Edit className="w-4 h-4" />
@@ -155,7 +155,7 @@ const QuestionnaireSummary = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => goToQuestion(-3)}
+                onClick={() => goToQuestion(-3, true)}
                 className="text-gray-600 hover:text-gray-700 p-1"
               >
                 <Edit className="w-4 h-4" />
@@ -238,7 +238,7 @@ const QuestionnaireSummary = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => goToQuestion(1000 + index)}
+                          onClick={() => goToQuestion(1000 + index, true)}
                           className="text-blue-600 hover:text-blue-700 p-1"
                         >
                           <Edit className="w-4 h-4" />

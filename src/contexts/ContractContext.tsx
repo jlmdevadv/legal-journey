@@ -29,13 +29,15 @@ interface ContractContextType {
   partyTypes: any[];
   locationData: LocationData;
   repeatableFieldsData: RepeatableFieldResponse[];
+  isEditingFromSummary: boolean;
   selectTemplate: (template: ContractTemplate) => void;
   updateFormValue: (fieldId: string, value: string) => void;
   resetForm: () => void;
   fillContractTemplate: () => string;
   nextQuestion: (option?: string) => void;
   previousQuestion: () => void;
-  goToQuestion: (index: number) => void;
+  goToQuestion: (index: number, triggeredFromSummary?: boolean) => void;
+  saveAndReturnToSummary: () => void;
   startQuestionnaire: () => void;
   finishQuestionnaire: () => void;
   loginAdmin: (username: string, password: string) => boolean;
@@ -88,6 +90,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     date: new Date().toISOString().split('T')[0]
   });
   const [repeatableFieldsData, setRepeatableFieldsData] = useState<RepeatableFieldResponse[]>([]);
+  const [isEditingFromSummary, setIsEditingFromSummary] = useState(false);
 
   // Load templates and party types from Supabase on mount
   useEffect(() => {
@@ -416,6 +419,12 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const previousQuestion = () => {
+    // Se estava em modo de edição e decidiu voltar, resetar o modo
+    if (isEditingFromSummary) {
+      console.log('[UX] Resetando modo de edição ao clicar em Anterior');
+      setIsEditingFromSummary(false);
+    }
+    
     // ============ BLOCO 4: SUMÁRIO (9999) ============
     if (currentQuestionIndex === 9999) {
       if (!selectedTemplate) return;
@@ -525,10 +534,25 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const goToQuestion = (index: number) => {
+  const goToQuestion = (index: number, triggeredFromSummary: boolean = false) => {
     // Permite navegação para todos os blocos: Bloco 1 (negativo), Bloco 2 (0-999), Bloco 3 (>=1000)
     // A validação de índices válidos é feita pela renderização condicional no QuestionnaireForm.tsx
+    
+    // Se a navegação foi iniciada do sumário, ativar modo de edição
+    if (triggeredFromSummary) {
+      console.log('[UX] Modo de edição ativado - navegação iniciada do sumário');
+      setIsEditingFromSummary(true);
+    }
+    
     setCurrentQuestionIndex(index);
+  };
+
+  const saveAndReturnToSummary = () => {
+    console.log('[UX] Salvando e retornando ao sumário');
+    // Resetar o estado de edição
+    setIsEditingFromSummary(false);
+    // Navegar para o índice fixo do sumário (9999)
+    setCurrentQuestionIndex(9999);
   };
 
   // Funções para campos repetíveis
@@ -953,6 +977,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         customTemplates,
         isLoadingTemplates,
         editingTemplate,
+        isEditingFromSummary,
         selectTemplate,
         updateFormValue,
         resetForm,
@@ -960,6 +985,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         nextQuestion,
         previousQuestion,
         goToQuestion,
+        saveAndReturnToSummary,
         startQuestionnaire,
         finishQuestionnaire,
         loginAdmin,
