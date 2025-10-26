@@ -92,6 +92,27 @@ export const validateTemplateJSON = (json: any): { valid: boolean; errors: strin
     if (card.conditionalLogic) {
       if (!Array.isArray(card.conditionalLogic.conditions)) {
         errors.push(`Card "${card.id}": conditionalLogic.conditions deve ser um array`);
+      } else {
+        // Validar cada condição
+        card.conditionalLogic.conditions.forEach((condition: any, condIdx: number) => {
+          if (!condition.fieldId) {
+            errors.push(`Card "${card.id}": condição ${condIdx + 1} requer "fieldId"`);
+          } else {
+            // Verificar se o fieldId referenciado existe nos cards
+            if (!cardIds.has(condition.fieldId)) {
+              errors.push(`Card "${card.id}": condição ${condIdx + 1} referencia fieldId "${condition.fieldId}" que não existe`);
+            }
+          }
+          
+          const validOperators = ['equals', 'notEquals', 'contains', 'greaterThan', 'lessThan'];
+          if (!validOperators.includes(condition.operator)) {
+            errors.push(`Card "${card.id}": condição ${condIdx + 1} tem operador inválido "${condition.operator}"`);
+          }
+          
+          if (condition.value === undefined || condition.value === null) {
+            errors.push(`Card "${card.id}": condição ${condIdx + 1} requer "value"`);
+          }
+        });
       }
       
       if (!['show', 'hide'].includes(card.conditionalLogic.action)) {

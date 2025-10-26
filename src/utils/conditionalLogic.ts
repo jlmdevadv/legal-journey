@@ -26,7 +26,7 @@ export const evaluateCondition = (
 };
 
 /**
- * Avalia todas as condições de um campo
+ * Avalia todas as condições de um campo com lógica AND/OR correta
  */
 export const evaluateConditionalLogic = (
   logic: ConditionalLogic | undefined,
@@ -36,21 +36,28 @@ export const evaluateConditionalLogic = (
     return true; // Sem condições = sempre visível
   }
 
+  // Avaliar cada condição
   const results = logic.conditions.map(condition => 
     evaluateCondition(condition, formValues)
   );
 
-  // Determinar operador lógico (AND ou OR)
-  // Se alguma condição tem OR, usa OR entre todas; caso contrário, usa AND
-  const useOrLogic = logic.conditions.some(c => c.logicOperator === 'OR');
+  // Aplicar operadores lógicos corretamente
+  // Percorre as condições aplicando AND/OR de forma sequencial
+  let finalResult = results[0];
   
-  const isConditionMet = useOrLogic
-    ? results.some(r => r)  // Pelo menos uma true (OR)
-    : results.every(r => r); // Todas true (AND)
+  for (let i = 1; i < logic.conditions.length; i++) {
+    const operator = logic.conditions[i - 1].logicOperator || 'AND';
+    
+    if (operator === 'OR') {
+      finalResult = finalResult || results[i];
+    } else { // AND
+      finalResult = finalResult && results[i];
+    }
+  }
 
   // Se action é "show", retorna true quando condições satisfeitas
   // Se action é "hide", retorna false quando condições satisfeitas
-  return logic.action === 'show' ? isConditionMet : !isConditionMet;
+  return logic.action === 'show' ? finalResult : !finalResult;
 };
 
 /**
@@ -67,9 +74,21 @@ export const getVisibleFields = (
 
 /**
  * Retorna apenas os campos marcados para repetição por parte
+ * AVISO: Esta função NÃO aplica lógica condicional
+ * Use getRepeatableVisibleFields() se precisar aplicar conditionalLogic
  */
 export const getRepeatableFields = (fields: ContractField[]): ContractField[] => {
   return fields.filter(field => field.repeatPerParty === true);
+};
+
+/**
+ * Retorna campos repetíveis E visíveis (aplica conditionalLogic)
+ */
+export const getRepeatableVisibleFields = (
+  fields: ContractField[],
+  formValues: Record<string, string>
+): ContractField[] => {
+  return getVisibleFields(fields, formValues).filter(field => field.repeatPerParty === true);
 };
 
 /**

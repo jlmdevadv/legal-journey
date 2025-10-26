@@ -10,7 +10,7 @@ import LocationDateQuestion from './questionnaire/LocationDateQuestion';
 import OtherPartiesQuestion from './questionnaire/OtherPartiesQuestion';
 import OtherPartiesNumberQuestion from './questionnaire/OtherPartiesNumberQuestion';
 import RepeatableFieldCard from './questionnaire/RepeatableFieldCard';
-import { getNonRepeatableVisibleFields, getRepeatableFields } from '@/utils/conditionalLogic';
+import { getNonRepeatableVisibleFields, getRepeatableVisibleFields } from '@/utils/conditionalLogic';
 import { useContractPreviewScroll } from '@/hooks/useContractPreviewScroll';
 
 const QuestionnaireForm = () => {
@@ -33,8 +33,8 @@ const QuestionnaireForm = () => {
 
   const repeatableFields = useMemo(() => {
     if (!selectedTemplate) return [];
-    return getRepeatableFields(selectedTemplate.fields);
-  }, [selectedTemplate]);
+    return getRepeatableVisibleFields(selectedTemplate.fields, formValues);
+  }, [selectedTemplate, formValues]);
 
   // Auto-scroll preview to match current question
   useContractPreviewScroll(currentQuestionIndex, numberOfParties, numberOfOtherParties, selectedTemplate, formValues);

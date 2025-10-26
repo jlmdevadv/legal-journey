@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Minus, ChevronDown, ChevronUp } from 'lucide-react';
 import HelpSectionEditor from './HelpSectionEditor';
 import { useContract } from '@/contexts/ContractContext';
+import { toast } from 'sonner';
 
 interface FieldConfigModalProps {
   open: boolean;
@@ -190,6 +191,25 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: F
 
   const handleSave = () => {
     if (!fieldData.label || !fieldData.id) return;
+
+    // Validar fieldIds nas condições
+    if (fieldData.conditionalLogic && fieldData.conditionalLogic.conditions.length > 0) {
+      const invalidFields: string[] = [];
+      
+      fieldData.conditionalLogic.conditions.forEach((condition) => {
+        if (condition.fieldId) {
+          const fieldExists = selectedTemplate?.fields.some(f => f.id === condition.fieldId);
+          if (!fieldExists) {
+            invalidFields.push(condition.fieldId);
+          }
+        }
+      });
+
+      if (invalidFields.length > 0) {
+        toast.error(`Erro na Lógica Condicional: Os seguintes fieldIds não existem no template: ${invalidFields.join(', ')}`);
+        return;
+      }
+    }
 
     const completeField: ContractField = {
       id: fieldData.id,

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, CheckCircle, Edit, Printer } from 'lucide-react';
 import DocumentDownloader from '../DocumentDownloader';
 import ContractPreviewModal from '../ContractPreviewModal';
-import { getRepeatableFields, getNonRepeatableVisibleFields } from '@/utils/conditionalLogic';
+import { getRepeatableVisibleFields, getNonRepeatableVisibleFields } from '@/utils/conditionalLogic';
 
 const QuestionnaireSummary = () => {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -45,7 +45,7 @@ const QuestionnaireSummary = () => {
   });
 
   const navigateToRepeatableField = (fieldId: string, partyId: string) => {
-    const repeatableFields = getRepeatableFields(selectedTemplate.fields);
+    const repeatableFields = getRepeatableVisibleFields(selectedTemplate.fields, formValues);
     const fieldIndex = repeatableFields.findIndex(f => f.id === fieldId);
     
     // Encontrar o índice real da parte no array partiesData
@@ -181,7 +181,7 @@ const QuestionnaireSummary = () => {
 
           {/* Campos Repetíveis por Parte */}
           {(() => {
-            const repeatableFields = getRepeatableFields(selectedTemplate.fields);
+            const repeatableFields = getRepeatableVisibleFields(selectedTemplate.fields, formValues);
             if (repeatableFields.length > 0) {
               return (
                 <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">

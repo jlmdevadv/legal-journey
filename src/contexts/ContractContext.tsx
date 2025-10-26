@@ -3,7 +3,7 @@ import { ContractTemplate as DataContractTemplate } from '../data/contractTempla
 import { PartyData, ContractField, RepeatableFieldResponse, ContractTemplate } from '../types/template';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { getVisibleFields, getRepeatableFields, getNonRepeatableVisibleFields } from '@/utils/conditionalLogic';
+import { getVisibleFields, getRepeatableVisibleFields, getNonRepeatableVisibleFields } from '@/utils/conditionalLogic';
 
 interface LocationData {
   city: string;
@@ -280,7 +280,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     const transitionFromOtherPartiesToNext = () => {
       if (!selectedTemplate) return;
       
-      const repeatableFields = getRepeatableFields(selectedTemplate.fields);
+      const repeatableFields = getRepeatableVisibleFields(selectedTemplate.fields, formValues);
       if (repeatableFields.length > 0 && numberOfParties > 0) {
         setCurrentQuestionIndex(0); // → BLOCO 2: Primeira Repetível
       } else {
@@ -351,7 +351,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     if (currentQuestionIndex >= 0 && currentQuestionIndex < 1000) {
       if (!selectedTemplate) return;
       
-      const repeatableFields = getRepeatableFields(selectedTemplate.fields);
+      const repeatableFields = getRepeatableVisibleFields(selectedTemplate.fields, formValues);
       const totalRepeatableQuestions = numberOfParties * repeatableFields.length;
       const isLastRepeatable = (currentQuestionIndex === totalRepeatableQuestions - 1);
       
@@ -456,7 +456,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     if (currentQuestionIndex === -3) {
       if (!selectedTemplate) return;
       
-      const repeatableFields = getRepeatableFields(selectedTemplate.fields);
+      const repeatableFields = getRepeatableVisibleFields(selectedTemplate.fields, formValues);
       const totalRepeatableQuestions = numberOfParties * repeatableFields.length;
       
       if (totalRepeatableQuestions > 0) {
