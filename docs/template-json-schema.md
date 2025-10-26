@@ -26,6 +26,12 @@ Este documento descreve o formato JSON utilizado para importar templates de cont
       "videoLink": "string (opcional)",
       "aiAssistantLink": "string (opcional)",
       "repeatPerParty": "boolean (opcional, padrão: false)",
+      "answerTemplates": [
+        {
+          "title": "string (obrigatório)",
+          "value": "string (obrigatório)"
+        }
+      ],
       "conditionalLogic": {
         "conditions": [
           {
@@ -69,6 +75,7 @@ Este documento descreve o formato JSON utilizado para importar templates de cont
 | `videoLink` | string | ❌ Não | URL de vídeo explicativo |
 | `aiAssistantLink` | string | ❌ Não | URL para assistente de IA |
 | `repeatPerParty` | boolean | ❌ Não | Se `true`, campo será preenchido uma vez por parte principal (padrão: `false`) |
+| `answerTemplates` | array | ❌ Não | Lista de sugestões de resposta pré-formatadas (apenas para `textarea`) |
 | `conditionalLogic` | object | ❌ Não | Regras de visibilidade condicional |
 
 ### Tipos de Campo Válidos
@@ -122,6 +129,89 @@ A lógica condicional permite mostrar ou ocultar campos baseado nas respostas de
 **Operadores Lógicos:**
 - `AND` - Todas as condições devem ser verdadeiras
 - `OR` - Pelo menos uma condição deve ser verdadeira
+
+### Modelos de Resposta (Answer Templates)
+
+A propriedade `answerTemplates` permite oferecer **sugestões de resposta pré-formatadas** para campos do tipo `textarea`, eliminando a necessidade de copiar e colar textos longos.
+
+**Como funciona:**
+1. O usuário vê botões com títulos curtos abaixo do campo textarea
+2. Ao clicar em um botão, o texto completo é automaticamente inserido no campo
+3. O usuário pode editar livremente o texto inserido
+
+**Quando usar:**
+- ✅ Cláusulas contratuais complexas com variações comuns
+- ✅ Políticas empresariais (lucros, confidencialidade, exclusividade)
+- ✅ Descrições de escopo de serviços/produtos
+- ✅ Termos e condições padrão com opções
+- ❌ Não use para campos simples (nome, CPF, email, etc.)
+- ⚠️ **Apenas válido para campos do tipo `textarea`**
+
+**Estrutura:**
+
+```json
+"answerTemplates": [
+  {
+    "title": "Título curto que aparece no botão",
+    "value": "Texto completo que será inserido no campo quando o usuário clicar"
+  }
+]
+```
+
+**Exemplo prático:**
+
+```json
+{
+  "id": "divisao_lucros",
+  "title": "Defina a política de destinação de receitas e lucros do projeto.",
+  "type": "textarea",
+  "placeholder": "Clique em uma sugestão abaixo ou digite sua própria cláusula...",
+  "required": true,
+  "answerTemplates": [
+    {
+      "title": "Opção A: Reinvestimento Total",
+      "value": "Todo o lucro líquido apurado será integralmente reinvestido no desenvolvimento do próprio Projeto, visando o custeio da operação, melhorias estruturais, marketing e aceleração do crescimento. Nesta fase, não haverá distribuição de lucros aos Fundadores."
+    },
+    {
+      "title": "Opção B: Caixa + Distribuição",
+      "value": "Do total da receita líquida apurada, o percentual de [25]% será retido para a composição de um fundo de caixa, destinado a cobrir despesas operacionais e reinvestimentos. O valor remanescente será distribuído aos Fundadores de forma [proporcional à participação societária de cada um]."
+    },
+    {
+      "title": "Opção C: Distribuição Total",
+      "value": "Todo o lucro líquido apurado será distribuído integralmente aos Fundadores, de forma [proporcional à participação societária de cada um], em até 15 dias após o fechamento do período de apuração."
+    }
+  ]
+}
+```
+
+**Interface Visual para o Usuário:**
+
+```
+┌─────────────────────────────────────────────────────┐
+│ Defina a política de destinação de receitas...     │
+│                                                     │
+│ ┌─────────────────────────────────────────────────┐ │
+│ │ [Campo textarea - clicável para editar]         │ │
+│ │                                                 │ │
+│ └─────────────────────────────────────────────────┘ │
+│                                                     │
+│ 📄 Sugestões de Resposta:                          │
+│ ┌─────────────────────┐ ┌──────────────────────┐  │
+│ │ Opção A: Reinvest.  │ │ Opção B: Caixa + Dist│  │
+│ └─────────────────────┘ └──────────────────────┘  │
+│ ┌─────────────────────┐                            │
+│ │ Opção C: Distr. Total│                           │
+│ └─────────────────────┘                            │
+│                                                     │
+│ Clique em uma sugestão para preencher...           │
+└─────────────────────────────────────────────────────┘
+```
+
+**Dicas de UX:**
+- ✅ Use títulos curtos e descritivos (máximo 40 caracteres)
+- ✅ Ofereça 2-4 opções (evite sobrecarga de escolha)
+- ✅ Inclua placeholders editáveis no texto (ex: `[25]%`, `[nome da empresa]`)
+- ✅ Mantenha o placeholder do textarea instrutivo
 
 ### Campos Repetíveis por Parte (repeatPerParty)
 
@@ -214,10 +304,26 @@ Os pagamentos serão realizados conforme dados bancários abaixo:
       "id": "divisao_lucros",
       "title": "Defina a política de destinação de receitas e lucros do projeto.",
       "type": "textarea",
+      "placeholder": "Clique em uma sugestão abaixo ou digite sua própria cláusula...",
+      "required": true,
       "helpText": {
-        "how": "Copie e cole uma das opções a seguir, editando os valores se necessário:\n\nOpção A (Reinvestimento Total):\n'Todo o lucro líquido apurado será integralmente reinvestido no desenvolvimento do próprio Projeto.'\n\nOpção B (Caixa + Distribuição):\n'Do total da receita líquida apurada, o percentual de [25]% será retido para a composição de um fundo de caixa. O valor remanescente será distribuído aos Fundadores de forma [proporcional à participação societária].'",
+        "how": "Use as sugestões abaixo para preencher este campo, ou escreva sua própria cláusula do zero.",
         "why": "Definir a política de lucros de forma clara evita a principal causa de conflitos entre sócios e alinha as expectativas financeiras de todos."
-      }
+      },
+      "answerTemplates": [
+        {
+          "title": "Opção A: Reinvestimento Total",
+          "value": "Todo o lucro líquido apurado será integralmente reinvestido no desenvolvimento do próprio Projeto, visando o custeio da operação, melhorias estruturais, marketing e aceleração do crescimento. Nesta fase, não haverá distribuição de lucros aos Fundadores."
+        },
+        {
+          "title": "Opção B: Caixa + Distribuição",
+          "value": "Do total da receita líquida apurada, o percentual de [25]% será retido para a composição de um fundo de caixa, destinado a cobrir despesas operacionais e reinvestimentos. O valor remanescente será distribuído aos Fundadores de forma [proporcional à participação societária de cada um]."
+        },
+        {
+          "title": "Opção C: Distribuição Total",
+          "value": "Todo o lucro líquido apurado será distribuído integralmente aos Fundadores, de forma [proporcional à participação societária de cada um], em até 15 dias após o fechamento do período de apuração."
+        }
+      ]
     }
   ],
   "usePartySystem": true
@@ -457,6 +563,11 @@ O sistema valida automaticamente:
    - ✅ `conditionalLogic.conditions` deve ser um array
    - ✅ `conditionalLogic.action` deve ser "show" ou "hide"
    - ✅ Cada condição deve ter `fieldId`, `operator` e `value`
+
+5. **Validação de Answer Templates:**
+   - ✅ `answerTemplates` deve ser um array (se presente)
+   - ✅ Cada template deve ter `title` e `value`
+   - ✅ Alertas se `answerTemplates` for usado em campos que não sejam `textarea`
 
 ## Processo de Importação
 

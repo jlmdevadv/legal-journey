@@ -36,11 +36,15 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: F
     videoLink: '',
     aiAssistantLink: '',
     options: [],
-    conditionalLogic: undefined
+    conditionalLogic: undefined,
+    answerTemplates: []
   });
 
   const [conditions, setConditions] = useState<FieldCondition[]>([]);
   const [showConditionsEditor, setShowConditionsEditor] = useState(false);
+  const [showAnswerTemplatesEditor, setShowAnswerTemplatesEditor] = useState(false);
+  const [newTemplateTitle, setNewTemplateTitle] = useState('');
+  const [newTemplateValue, setNewTemplateValue] = useState('');
 
   useEffect(() => {
     if (field) {
@@ -56,10 +60,12 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: F
         videoLink: field.videoLink || '',
         aiAssistantLink: field.aiAssistantLink || '',
         options: field.options || [],
-        conditionalLogic: field.conditionalLogic
+        conditionalLogic: field.conditionalLogic,
+        answerTemplates: field.answerTemplates || []
       });
       setConditions(field.conditionalLogic?.conditions || []);
       setShowConditionsEditor(!!field.conditionalLogic && field.conditionalLogic.conditions.length > 0);
+      setShowAnswerTemplatesEditor(!!field.answerTemplates && field.answerTemplates.length > 0);
     } else {
       setFieldData({
         id: '',
@@ -73,10 +79,12 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: F
         videoLink: '',
         aiAssistantLink: '',
         options: [],
-        conditionalLogic: undefined
+        conditionalLogic: undefined,
+        answerTemplates: []
       });
       setConditions([]);
       setShowConditionsEditor(false);
+      setShowAnswerTemplatesEditor(false);
     }
   }, [field]);
 
@@ -112,6 +120,24 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: F
     setFieldData(prev => ({
       ...prev,
       options: prev.options?.filter((_, i) => i !== index) || []
+    }));
+  };
+
+  const handleAddAnswerTemplate = () => {
+    if (newTemplateTitle.trim() && newTemplateValue.trim()) {
+      setFieldData(prev => ({
+        ...prev,
+        answerTemplates: [...(prev.answerTemplates || []), { title: newTemplateTitle.trim(), value: newTemplateValue.trim() }]
+      }));
+      setNewTemplateTitle('');
+      setNewTemplateValue('');
+    }
+  };
+
+  const handleRemoveAnswerTemplate = (index: number) => {
+    setFieldData(prev => ({
+      ...prev,
+      answerTemplates: prev.answerTemplates?.filter((_, i) => i !== index) || []
     }));
   };
 
@@ -177,7 +203,8 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: F
       ...(fieldData.videoLink && { videoLink: fieldData.videoLink }),
       ...(fieldData.aiAssistantLink && { aiAssistantLink: fieldData.aiAssistantLink }),
       ...(fieldData.type === 'select' && fieldData.options && { options: fieldData.options }),
-      ...(fieldData.conditionalLogic && fieldData.conditionalLogic.conditions.length > 0 && { conditionalLogic: fieldData.conditionalLogic })
+      ...(fieldData.conditionalLogic && fieldData.conditionalLogic.conditions.length > 0 && { conditionalLogic: fieldData.conditionalLogic }),
+      ...(fieldData.answerTemplates && fieldData.answerTemplates.length > 0 && { answerTemplates: fieldData.answerTemplates })
     };
 
     onSave(completeField);
@@ -484,6 +511,108 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: F
               </CardContent>
             )}
           </Card>
+
+          {/* Answer Templates */}
+          {fieldData.type === 'textarea' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center justify-between">
+                  Modelos de Resposta (Opcional)
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAnswerTemplatesEditor(!showAnswerTemplatesEditor)}
+                  >
+                    {showAnswerTemplatesEditor ? (
+                      <>
+                        <ChevronUp className="w-4 h-4 mr-1" />
+                        Ocultar
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="w-4 h-4 mr-1" />
+                        Configurar
+                      </>
+                    )}
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              {showAnswerTemplatesEditor && (
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Configure sugestões de resposta pré-formatadas que o usuário pode selecionar com um clique.
+                  </p>
+
+                  {fieldData.answerTemplates && fieldData.answerTemplates.length > 0 && (
+                    <div className="space-y-3">
+                      {fieldData.answerTemplates.map((template, index) => (
+                        <div key={index} className="border rounded-lg p-3 bg-muted/50 space-y-2">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <p className="font-medium text-sm">{template.title}</p>
+                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{template.value}</p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveAnswerTemplate(index)}
+                            >
+                              <Minus className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="space-y-3 pt-3 border-t">
+                    <div>
+                      <Label htmlFor="template-title">Título da Sugestão</Label>
+                      <Input
+                        id="template-title"
+                        value={newTemplateTitle}
+                        onChange={(e) => setNewTemplateTitle(e.target.value)}
+                        placeholder="Ex: Opção A: Reinvestimento Total"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="template-value">Texto Completo</Label>
+                      <Textarea
+                        id="template-value"
+                        value={newTemplateValue}
+                        onChange={(e) => setNewTemplateValue(e.target.value)}
+                        placeholder="Digite o texto completo que será inserido quando o usuário clicar nesta opção..."
+                        className="min-h-24"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleAddAnswerTemplate}
+                      disabled={!newTemplateTitle.trim() || !newTemplateValue.trim()}
+                      className="w-full"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Adicionar Modelo de Resposta
+                    </Button>
+                  </div>
+
+                  {fieldData.answerTemplates && fieldData.answerTemplates.length > 0 && (
+                    <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                        💡 Preview
+                      </p>
+                      <p className="text-sm text-blue-700 dark:text-blue-300">
+                        O usuário verá {fieldData.answerTemplates.length} {fieldData.answerTemplates.length === 1 ? 'botão' : 'botões'} abaixo do campo de texto com {fieldData.answerTemplates.length === 1 ? 'esta opção' : 'estas opções'}. Ao clicar, o texto será automaticamente inserido no campo.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              )}
+            </Card>
+          )}
 
           {/* Optional Instructions */}
           <Card>

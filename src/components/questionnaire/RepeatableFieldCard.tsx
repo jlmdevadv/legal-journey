@@ -9,6 +9,7 @@ import { useContract } from '@/contexts/ContractContext';
 import { ContractField } from '@/types/template';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import QuestionnaireHelp from './QuestionnaireHelp';
+import AnswerTemplatesSelector from './AnswerTemplatesSelector';
 
 interface RepeatableFieldCardProps {
   field: ContractField;
@@ -86,14 +87,22 @@ const RepeatableFieldCard = ({
       </CardHeader>
       <CardContent className="space-y-4">
         {field.type === 'textarea' ? (
-          <Textarea
-            ref={inputRef as any}
-            value={currentValue}
-            onChange={(e) => updateRepeatableFieldValue(field.id, partyId, e.target.value)}
-            onKeyDown={handleKeyPress}
-            placeholder={field.placeholder}
-            className="min-h-32"
-          />
+          <>
+            <Textarea
+              ref={inputRef as any}
+              value={currentValue}
+              onChange={(e) => updateRepeatableFieldValue(field.id, partyId, e.target.value)}
+              onKeyDown={handleKeyPress}
+              placeholder={field.placeholder}
+              className="min-h-32"
+            />
+            {field.answerTemplates && field.answerTemplates.length > 0 && (
+              <AnswerTemplatesSelector
+                templates={field.answerTemplates}
+                onSelectTemplate={(value) => updateRepeatableFieldValue(field.id, partyId, value)}
+              />
+            )}
+          </>
         ) : field.type === 'select' && field.options ? (
           <Select 
             value={currentValue} 

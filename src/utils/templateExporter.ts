@@ -29,7 +29,8 @@ export const exportTemplateToJSON = (template: ContractTemplate): string => {
       videoLink: field.videoLink,
       aiAssistantLink: field.aiAssistantLink,
       conditionalLogic: field.conditionalLogic,
-      repeatPerParty: field.repeatPerParty
+      repeatPerParty: field.repeatPerParty,
+      answerTemplates: field.answerTemplates
     })),
     usePartySystem: template.usePartySystem
   };

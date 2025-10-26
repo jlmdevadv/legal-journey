@@ -29,6 +29,10 @@ export interface TemplateImportJSON {
       action: 'show' | 'hide';
     };
     repeatPerParty?: boolean;
+    answerTemplates?: Array<{
+      title: string;
+      value: string;
+    }>;
   }>;
   usePartySystem?: boolean;
 }
@@ -94,6 +98,22 @@ export const validateTemplateJSON = (json: any): { valid: boolean; errors: strin
         errors.push(`Card "${card.id}": conditionalLogic.action deve ser "show" ou "hide"`);
       }
     }
+    
+    // Validar answerTemplates (se existir)
+    if (card.answerTemplates) {
+      if (!Array.isArray(card.answerTemplates)) {
+        errors.push(`Card "${card.id}": answerTemplates deve ser um array`);
+      } else {
+        card.answerTemplates.forEach((template: any, tIdx: number) => {
+          if (!template.title) {
+            errors.push(`Card "${card.id}": answerTemplate ${tIdx + 1} requer "title"`);
+          }
+          if (!template.value) {
+            errors.push(`Card "${card.id}": answerTemplate ${tIdx + 1} requer "value"`);
+          }
+        });
+      }
+    }
   });
   
   // Validar se placeholders no contractText têm cards correspondentes
@@ -129,7 +149,8 @@ export const convertJSONToTemplate = (json: TemplateImportJSON): ContractTemplat
     videoLink: card.videoLink,
     aiAssistantLink: card.aiAssistantLink,
     conditionalLogic: card.conditionalLogic,
-    repeatPerParty: card.repeatPerParty || false
+    repeatPerParty: card.repeatPerParty || false,
+    answerTemplates: card.answerTemplates
   }));
   
   // Converter {{placeholders}} para [field-id] no texto do contrato

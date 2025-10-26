@@ -1,4 +1,9 @@
 
+export interface AnswerTemplate {
+  title: string;
+  value: string;
+}
+
 export interface PartyType {
   id: string;
   name: string;
@@ -47,6 +52,7 @@ export interface ContractField {
   aiAssistantLink?: string;
   conditionalLogic?: ConditionalLogic; // Lógica de visibilidade condicional
   repeatPerParty?: boolean; // Campo repetível para cada parte principal
+  answerTemplates?: AnswerTemplate[]; // Modelos de resposta pré-formatados
 }
 
 export interface RepeatableFieldResponse {

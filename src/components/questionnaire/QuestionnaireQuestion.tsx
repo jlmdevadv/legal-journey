@@ -10,6 +10,7 @@ import { ArrowLeft, ArrowRight, Edit } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import QuestionnaireHelp from './QuestionnaireHelp';
 import FieldConfigModal from '../admin/FieldConfigModal';
+import AnswerTemplatesSelector from './AnswerTemplatesSelector';
 import { getNonRepeatableVisibleFields } from '@/utils/conditionalLogic';
 
 const QuestionnaireQuestion = () => {
@@ -113,15 +114,23 @@ const QuestionnaireQuestion = () => {
           <CardContent className="space-y-6">
             <div className="space-y-2">
               {currentField.type === 'textarea' ? (
-                <Textarea
-                  ref={inputRef as any}
-                  placeholder={currentField.placeholder}
-                  value={currentValue}
-                  onChange={(e) => updateFormValue(currentField.id, e.target.value)}
-                  onKeyDown={handleKeyPress}
-                  className="min-h-[120px] text-base border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                  rows={5}
-                />
+                <>
+                  <Textarea
+                    ref={inputRef as any}
+                    placeholder={currentField.placeholder}
+                    value={currentValue}
+                    onChange={(e) => updateFormValue(currentField.id, e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    className="min-h-[120px] text-base border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                    rows={5}
+                  />
+                  {currentField.answerTemplates && currentField.answerTemplates.length > 0 && (
+                    <AnswerTemplatesSelector
+                      templates={currentField.answerTemplates}
+                      onSelectTemplate={(value) => updateFormValue(currentField.id, value)}
+                    />
+                  )}
+                </>
               ) : currentField.type === 'select' ? (
                 <Select 
                   value={currentValue} 
