@@ -37,7 +37,7 @@ interface ContractContextType {
   nextQuestion: (option?: string) => void;
   previousQuestion: () => void;
   goToQuestion: (index: number, triggeredFromSummary?: boolean) => void;
-  saveAndReturnToSummary: () => void;
+  saveAndReturnToSummary: (editedFieldId?: string, newValue?: string) => void;
   startQuestionnaire: () => void;
   finishQuestionnaire: () => void;
   loginAdmin: (username: string, password: string) => boolean;
@@ -588,17 +588,23 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     setCurrentQuestionIndex(index);
   };
 
-  const saveAndReturnToSummary = () => {
-    console.log('[UX] Salvando e processando navegação inteligente...');
+  const saveAndReturnToSummary = (editedFieldId?: string, newValue?: string) => {
+    console.log('[UX] Salvando e processando navegação inteligente...', { editedFieldId, newValue });
     
-    // 🛡️ SEGURANÇA: Limpar valores de campos ocultos
+    // Criar snapshot do estado futuro
+    const futureFormValues = { ...formValues };
+    if (editedFieldId && newValue !== undefined) {
+      futureFormValues[editedFieldId] = newValue;
+    }
+    
+    // 🛡️ SEGURANÇA: Limpar valores de campos ocultos (com estado futuro)
     cleanHiddenFieldValues();
     
     // Resetar o estado de edição
     setIsEditingFromSummary(false);
     
     // 🧠 INTELIGÊNCIA: Verificar se há campos obrigatórios vazios agora visíveis
-    const unansweredField = findFirstUnansweredRequiredField();
+    const unansweredField = findFirstUnansweredRequiredField(futureFormValues);
     
     if (unansweredField) {
       console.log(`[UX] Navegando para campo obrigatório vazio: índice ${unansweredField.index} (${unansweredField.blockType})`);
@@ -611,14 +617,19 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // 🧠 FASE 2: Detectar campos obrigatórios visíveis sem resposta
-  const findFirstUnansweredRequiredField = (): { 
+  const findFirstUnansweredRequiredField = (
+    customFormValues?: Record<string, string>
+  ): { 
     index: number, 
     blockType: 'repeatable' | 'nonRepeatable' 
   } | null => {
     if (!selectedTemplate) return null;
     
+    // Usar formValues customizados (estado futuro) se fornecidos
+    const currentFormValues = customFormValues || formValues;
+    
     // 1. Verificar campos repetíveis
-    const visibleRepeatableFields = getRepeatableVisibleFields(selectedTemplate.fields, formValues);
+    const visibleRepeatableFields = getRepeatableVisibleFields(selectedTemplate.fields, currentFormValues);
     const requiredRepeatableFields = visibleRepeatableFields.filter(f => f.required === true);
     
     for (let partyIdx = 0; partyIdx < numberOfParties; partyIdx++) {
@@ -637,12 +648,12 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     }
     
     // 2. Verificar campos não-repetíveis
-    const visibleNonRepeatableFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
+    const visibleNonRepeatableFields = getNonRepeatableVisibleFields(selectedTemplate.fields, currentFormValues);
     const requiredNonRepeatableFields = visibleNonRepeatableFields.filter(f => f.required === true);
     
     for (let fieldIdx = 0; fieldIdx < requiredNonRepeatableFields.length; fieldIdx++) {
       const field = requiredNonRepeatableFields[fieldIdx];
-      const value = formValues[field.id];
+      const value = currentFormValues[field.id];
       
       if (!value || value.trim() === '') {
         const globalFieldIndex = visibleNonRepeatableFields.findIndex(f => f.id === field.id);
@@ -753,15 +764,60 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     
     // 2. Replace campos normais VISÍVEIS
     Object.entries(formValues).forEach(([fieldId, value]) => {
-      // Apenas substituir se o campo estiver visível
       if (visibleFieldIds.has(fieldId)) {
+        const field = selectedTemplate.fields.find(f => f.id === fieldId);
         const escapedFieldId = fieldId.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
         const placeholderPattern = new RegExp(`\\[${escapedFieldId}\\]`, 'g');
-        filledTemplate = filledTemplate.replace(placeholderPattern, value || `[${fieldId}]`);
+        
+        // Se campo opcional e vazio, remover linha inteira (Smart Placeholder Replacement)
+        if (field && !field.required && (!value || value.trim() === '')) {
+          const lineRemovalPattern = new RegExp(`^.*\\[${escapedFieldId}\\].*\\n?`, 'gm');
+          filledTemplate = filledTemplate.replace(lineRemovalPattern, '');
+          console.log(`[SMART-CLEANUP] Removendo linha do campo opcional vazio: ${fieldId}`);
+        } else {
+          // Substituir normalmente
+          filledTemplate = filledTemplate.replace(placeholderPattern, value || '');
+        }
       }
     });
     
-    // 3. Replace location and date placeholders
+    // 3. ⚡ NOVA ETAPA: Limpar placeholders de campos OCULTOS ou NÃO EXISTENTES
+    // Encontrar todos os placeholders remanescentes no template
+    const placeholderRegex = /\[([a-zA-Z0-9_-]+)\]/g;
+    const remainingPlaceholders = new Set<string>();
+    let match;
+    
+    while ((match = placeholderRegex.exec(filledTemplate)) !== null) {
+      remainingPlaceholders.add(match[1]);
+    }
+    
+    // Para cada placeholder remanescente, verificar se é de campo oculto ou inexistente
+    remainingPlaceholders.forEach(fieldId => {
+      // Ignorar placeholders especiais do sistema
+      if (['city', 'state', 'signing-date'].includes(fieldId)) return;
+      
+      const field = selectedTemplate.fields.find(f => f.id === fieldId);
+      const isHidden = field && !visibleFieldIds.has(fieldId);
+      const doesNotExist = !field;
+      
+      if (isHidden || doesNotExist) {
+        const escapedFieldId = fieldId.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        
+        // Se campo opcional ou oculto, remover linha inteira
+        if ((field && !field.required) || isHidden) {
+          const lineRemovalPattern = new RegExp(`^.*\\[${escapedFieldId}\\].*\\n?`, 'gm');
+          filledTemplate = filledTemplate.replace(lineRemovalPattern, '');
+          console.log(`[PLACEHOLDER-CLEANUP] Removendo linha de campo oculto/opcional: ${fieldId}`);
+        } else {
+          // Campo obrigatório mas não existe - substituir por vazio (evitar quebra)
+          const placeholderPattern = new RegExp(`\\[${escapedFieldId}\\]`, 'g');
+          filledTemplate = filledTemplate.replace(placeholderPattern, '');
+          console.log(`[PLACEHOLDER-CLEANUP] Removendo placeholder de campo inexistente: ${fieldId}`);
+        }
+      }
+    });
+    
+    // 4. Replace location and date placeholders
     filledTemplate = filledTemplate.replace(/\[city\]/g, locationData.city || '[city]');
     filledTemplate = filledTemplate.replace(/\[state\]/g, locationData.state || '[state]');
     filledTemplate = filledTemplate.replace(/\[signing-date\]/g, locationData.date ? formatDateToBrazilian(locationData.date) : '[signing-date]');

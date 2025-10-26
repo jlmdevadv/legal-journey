@@ -30,6 +30,7 @@ const QuestionnaireQuestion = () => {
   
   const inputRef = useRef<HTMLInputElement>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [localValue, setLocalValue] = useState('');
 
   // Calculate visible fields dynamically based on conditional logic
   const visibleFields = useMemo(() => {
@@ -50,11 +51,21 @@ const QuestionnaireQuestion = () => {
   const isLastQuestion = templateQuestionIndex === visibleFields.length - 1;
   const canProceed = !currentField.required || currentValue.trim() !== '';
 
+  // Sincronizar valor local com formValues
+  useEffect(() => {
+    setLocalValue(currentValue);
+  }, [currentValue, currentField.id]);
+
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.focus();
     }
   }, [currentQuestionIndex]);
+
+  const handleValueChange = (value: string) => {
+    setLocalValue(value);
+    updateFormValue(currentField.id, value);
+  };
 
   const handleNext = () => {
     if (canProceed) {
@@ -120,8 +131,8 @@ const QuestionnaireQuestion = () => {
                   <Textarea
                     ref={inputRef as any}
                     placeholder={currentField.placeholder}
-                    value={currentValue}
-                    onChange={(e) => updateFormValue(currentField.id, e.target.value)}
+                    value={localValue}
+                    onChange={(e) => handleValueChange(e.target.value)}
                     onKeyDown={handleKeyPress}
                     className="min-h-[120px] text-base border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                     rows={5}
@@ -129,14 +140,14 @@ const QuestionnaireQuestion = () => {
                   {currentField.answerTemplates && currentField.answerTemplates.length > 0 && (
                     <AnswerTemplatesSelector
                       templates={currentField.answerTemplates}
-                      onSelectTemplate={(value) => updateFormValue(currentField.id, value)}
+                      onSelectTemplate={(value) => handleValueChange(value)}
                     />
                   )}
                 </>
               ) : currentField.type === 'select' ? (
                 <Select 
-                  value={currentValue} 
-                  onValueChange={(value) => updateFormValue(currentField.id, value)}
+                  value={localValue} 
+                  onValueChange={(value) => handleValueChange(value)}
                 >
                   <SelectTrigger className="text-base border-gray-200 focus:border-blue-300 h-12">
                     <SelectValue placeholder={currentField.placeholder} />
@@ -154,8 +165,8 @@ const QuestionnaireQuestion = () => {
                   ref={inputRef}
                   type={currentField.type}
                   placeholder={currentField.placeholder}
-                  value={currentValue}
-                  onChange={(e) => updateFormValue(currentField.id, e.target.value)}
+                  value={localValue}
+                  onChange={(e) => handleValueChange(e.target.value)}
                   onKeyDown={handleKeyPress}
                   className="text-base border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 h-12"
                 />
@@ -179,7 +190,13 @@ const QuestionnaireQuestion = () => {
               </Button>
               
               <Button 
-                onClick={isEditingFromSummary ? saveAndReturnToSummary : handleNext}
+                onClick={() => {
+                  if (isEditingFromSummary) {
+                    saveAndReturnToSummary(currentField.id, localValue);
+                  } else {
+                    handleNext();
+                  }
+                }}
                 disabled={!canProceed}
                 className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 flex items-center gap-2"
               >

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,6 +45,12 @@ const RepeatableFieldCard = ({
 
   const inputRef = useRef<HTMLInputElement>(null);
   const currentValue = getRepeatableFieldValue(field.id, partyId);
+  const [localValue, setLocalValue] = useState(currentValue);
+  
+  // Sincronizar valor local com o valor do contexto
+  useEffect(() => {
+    setLocalValue(currentValue);
+  }, [currentValue, field.id, partyId]);
   
   // Progress: considera tanto partes quanto campos
   const totalSteps = totalParties * totalFields;
@@ -55,8 +61,13 @@ const RepeatableFieldCard = ({
     inputRef.current?.focus();
   }, [partyId, field.id]);
 
+  const handleValueChange = (value: string) => {
+    setLocalValue(value);
+    updateRepeatableFieldValue(field.id, partyId, value);
+  };
+
   const handleNext = () => {
-    if (field.required && !currentValue.trim()) return;
+    if (field.required && !localValue.trim()) return;
     nextQuestion();
   };
 
@@ -66,7 +77,7 @@ const RepeatableFieldCard = ({
     }
   };
 
-  const canProceed = !field.required || currentValue.trim() !== '';
+  const canProceed = !field.required || localValue.trim() !== '';
 
   return (
     <Card className="max-w-2xl mx-auto">
@@ -92,8 +103,8 @@ const RepeatableFieldCard = ({
           <>
             <Textarea
               ref={inputRef as any}
-              value={currentValue}
-              onChange={(e) => updateRepeatableFieldValue(field.id, partyId, e.target.value)}
+              value={localValue}
+              onChange={(e) => handleValueChange(e.target.value)}
               onKeyDown={handleKeyPress}
               placeholder={field.placeholder}
               className="min-h-32"
@@ -101,14 +112,14 @@ const RepeatableFieldCard = ({
             {field.answerTemplates && field.answerTemplates.length > 0 && (
               <AnswerTemplatesSelector
                 templates={field.answerTemplates}
-                onSelectTemplate={(value) => updateRepeatableFieldValue(field.id, partyId, value)}
+                onSelectTemplate={(value) => handleValueChange(value)}
               />
             )}
           </>
         ) : field.type === 'select' && field.options ? (
           <Select 
-            value={currentValue} 
-            onValueChange={(value) => updateRepeatableFieldValue(field.id, partyId, value)}
+            value={localValue} 
+            onValueChange={(value) => handleValueChange(value)}
           >
             <SelectTrigger>
               <SelectValue placeholder={field.placeholder || 'Selecione...'} />
@@ -123,14 +134,14 @@ const RepeatableFieldCard = ({
           <Input
             ref={inputRef}
             type={field.type}
-            value={currentValue}
-            onChange={(e) => updateRepeatableFieldValue(field.id, partyId, e.target.value)}
+            value={localValue}
+            onChange={(e) => handleValueChange(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder={field.placeholder}
           />
         )}
 
-        {field.required && !currentValue.trim() && (
+        {field.required && !localValue.trim() && (
           <p className="text-sm text-destructive">Este campo é obrigatório</p>
         )}
 
@@ -146,7 +157,13 @@ const RepeatableFieldCard = ({
             Anterior
           </Button>
           <Button
-            onClick={isEditingFromSummary ? saveAndReturnToSummary : handleNext}
+            onClick={() => {
+              if (isEditingFromSummary) {
+                saveAndReturnToSummary(field.id, localValue);
+              } else {
+                handleNext();
+              }
+            }}
             disabled={!canProceed}
             className="flex items-center gap-2"
           >
