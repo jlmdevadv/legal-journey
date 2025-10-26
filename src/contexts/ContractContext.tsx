@@ -102,22 +102,49 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
 
   // 🛡️ CORREÇÃO 1: useEffect com debounce para cleanup controlado
   const prevFormValuesRef = useRef(formValues);
+  const isCleaningRef = useRef(false);
 
   useEffect(() => {
-    // Só executar se formValues realmente mudou (comparação superficial de chaves)
-    const prevKeys = Object.keys(prevFormValuesRef.current).sort().join(',');
-    const currentKeys = Object.keys(formValues).sort().join(',');
+    // Evitar loop: não executar se já estamos limpando
+    if (isCleaningRef.current || !selectedTemplate) return;
     
-    if (prevKeys !== currentKeys || JSON.stringify(prevFormValuesRef.current) !== JSON.stringify(formValues)) {
-      // Agendar limpeza para o próximo tick (evitar atualização durante render)
+    // Calcular visibilidade ANTES e DEPOIS
+    const prevVisible = new Set<string>();
+    const currentVisible = new Set<string>();
+    
+    // Campos visíveis com formValues anterior
+    if (Object.keys(prevFormValuesRef.current).length > 0) {
+      const prevNonRepeatable = getNonRepeatableVisibleFields(selectedTemplate.fields, prevFormValuesRef.current);
+      const prevRepeatable = getRepeatableVisibleFields(selectedTemplate.fields, prevFormValuesRef.current);
+      prevNonRepeatable.forEach(f => prevVisible.add(f.id));
+      prevRepeatable.forEach(f => prevVisible.add(f.id));
+    }
+    
+    // Campos visíveis com formValues atual
+    const currentNonRepeatable = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
+    const currentRepeatable = getRepeatableVisibleFields(selectedTemplate.fields, formValues);
+    currentNonRepeatable.forEach(f => currentVisible.add(f.id));
+    currentRepeatable.forEach(f => currentVisible.add(f.id));
+    
+    // Verificar se a visibilidade MUDOU
+    const prevKeys = Array.from(prevVisible).sort().join(',');
+    const currentKeys = Array.from(currentVisible).sort().join(',');
+    
+    if (prevKeys !== currentKeys) {
+      console.log('[CLEANUP] Visibilidade mudou, executando limpeza...');
+      isCleaningRef.current = true;
+      
       const timer = setTimeout(() => {
         cleanHiddenFieldValues();
+        isCleaningRef.current = false;
       }, 0);
       
       prevFormValuesRef.current = formValues;
       
       return () => clearTimeout(timer);
     }
+    
+    prevFormValuesRef.current = formValues;
   }, [formValues, selectedTemplate]);
 
   // 🧠 CORREÇÃO 3: Hook customizado para rastrear valor anterior
@@ -131,17 +158,29 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
 
   const prevIsEditingFromSummary = usePrevious(isEditingFromSummary);
 
-  // 🧠 CORREÇÃO 3: useEffect para navegação inteligente pós-edição
+  // 🧠 CORREÇÃO 3: useEffect para navegação inteligente pós-edição - Passo 1
   useEffect(() => {
-    // Detectar: voltou ao sumário (9999) vindo de uma edição (isEditingFromSummary passou de true → false)
-    if (
-      currentQuestionIndex === 9999 && 
-      prevIsEditingFromSummary === true && 
-      isEditingFromSummary === false
-    ) {
+    if (currentQuestionIndex === 9999 && 
+        prevIsEditingFromSummary === true && 
+        isEditingFromSummary === false) {
+      console.log('[UX] Detectado retorno ao sumário após edição, aguardando atualização de formValues...');
+      // Não fazer nada aqui, apenas logar - o próximo useEffect cuidará da navegação
+    }
+  }, [currentQuestionIndex, isEditingFromSummary, prevIsEditingFromSummary]);
+
+  // 🧠 CORREÇÃO 3: useEffect para navegação inteligente pós-edição - Passo 2
+  useEffect(() => {
+    // Só executar se:
+    // 1. Estamos no sumário (9999)
+    // 2. NÃO estamos em modo de edição
+    // 3. Acabamos de sair do modo de edição (transição)
+    if (currentQuestionIndex === 9999 && 
+        !isEditingFromSummary && 
+        prevIsEditingFromSummary === true) {
+      
       console.log('[UX] Verificando se há novos campos obrigatórios após edição...');
       
-      // Aguardar próximo tick para garantir que formValues foi atualizado
+      // Aguardar 2 ticks para garantir que formValues foi atualizado
       const timer = setTimeout(() => {
         const unansweredField = findFirstUnansweredRequiredField();
         
@@ -152,11 +191,11 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         } else {
           console.log('[UX] Todos os campos obrigatórios preenchidos');
         }
-      }, 100); // Pequeno delay para garantir que state foi atualizado
+      }, 150); // Aumentar delay para 150ms
       
       return () => clearTimeout(timer);
     }
-  }, [currentQuestionIndex, isEditingFromSummary, prevIsEditingFromSummary, formValues]);
+  }, [formValues, currentQuestionIndex, isEditingFromSummary, prevIsEditingFromSummary]);
 
   const loadPartyTypes = async () => {
     try {

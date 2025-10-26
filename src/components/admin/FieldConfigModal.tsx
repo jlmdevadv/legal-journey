@@ -518,12 +518,12 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: F
                     <p className="text-sm text-blue-700 dark:text-blue-300">
                       Este campo será exibido quando:{' '}
                       {conditions.map((c, i) => (
-                        <React.Fragment key={i}>
+                        <span key={i} className="inline">
                           <strong>{selectedTemplate?.fields.find(f => f.id === c.fieldId)?.label || c.fieldId}</strong>
                           {' '}<em>{getOperatorLabel(c.operator)}</em>{' '}
                           <strong>"{c.value}"</strong>
                           {i < conditions.length - 1 && ` ${c.logicOperator} `}
-                        </React.Fragment>
+                        </span>
                       ))}
                     </p>
                   </div>
