@@ -119,11 +119,60 @@ export const validateTemplateJSON = (json: any): { valid: boolean; errors: strin
   // Validar se placeholders no contractText têm cards correspondentes
   if (json.contractText && cardIds.size > 0) {
     const placeholders = detectPlaceholders(json.contractText);
-    const missingCards = placeholders.filter(p => !cardIds.has(p) && !cardIds.has(sanitizeVariableName(p)));
+    
+    // Construir um mapa de cards para validação eficiente
+    const cardsMap = new Map<string, any>(json.cards.map(card => [card.id, card]));
+    
+    const missingCards = placeholders.filter(placeholder => {
+      // Verificar correspondência direta (caso normal)
+      if (cardIds.has(placeholder) || cardIds.has(sanitizeVariableName(placeholder))) {
+        return false; // Placeholder válido
+      }
+      
+      // Verificar se termina com _formatted (campos repetíveis)
+      if (placeholder.endsWith('_formatted')) {
+        const baseId = placeholder.replace(/_formatted$/, '');
+        const sanitizedBaseId = sanitizeVariableName(baseId);
+        
+        // Verificar se existe um card com o ID base
+        if (cardIds.has(baseId) || cardIds.has(sanitizedBaseId)) {
+          const card = cardsMap.get(baseId) || cardsMap.get(sanitizedBaseId);
+          
+          // Validar se o card tem repeatPerParty: true
+          if (card && card.repeatPerParty === true) {
+            return false; // Placeholder _formatted válido
+          } else if (card) {
+            // Card existe mas não tem repeatPerParty: true
+            errors.push(
+              `Placeholder "{{${placeholder}}}" usa sufixo _formatted mas o card "${card.id}" não tem "repeatPerParty": true`
+            );
+            return false; // Não adicionar como "missing", já foi reportado acima
+          }
+        }
+      }
+      
+      return true; // Placeholder sem card correspondente
+    });
     
     if (missingCards.length > 0) {
       errors.push(`Placeholders sem card correspondente: ${missingCards.join(', ')}`);
     }
+    
+    // Validar se cards com repeatPerParty: true usam _formatted no texto
+    const repeatableCards = json.cards.filter((c: any) => c.repeatPerParty === true);
+    const allPlaceholders = detectPlaceholders(json.contractText);
+    
+    repeatableCards.forEach((card: any) => {
+      const expectedFormattedPlaceholder = `${card.id}_formatted`;
+      const hasFormatted = allPlaceholders.includes(expectedFormattedPlaceholder);
+      const hasBasic = allPlaceholders.includes(card.id);
+      
+      if (!hasFormatted && hasBasic) {
+        errors.push(
+          `⚠️ Card "${card.id}" tem "repeatPerParty": true mas usa {{${card.id}}} no texto. Use {{${card.id}_formatted}} para formatar corretamente.`
+        );
+      }
+    });
   }
   
   return {

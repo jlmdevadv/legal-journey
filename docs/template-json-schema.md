@@ -716,6 +716,72 @@ Requisitos:
    - No texto do contrato, lembre-se de usar `{{campo_id_formatted}}` para campos repetíveis
    - Teste o fluxo com diferentes números de partes
 
+## Erros Comuns e Como Resolver
+
+### 1. "Placeholders sem card correspondente: campo_id_formatted"
+
+**Causa:** Você usou `{{campo_id_formatted}}` no `contractText`, mas o card correspondente não tem `repeatPerParty: true`.
+
+**Solução:** 
+- Se o campo deve ser repetível por parte, adicione `"repeatPerParty": true` ao card
+- Se não deve ser repetível, remova `_formatted` do placeholder no `contractText`
+
+**Exemplo de Erro:**
+```json
+"contractText": "... {{email_formatted}} ...",
+"cards": [
+  {
+    "id": "email",
+    "type": "email",
+    "repeatPerParty": false
+  }
+]
+```
+
+**Correção 1 (Tornar repetível):**
+```json
+"cards": [
+  {
+    "id": "email",
+    "type": "email",
+    "repeatPerParty": true
+  }
+]
+```
+
+**Correção 2 (Remover _formatted):**
+```json
+"contractText": "... {{email}} ..."
+```
+
+---
+
+### 2. "Card 'campo_id' tem repeatPerParty: true mas usa {{campo_id}} no texto"
+
+**Causa:** Você marcou o card como repetível mas esqueceu de usar `_formatted` no placeholder.
+
+**Problema:** O campo será coletado de cada parte, mas todas as respostas aparecerão juntas no texto sem formatação adequada.
+
+**Solução:** Use `{{campo_id_formatted}}` no `contractText` em vez de `{{campo_id}}`.
+
+**Exemplo de Erro:**
+```json
+"contractText": "Dados bancários: {{dados_bancarios}}",
+"cards": [
+  {
+    "id": "dados_bancarios",
+    "repeatPerParty": true
+  }
+]
+```
+
+**Correção:**
+```json
+"contractText": "Dados bancários: {{dados_bancarios_formatted}}"
+```
+
+---
+
 6. **Validação antes da Importação:**
    - Valide o JSON em JSONLint.com
    - Revise todos os IDs e placeholders
