@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Save, Plus, Info, Keyboard, Clock, Eye, Edit3, Download } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Info, Keyboard, Clock, Eye, Edit3, Download, Code } from 'lucide-react';
 import { toast } from 'sonner';
 import FieldConfigModal from './FieldConfigModal';
 import TemplateVersionHistory from './TemplateVersionHistory';
 import SelectionConfirmationModal from './SelectionConfirmationModal';
+import { ConditionalClauseHelper } from './ConditionalClauseHelper';
+import { SortableFieldList } from './SortableFieldList';
 import { useKeyboardSelection } from '../../hooks/useKeyboardSelection';
 import { detectPlaceholders, humanizeVariableName, sanitizeVariableName } from '../../utils/templateUtils';
 import { incrementVersion, createNewVersion, restoreVersion } from '../../utils/versionUtils';
@@ -33,6 +35,7 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [changesDescription, setChangesDescription] = useState('');
   const [showSaveVersionDialog, setShowSaveVersionDialog] = useState(false);
+  const [showConditionalClauseHelper, setShowConditionalClauseHelper] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -257,6 +260,37 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
     toast.info('Funcionalidade de preview em desenvolvimento');
   };
 
+  const handleInsertConditionalClause = (clauseText: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    
+    const cursorPos = textarea.selectionStart;
+    const before = editingTemplate.template.substring(0, cursorPos);
+    const after = editingTemplate.template.substring(cursorPos);
+    
+    setEditingTemplate(prev => ({
+      ...prev,
+      template: before + '\n' + clauseText + '\n' + after
+    }));
+    
+    toast.success('Cláusula condicional inserida!');
+  };
+
+  const handleFieldsReorder = (newFields: ContractField[]) => {
+    // Atualizar display_order com base na nova posição
+    const fieldsWithOrder = newFields.map((field, index) => ({
+      ...field,
+      display_order: index
+    }));
+    
+    setEditingTemplate(prev => ({
+      ...prev,
+      fields: fieldsWithOrder
+    }));
+    
+    toast.success('Ordem dos campos atualizada!');
+  };
+
   const renderPreview = () => {
     let content = editingTemplate.template;
     
@@ -342,6 +376,14 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
           </Button>
           <Button
             variant="outline"
+            onClick={() => setShowConditionalClauseHelper(true)}
+            className="flex items-center gap-2"
+          >
+            <Code className="w-4 h-4" />
+            Cláusula Condicional
+          </Button>
+          <Button
+            variant="outline"
             onClick={() => {
               downloadTemplateJSON(editingTemplate);
               toast.success('JSON exportado com sucesso!');
@@ -372,50 +414,12 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {editingTemplate.fields.length === 0 ? (
-                  <div className="text-gray-500 text-center py-4">
-                    <p className="mb-2">Crie campos editáveis de duas formas:</p>
-                    <div className="text-sm space-y-1">
-                      <p>• Selecione texto no preview (mouse ou Shift+setas)</p>
-                      <p>• Digite <code className="bg-gray-100 px-1 rounded">{'{{nome_variavel}}'}</code> no template</p>
-                    </div>
-                  </div>
-                ) : (
-                  editingTemplate.fields.map((field, index) => (
-                    <div key={field.id} className="p-3 border rounded-lg hover:bg-gray-50 transition-colors">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="font-medium">{field.label}</div>
-                          <div className="text-sm text-gray-500">
-                            Placeholder: [{field.id}]
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            Tipo: {field.type}
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleFieldEdit(index)}
-                          >
-                            Editar
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleRemoveField(index)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            Remover
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
+              <SortableFieldList
+                fields={editingTemplate.fields}
+                onReorder={handleFieldsReorder}
+                onEdit={handleFieldEdit}
+                onRemove={handleRemoveField}
+              />
             </CardContent>
           </Card>
         </div>
@@ -522,6 +526,13 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
         selectedText={selectedText}
         field={editingFieldIndex !== null ? editingTemplate.fields[editingFieldIndex] : undefined}
         availableFields={editingTemplate.fields}
+      />
+
+      <ConditionalClauseHelper
+        open={showConditionalClauseHelper}
+        onOpenChange={setShowConditionalClauseHelper}
+        availableFields={editingTemplate.fields}
+        onInsert={handleInsertConditionalClause}
       />
 
       {/* Dialog para descrição de mudanças */}

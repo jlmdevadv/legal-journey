@@ -24,16 +24,21 @@ const ContractPreview = () => {
     // First handle bold markers (**text**)
     const boldRegex = /\*\*(.*?)\*\*/g;
     const placeholderRegex = /\[([\w-]+)\]/g;
+    const conditionalRegex = /(\{\{#if\s+[^}]+\}\}|\{\{\/if\}\})/g;
     
-    // Split by both bold and placeholder patterns
-    const combinedRegex = /(\*\*.*?\*\*|\[[\w-]+\])/g;
+    // Split by bold, placeholder, and conditional patterns
+    const combinedRegex = /(\*\*.*?\*\*|\[[\w-]+\]|\{\{#if\s+[^}]+\}\}|\{\{\/if\}\})/g;
     const parts = text.split(combinedRegex);
     
     if (parts.length <= 1) return text;
     
     return parts.map((part, i) => {
+      // Check if it's a conditional tag
+      if (part.includes('{{#if') || part.includes('{{/if}}')) {
+        return <span key={i} className="bg-purple-100 px-1 rounded border border-purple-300 text-purple-800 font-mono text-xs">{part}</span>;
+      }
       // Check if it's a bold marker
-      if (part.startsWith('**') && part.endsWith('**')) {
+      else if (part.startsWith('**') && part.endsWith('**')) {
         const boldText = part.slice(2, -2);
         return <strong key={i} className="font-bold">{boldText}</strong>;
       }

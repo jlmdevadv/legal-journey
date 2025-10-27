@@ -53,6 +53,7 @@ export interface ContractField {
   conditionalLogic?: ConditionalLogic; // Lógica de visibilidade condicional
   repeatPerParty?: boolean; // Campo repetível para cada parte principal
   answerTemplates?: AnswerTemplate[]; // Modelos de resposta pré-formatados
+  display_order?: number; // Ordem de exibição dos campos
 }
 
 export interface RepeatableFieldResponse {

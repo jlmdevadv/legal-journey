@@ -175,11 +175,19 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error;
       
       if (data && data.length > 0) {
-        const templates = data.map(t => ({
-          ...t,
-          fields: t.fields as any as ContractField[],
-          version: t.version as any
-        })) as ContractTemplate[];
+        const templates = data.map(t => {
+          // Inicializar display_order se não existir
+          const fields = (t.fields as any as ContractField[]).map((field, index) => ({
+            ...field,
+            display_order: field.display_order ?? index
+          }));
+          
+          return {
+            ...t,
+            fields,
+            version: t.version as any
+          };
+        }) as ContractTemplate[];
         
         setCustomTemplates(templates);
         console.log(`✅ Carregados ${templates.length} templates do banco`);
@@ -277,10 +285,16 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const selectTemplate = (template: ContractTemplate) => {
-    setSelectedTemplate(template);
+    // Ordenar campos por display_order antes de usar
+    const sortedTemplate = {
+      ...template,
+      fields: sortFieldsByDisplayOrder(template.fields)
+    };
+    
+    setSelectedTemplate(sortedTemplate);
     // Initialize form values with empty strings for each field
     const initialValues: Record<string, string> = {};
-    template.fields.forEach(field => {
+    sortedTemplate.fields.forEach(field => {
       initialValues[field.id] = '';
     });
     setFormValues(initialValues);
@@ -712,11 +726,110 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       .join('\n');
   };
 
+  // ========== CLÁUSULAS CONDICIONAIS ==========
+  // Parser de cláusulas condicionais {{#if}}...{{/if}}
+  const parseConditionalClauses = (templateText: string, formValues: Record<string, string>): string => {
+    console.log('[CONDITIONAL-CLAUSES] Iniciando parsing...');
+    
+    // Regex para detectar blocos {{#if condition}}...{{/if}}
+    // Captura: grupo 1 = condição completa, grupo 2 = conteúdo interno
+    const conditionalRegex = /\{\{#if\s+([^}]+)\}\}([\s\S]*?)\{\{\/if\}\}/g;
+    
+    let parsedText = templateText;
+    let match;
+    
+    while ((match = conditionalRegex.exec(templateText)) !== null) {
+      const fullMatch = match[0];           // Bloco completo {{#if}}...{{/if}}
+      const conditionStr = match[1].trim(); // String da condição
+      const innerContent = match[2];        // Conteúdo interno
+      
+      console.log(`[CONDITIONAL-CLAUSES] Encontrado bloco:`, { conditionStr, innerContent });
+      
+      // Parsear condição (suporta AND/OR)
+      const conditionResult = evaluateConditionalString(conditionStr, formValues);
+      
+      if (conditionResult) {
+        // Condição verdadeira: manter conteúdo interno (remover apenas tags)
+        parsedText = parsedText.replace(fullMatch, innerContent);
+        console.log(`[CONDITIONAL-CLAUSES] ✅ Condição VERDADEIRA - mantendo conteúdo`);
+      } else {
+        // Condição falsa: remover bloco inteiro
+        parsedText = parsedText.replace(fullMatch, '');
+        console.log(`[CONDITIONAL-CLAUSES] ❌ Condição FALSA - removendo bloco`);
+      }
+    }
+    
+    return parsedText;
+  };
+
+  // Avalia string de condição (ex: "campo equals 'valor' AND outro greaterThan '10'")
+  const evaluateConditionalString = (conditionStr: string, formValues: Record<string, string>): boolean => {
+    // Dividir por AND/OR
+    const andParts = conditionStr.split(/\s+AND\s+/i);
+    
+    // Se tem AND, TODAS as partes devem ser verdadeiras
+    if (andParts.length > 1) {
+      return andParts.every(part => evaluateSingleCondition(part.trim(), formValues));
+    }
+    
+    const orParts = conditionStr.split(/\s+OR\s+/i);
+    
+    // Se tem OR, PELO MENOS UMA parte deve ser verdadeira
+    if (orParts.length > 1) {
+      return orParts.some(part => evaluateSingleCondition(part.trim(), formValues));
+    }
+    
+    // Condição simples
+    return evaluateSingleCondition(conditionStr, formValues);
+  };
+
+  // Avalia condição individual (ex: "campo equals 'valor'")
+  const evaluateSingleCondition = (conditionStr: string, formValues: Record<string, string>): boolean => {
+    // Regex: campo_id operator "valor" (com suporte a aspas simples/duplas)
+    const conditionRegex = /^(\w+)\s+(equals|notEquals|contains|greaterThan|lessThan)\s+["'](.+?)["']$/i;
+    const match = conditionStr.match(conditionRegex);
+    
+    if (!match) {
+      console.warn(`[CONDITIONAL-CLAUSES] Condição inválida: ${conditionStr}`);
+      return false;
+    }
+    
+    const [, fieldId, operator, expectedValue] = match;
+    const actualValue = formValues[fieldId] || '';
+    
+    console.log(`[CONDITIONAL-CLAUSES] Avaliando: ${fieldId} ${operator} "${expectedValue}" (valor atual: "${actualValue}")`);
+    
+    switch (operator.toLowerCase()) {
+      case 'equals':
+        return actualValue === expectedValue;
+      case 'notequals':
+        return actualValue !== expectedValue;
+      case 'contains':
+        return actualValue.includes(expectedValue);
+      case 'greaterthan':
+        return Number(actualValue) > Number(expectedValue);
+      case 'lessthan':
+        return Number(actualValue) < Number(expectedValue);
+      default:
+        return false;
+    }
+  };
+
+  // ========== ORDENAÇÃO DE CAMPOS ==========
+  const sortFieldsByDisplayOrder = (fields: ContractField[]): ContractField[] => {
+    return [...fields].sort((a, b) => {
+      const orderA = a.display_order ?? 999999;
+      const orderB = b.display_order ?? 999999;
+      return orderA - orderB;
+    });
+  };
+
   // 🎨 CORREÇÃO 2: Função para PREVIEW (mantém placeholders visíveis)
   const generatePreviewText = (): string => {
     if (!selectedTemplate) return '';
     
-    let filledTemplate = selectedTemplate.template;
+    // ✅ ETAPA 1: Processar cláusulas condicionais PRIMEIRO
+    let filledTemplate = parseConditionalClauses(selectedTemplate.template, formValues);
     
     // Obter campos visíveis ATUAIS (sem chamar cleanup)
     const visibleNonRepeatableFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
@@ -788,7 +901,8 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   const generateFinalDocument = (): string => {
     if (!selectedTemplate) return '';
     
-    let filledTemplate = selectedTemplate.template;
+    // ✅ ETAPA 1: Processar cláusulas condicionais PRIMEIRO
+    let filledTemplate = parseConditionalClauses(selectedTemplate.template, formValues);
     
     // Obter campos visíveis
     const visibleNonRepeatableFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
