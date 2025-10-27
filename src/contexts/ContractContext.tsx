@@ -147,55 +147,6 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     prevFormValuesRef.current = formValues;
   }, [formValues, selectedTemplate]);
 
-  // 🧠 CORREÇÃO 3: Hook customizado para rastrear valor anterior
-  const usePrevious = <T,>(value: T): T | undefined => {
-    const ref = useRef<T>();
-    useEffect(() => {
-      ref.current = value;
-    });
-    return ref.current;
-  };
-
-  const prevIsEditingFromSummary = usePrevious(isEditingFromSummary);
-
-  // 🧠 CORREÇÃO 3: useEffect para navegação inteligente pós-edição - Passo 1
-  useEffect(() => {
-    if (currentQuestionIndex === 9999 && 
-        prevIsEditingFromSummary === true && 
-        isEditingFromSummary === false) {
-      console.log('[UX] Detectado retorno ao sumário após edição, aguardando atualização de formValues...');
-      // Não fazer nada aqui, apenas logar - o próximo useEffect cuidará da navegação
-    }
-  }, [currentQuestionIndex, isEditingFromSummary, prevIsEditingFromSummary]);
-
-  // 🧠 CORREÇÃO 3: useEffect para navegação inteligente pós-edição - Passo 2
-  useEffect(() => {
-    // Só executar se:
-    // 1. Estamos no sumário (9999)
-    // 2. NÃO estamos em modo de edição
-    // 3. Acabamos de sair do modo de edição (transição)
-    if (currentQuestionIndex === 9999 && 
-        !isEditingFromSummary && 
-        prevIsEditingFromSummary === true) {
-      
-      console.log('[UX] Verificando se há novos campos obrigatórios após edição...');
-      
-      // Aguardar 2 ticks para garantir que formValues foi atualizado
-      const timer = setTimeout(() => {
-        const unansweredField = findFirstUnansweredRequiredField();
-        
-        if (unansweredField) {
-          console.log(`[UX] Campo obrigatório vazio encontrado após edição: índice ${unansweredField.index}`);
-          toast.info('Um novo campo obrigatório precisa ser preenchido');
-          setCurrentQuestionIndex(unansweredField.index);
-        } else {
-          console.log('[UX] Todos os campos obrigatórios preenchidos');
-        }
-      }, 150); // Aumentar delay para 150ms
-      
-      return () => clearTimeout(timer);
-    }
-  }, [formValues, currentQuestionIndex, isEditingFromSummary, prevIsEditingFromSummary]);
 
   const loadPartyTypes = async () => {
     try {
@@ -687,59 +638,11 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     setCurrentQuestionIndex(index);
   };
 
-  // 🧠 CORREÇÃO 3: Simplificar saveAndReturnToSummary
+  // Salvar e retornar ao sumário
   const saveAndReturnToSummary = () => {
     console.log('[UX] Salvando e retornando ao sumário...');
-    
-    // Apenas resetar flag de edição e voltar ao sumário
-    // O useEffect acima fará a navegação inteligente
     setIsEditingFromSummary(false);
     setCurrentQuestionIndex(9999);
-  };
-
-  // 🧠 FASE 2: Detectar campos obrigatórios visíveis sem resposta
-  const findFirstUnansweredRequiredField = (): { 
-    index: number, 
-    blockType: 'repeatable' | 'nonRepeatable' 
-  } | null => {
-    if (!selectedTemplate) return null;
-    
-    // 1. Verificar campos repetíveis
-    const visibleRepeatableFields = getRepeatableVisibleFields(selectedTemplate.fields, formValues);
-    const requiredRepeatableFields = visibleRepeatableFields.filter(f => f.required === true);
-    
-    for (let partyIdx = 0; partyIdx < numberOfParties; partyIdx++) {
-      for (let fieldIdx = 0; fieldIdx < requiredRepeatableFields.length; fieldIdx++) {
-        const field = requiredRepeatableFields[fieldIdx];
-        const value = getRepeatableFieldValue(field.id, partiesData[partyIdx].id);
-        
-        if (!value || value.trim() === '') {
-          // Calcular índice linear no Bloco 2
-          const globalFieldIndex = visibleRepeatableFields.findIndex(f => f.id === field.id);
-          const index = (partyIdx * visibleRepeatableFields.length) + globalFieldIndex;
-          console.log(`[UX] Campo repetível obrigatório vazio encontrado: ${field.id} (parte ${partyIdx})`);
-          return { index, blockType: 'repeatable' };
-        }
-      }
-    }
-    
-    // 2. Verificar campos não-repetíveis
-    const visibleNonRepeatableFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
-    const requiredNonRepeatableFields = visibleNonRepeatableFields.filter(f => f.required === true);
-    
-    for (let fieldIdx = 0; fieldIdx < requiredNonRepeatableFields.length; fieldIdx++) {
-      const field = requiredNonRepeatableFields[fieldIdx];
-      const value = formValues[field.id];
-      
-      if (!value || value.trim() === '') {
-        const globalFieldIndex = visibleNonRepeatableFields.findIndex(f => f.id === field.id);
-        const index = 1000 + globalFieldIndex; // Índice no Bloco 3
-        console.log(`[UX] Campo não-repetível obrigatório vazio encontrado: ${field.id}`);
-        return { index, blockType: 'nonRepeatable' };
-      }
-    }
-    
-    return null; // Todos os campos obrigatórios preenchidos
   };
 
   // Funções para campos repetíveis

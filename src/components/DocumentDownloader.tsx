@@ -19,6 +19,7 @@ interface DocumentDownloaderProps {
   variant?: 'default' | 'outline';
   size?: 'default' | 'sm' | 'lg';
   className?: string;
+  disabled?: boolean;
 }
 
 const DocumentDownloader = ({
@@ -27,7 +28,8 @@ const DocumentDownloader = ({
   elementId = 'contract-preview',
   variant = 'outline',
   size = 'default',
-  className = ''
+  className = '',
+  disabled = false
 }: DocumentDownloaderProps) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadingFormat, setDownloadingFormat] = useState<DocumentFormat | null>(null);
@@ -93,7 +95,7 @@ const DocumentDownloader = ({
         <Button
           variant={variant}
           size={size}
-          disabled={isDownloading}
+          disabled={disabled || isDownloading}
           className={`flex items-center gap-2 ${className}`}
         >
           <Download className="w-4 h-4" />

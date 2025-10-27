@@ -1,15 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useContract } from '../../contexts/ContractContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, CheckCircle, Edit, Printer } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ArrowLeft, CheckCircle, Edit, Printer, AlertCircle } from 'lucide-react';
 import DocumentDownloader from '../DocumentDownloader';
 import ContractPreviewModal from '../ContractPreviewModal';
 import { getRepeatableVisibleFields, getNonRepeatableVisibleFields } from '@/utils/conditionalLogic';
+import { validateAllVisibleRequiredFields, ValidationResult } from '@/utils/validation';
 
 const QuestionnaireSummary = () => {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [validationResult, setValidationResult] = useState<ValidationResult>({
+    isValid: true,
+    invalidFieldIds: new Set(),
+    invalidRepeatableFields: new Map()
+  });
   const { 
     selectedTemplate, 
     formValues, 
@@ -30,6 +37,31 @@ const QuestionnaireSummary = () => {
   } = useContract();
 
   if (!selectedTemplate) return null;
+
+  // Executar validação sempre que formValues, repeatableFieldsData ou template mudarem
+  useEffect(() => {
+    if (!selectedTemplate) return;
+    
+    const result = validateAllVisibleRequiredFields(
+      selectedTemplate.fields,
+      formValues,
+      partiesData,
+      repeatableFieldsData
+    );
+    
+    setValidationResult(result);
+  }, [selectedTemplate, formValues, partiesData, repeatableFieldsData]);
+
+  // Verificar se campo está inválido
+  const isFieldInvalid = (fieldId: string, partyId?: string): boolean => {
+    if (partyId) {
+      // Campo repetível
+      return validationResult.invalidRepeatableFields.get(fieldId)?.has(partyId) || false;
+    } else {
+      // Campo não-repetível
+      return validationResult.invalidFieldIds.has(fieldId);
+    }
+  };
 
   const handlePrint = () => {
     finishQuestionnaire();
@@ -196,16 +228,30 @@ const QuestionnaireSummary = () => {
                           {fieldData?.responses && fieldData.responses.length > 0 ? (
                             <div className="space-y-2">
                               {fieldData.responses.map((response, idx) => (
-                                <div key={response.partyId} className="text-sm bg-purple-50 p-2 rounded flex justify-between items-center">
-                                  <div>
-                                    <span className="font-medium text-purple-800">{response.partyName}:</span>{' '}
-                                    <span className="text-gray-700">{response.value || <span className="text-gray-400 italic">Não preenchido</span>}</span>
+                                <div 
+                                  key={response.partyId} 
+                                  className={`text-sm p-2 rounded flex justify-between items-center ${
+                                    isFieldInvalid(field.id, response.partyId) 
+                                      ? 'bg-red-50 border-2 border-red-400' 
+                                      : 'bg-purple-50'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    {isFieldInvalid(field.id, response.partyId) && (
+                                      <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                                    )}
+                                    <div>
+                                      <span className="font-medium text-purple-800">{response.partyName}:</span>{' '}
+                                      <span className={isFieldInvalid(field.id, response.partyId) ? 'text-red-600 font-medium' : 'text-gray-700'}>
+                                        {response.value || <span className="text-red-500 italic font-medium">⚠️ Campo obrigatório não preenchido</span>}
+                                      </span>
+                                    </div>
                                   </div>
                                   <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => navigateToRepeatableField(field.id, response.partyId)}
-                                    className="text-purple-600 hover:text-purple-700 p-1"
+                                    className={isFieldInvalid(field.id, response.partyId) ? 'text-red-600 hover:text-red-700 p-1' : 'text-purple-600 hover:text-purple-700 p-1'}
                                   >
                                     <Edit className="w-4 h-4" />
                                   </Button>
@@ -233,20 +279,33 @@ const QuestionnaireSummary = () => {
                 <div className="grid gap-4">
                   <h4 className="font-semibold text-gray-900">Informações Gerais do Contrato</h4>
                   {nonRepeatableFields.map((field, index) => (
-                    <div key={field.id} className="border border-gray-200 rounded-lg p-4">
+                    <div 
+                      key={field.id} 
+                      className={`border rounded-lg p-4 ${
+                        isFieldInvalid(field.id) 
+                          ? 'border-red-400 border-2 bg-red-50' 
+                          : 'border-gray-200'
+                      }`}
+                    >
                       <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-medium text-gray-900">{field.label}</h4>
+                        <div className="flex items-center gap-2">
+                          {isFieldInvalid(field.id) && (
+                            <AlertCircle className="w-5 h-5 text-red-500" />
+                          )}
+                          <h4 className="font-medium text-gray-900">{field.label}</h4>
+                          {field.required && <Badge variant="destructive" className="text-xs">Obrigatório</Badge>}
+                        </div>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => goToQuestion(1000 + index, true)}
-                          className="text-blue-600 hover:text-blue-700 p-1"
+                          className={isFieldInvalid(field.id) ? 'text-red-600 hover:text-red-700 p-1' : 'text-blue-600 hover:text-blue-700 p-1'}
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
                       </div>
-                      <p className="text-gray-700 bg-gray-50 p-2 rounded">
-                        {formValues[field.id] || <span className="text-gray-400 italic">Não preenchido</span>}
+                      <p className={`p-2 rounded ${isFieldInvalid(field.id) ? 'bg-white text-red-600 font-medium' : 'bg-gray-50 text-gray-700'}`}>
+                        {formValues[field.id] || <span className="text-red-500 italic">⚠️ Campo obrigatório não preenchido</span>}
                       </p>
                     </div>
                   ))}
@@ -256,22 +315,37 @@ const QuestionnaireSummary = () => {
             return null;
           })()}
           
+          {/* Alerta de Validação */}
+          {!validationResult.isValid && (
+            <Alert variant="destructive" className="bg-red-50 border-red-200">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-red-800">
+                <strong>Atenção!</strong> Existem campos obrigatórios não preenchidos (destacados em vermelho acima). 
+                Por favor, preencha todos os campos marcados antes de visualizar ou baixar o contrato.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="bg-blue-50 p-4 rounded-lg">
             <h3 className="font-semibold text-blue-800 mb-2">Próximos passos</h3>
             <p className="text-sm text-blue-700 mb-3">
-              Seu contrato está pronto! Você pode visualizá-lo, imprimi-lo ou baixá-lo.
+              {validationResult.isValid 
+                ? 'Seu contrato está pronto! Você pode visualizá-lo, imprimi-lo ou baixá-lo.'
+                : 'Complete os campos obrigatórios destacados acima para prosseguir.'}
             </p>
             <div className="flex flex-wrap gap-3">
               <Button 
                 onClick={() => setShowPreviewModal(true)}
                 variant="outline"
-                className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                disabled={!validationResult.isValid}
+                className="border-blue-200 text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Visualizar Contrato
               </Button>
               <Button 
                 onClick={handlePrint}
-                className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
+                disabled={!validationResult.isValid}
+                className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Printer className="w-4 h-4" />
                 Imprimir
@@ -281,7 +355,8 @@ const QuestionnaireSummary = () => {
                 filename={selectedTemplate.name}
                 elementId="contract-preview"
                 variant="outline"
-                className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                disabled={!validationResult.isValid}
+                className="border-blue-200 text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
           </div>
