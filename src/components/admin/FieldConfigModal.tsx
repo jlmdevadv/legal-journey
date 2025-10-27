@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Minus, ChevronDown, ChevronUp } from 'lucide-react';
 import HelpSectionEditor from './HelpSectionEditor';
-import { useContract } from '@/contexts/ContractContext';
 import { toast } from 'sonner';
 
 interface FieldConfigModalProps {
@@ -20,10 +19,10 @@ interface FieldConfigModalProps {
   onSave: (field: ContractField) => void;
   selectedText: string;
   field?: ContractField; // For editing existing fields
+  availableFields: ContractField[]; // Fields available for conditional logic
 }
 
-const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: FieldConfigModalProps) => {
-  const { selectedTemplate } = useContract();
+const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field, availableFields }: FieldConfigModalProps) => {
   
   const [fieldData, setFieldData] = useState<Partial<ContractField>>({
     id: '',
@@ -198,7 +197,7 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: F
       
       fieldData.conditionalLogic.conditions.forEach((condition) => {
         if (condition.fieldId) {
-          const fieldExists = selectedTemplate?.fields.some(f => f.id === condition.fieldId);
+          const fieldExists = availableFields.some(f => f.id === condition.fieldId);
           if (!fieldExists) {
             invalidFields.push(condition.fieldId);
           }
@@ -423,7 +422,7 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: F
                           <SelectValue placeholder="Selecione um campo" />
                         </SelectTrigger>
                         <SelectContent>
-                          {selectedTemplate?.fields
+                          {availableFields
                             .filter(f => f.id !== fieldData.id) // Não pode depender de si mesmo
                             .map(f => (
                               <SelectItem key={f.id} value={f.id}>
@@ -455,7 +454,7 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: F
 
                     <div>
                       <Label>Valor</Label>
-                      {selectedTemplate?.fields.find(f => f.id === condition.fieldId)?.type === 'select' ? (
+                      {availableFields.find(f => f.id === condition.fieldId)?.type === 'select' ? (
                         <Select
                           value={String(condition.value)}
                           onValueChange={(value) => handleUpdateCondition(index, { value })}
@@ -464,7 +463,7 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: F
                             <SelectValue placeholder="Selecione uma opção" />
                           </SelectTrigger>
                           <SelectContent>
-                            {selectedTemplate?.fields.find(f => f.id === condition.fieldId)?.options?.map(opt => (
+                            {availableFields.find(f => f.id === condition.fieldId)?.options?.map(opt => (
                               <SelectItem key={opt} value={opt}>
                                 {opt}
                               </SelectItem>
@@ -519,7 +518,7 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field }: F
                       Este campo será exibido quando:{' '}
                       {conditions.map((c, i) => (
                         <span key={i} className="inline">
-                          <strong>{selectedTemplate?.fields.find(f => f.id === c.fieldId)?.label || c.fieldId}</strong>
+                          <strong>{availableFields.find(f => f.id === c.fieldId)?.label || c.fieldId}</strong>
                           {' '}<em>{getOperatorLabel(c.operator)}</em>{' '}
                           <strong>"{c.value}"</strong>
                           {i < conditions.length - 1 && ` ${c.logicOperator} `}

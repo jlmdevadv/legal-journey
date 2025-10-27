@@ -521,6 +521,7 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
         onSave={handleFieldSave}
         selectedText={selectedText}
         field={editingFieldIndex !== null ? editingTemplate.fields[editingFieldIndex] : undefined}
+        availableFields={editingTemplate.fields}
       />
 
       {/* Dialog para descrição de mudanças */}

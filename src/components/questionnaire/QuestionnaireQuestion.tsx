@@ -217,6 +217,7 @@ const QuestionnaireQuestion = () => {
         onSave={handleFieldUpdate}
         selectedText=""
         field={currentField}
+        availableFields={selectedTemplate?.fields || []}
       />
     </>
   );
