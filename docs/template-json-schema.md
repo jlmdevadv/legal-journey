@@ -77,6 +77,7 @@ Este documento descreve o formato JSON utilizado para importar templates de cont
 | `repeatPerParty` | boolean | ❌ Não | Se `true`, campo será preenchido uma vez por parte principal (padrão: `false`) |
 | `answerTemplates` | array | ❌ Não | Lista de sugestões de resposta pré-formatadas (apenas para `textarea`) |
 | `conditionalLogic` | object | ❌ Não | Regras de visibilidade condicional |
+| `display_order` | number | ❌ Não | Ordem de exibição do campo no questionário (gerado automaticamente ao reordenar no editor) |
 
 ### Tipos de Campo Válidos
 
@@ -129,6 +130,141 @@ A lógica condicional permite mostrar ou ocultar campos baseado nas respostas de
 **Operadores Lógicos:**
 - `AND` - Todas as condições devem ser verdadeiras
 - `OR` - Pelo menos uma condição deve ser verdadeira
+
+### Cláusulas Condicionais no Texto do Contrato
+
+**⚠️ IMPORTANTE:** Não confunda com `conditionalLogic` (que controla a visibilidade de CAMPOS). As cláusulas condicionais permitem **adicionar ou remover blocos inteiros de texto** no contrato final baseado nas respostas do usuário.
+
+**Como funciona:**
+- Use a sintaxe `{{#if condition}}...{{/if}}` diretamente no `contractText`
+- O texto dentro do bloco só aparecerá no contrato se a condição for verdadeira
+- Suporta as mesmas condições que `conditionalLogic`
+
+**Sintaxe:**
+```
+{{#if campo_id operator "valor"}}
+Texto que só aparece se a condição for verdadeira.
+Pode conter múltiplas linhas e cláusulas inteiras.
+{{/if}}
+```
+
+**Operadores Disponíveis:**
+- `equals` - Igual a
+- `notEquals` - Diferente de
+- `contains` - Contém (para strings)
+- `greaterThan` - Maior que (para números)
+- `lessThan` - Menor que (para números)
+
+**Múltiplas Condições (AND/OR):**
+```
+{{#if campo1 equals "Sim" AND campo2 greaterThan "100"}}
+Texto que aparece apenas se AMBAS as condições forem verdadeiras.
+{{/if}}
+
+{{#if campo1 equals "Opção A" OR campo1 equals "Opção B"}}
+Texto que aparece se PELO MENOS UMA condição for verdadeira.
+{{/if}}
+```
+
+**Exemplo Prático:**
+
+Template com campo "foro" opcional:
+
+```json
+{
+  "contractText": "CLÁUSULA 1ª - OBJETO\n[...]\n\n{{#if incluir_foro equals \"Sim\"}}\nCLÁUSULA 8ª - FORO\n\nFica eleito o foro da comarca de {{cidade_foro}} para dirimir quaisquer questões oriundas deste contrato, com renúncia expressa a qualquer outro, por mais privilegiado que seja.\n{{/if}}",
+  "cards": [
+    {
+      "id": "incluir_foro",
+      "title": "Deseja incluir cláusula de foro?",
+      "type": "select",
+      "options": ["Sim", "Não"],
+      "required": true
+    },
+    {
+      "id": "cidade_foro",
+      "title": "Qual a cidade do foro?",
+      "type": "text",
+      "placeholder": "Ex: São Paulo - SP",
+      "conditionalLogic": {
+        "conditions": [
+          {
+            "fieldId": "incluir_foro",
+            "operator": "equals",
+            "value": "Sim"
+          }
+        ],
+        "action": "show"
+      }
+    }
+  ]
+}
+```
+
+**Resultado quando `incluir_foro = "Sim"` e `cidade_foro = "São Paulo - SP"`:**
+```
+CLÁUSULA 1ª - OBJETO
+[...]
+
+CLÁUSULA 8ª - FORO
+
+Fica eleito o foro da comarca de São Paulo - SP para dirimir quaisquer questões oriundas deste contrato, com renúncia expressa a qualquer outro, por mais privilegiado que seja.
+```
+
+**Resultado quando `incluir_foro = "Não"`:**
+```
+CLÁUSULA 1ª - OBJETO
+[...]
+
+(Cláusula de foro não aparece)
+```
+
+**Quando usar:**
+- ✅ Cláusulas opcionais (foro, confidencialidade, exclusividade)
+- ✅ Variações de texto baseadas em tipo de contrato
+- ✅ Parágrafos adicionais condicionais
+- ✅ Diferentes versões de uma mesma cláusula
+- ❌ Não use para simples visibilidade de campos (use `conditionalLogic` no card)
+
+**Diferença entre `conditionalLogic` e `{{#if}}`:**
+
+| Recurso | `conditionalLogic` (nos cards) | `{{#if}}` (no contractText) |
+|---------|-------------------------------|------------------------------|
+| **Controla** | Visibilidade de CAMPOS no questionário | Inclusão de TEXTO no contrato final |
+| **Onde usa** | Dentro do objeto `card` | Diretamente no `contractText` |
+| **Quando usar** | Para perguntas opcionais | Para cláusulas opcionais |
+| **Exemplo** | "Mostrar campo 'detalhes' apenas se tipo='Sim'" | "Incluir cláusula de foro apenas se usuário escolher 'Sim'" |
+
+**Dica:** Você pode combinar ambos! Use `conditionalLogic` para mostrar o campo apenas quando necessário, e `{{#if}}` para incluir a cláusula no contrato:
+
+```json
+{
+  "contractText": "{{#if necessita_detalhes equals \"Sim\"}}\nCLÁUSULA X - DETALHES\n\n{{detalhes}}\n{{/if}}",
+  "cards": [
+    {
+      "id": "necessita_detalhes",
+      "title": "Precisa incluir detalhes adicionais?",
+      "type": "select",
+      "options": ["Sim", "Não"]
+    },
+    {
+      "id": "detalhes",
+      "title": "Quais são os detalhes?",
+      "type": "textarea",
+      "conditionalLogic": {
+        "conditions": [
+          {
+            "fieldId": "necessita_detalhes",
+            "operator": "equals",
+            "value": "Sim"
+          }
+        ],
+        "action": "show"
+      }
+    }
+  ]
+}
+```
 
 ### Modelos de Resposta (Answer Templates)
 
@@ -212,6 +348,62 @@ A propriedade `answerTemplates` permite oferecer **sugestões de resposta pré-f
 - ✅ Ofereça 2-4 opções (evite sobrecarga de escolha)
 - ✅ Inclua placeholders editáveis no texto (ex: `[25]%`, `[nome da empresa]`)
 - ✅ Mantenha o placeholder do textarea instrutivo
+
+### Ordenação de Campos (display_order)
+
+**IMPORTANTE:** A ordem em que os campos aparecem no array `cards` do JSON **não determina** a ordem de exibição no questionário.
+
+**Como funciona:**
+- Cada campo possui um campo opcional `display_order` (número)
+- Campos são exibidos no questionário ordenados por `display_order` (ordem crescente)
+- Se `display_order` não for especificado, o campo recebe automaticamente um valor baseado em sua posição no array
+
+**No Editor Visual:**
+- O administrador pode arrastar e soltar campos para reordená-los
+- A ordem é automaticamente salva no campo `display_order`
+
+**No JSON:**
+- Você pode especificar manualmente o `display_order` ao criar o JSON
+- Valores menores aparecem primeiro (ex: 1, 2, 3...)
+- Não é necessário usar números consecutivos (pode usar 10, 20, 30... para facilitar inserções futuras)
+
+**Exemplo:**
+
+```json
+{
+  "cards": [
+    {
+      "id": "nome_empresa",
+      "title": "Nome da empresa",
+      "type": "text",
+      "display_order": 10
+    },
+    {
+      "id": "objetivo",
+      "title": "Objetivo do contrato",
+      "type": "textarea",
+      "display_order": 30
+    },
+    {
+      "id": "cnpj",
+      "title": "CNPJ da empresa",
+      "type": "text",
+      "display_order": 20
+    }
+  ]
+}
+```
+
+**Ordem de exibição no questionário:**
+1. nome_empresa (display_order: 10)
+2. cnpj (display_order: 20)
+3. objetivo (display_order: 30)
+
+**Boas práticas:**
+- ✅ Use intervalos de 10 (10, 20, 30...) para facilitar inserções futuras
+- ✅ Deixe `display_order` vazio no JSON - o editor visual permite reordenar facilmente
+- ✅ Organize campos em ordem lógica (informações básicas primeiro, detalhes depois)
+- ⚠️ Se você especificar `display_order` manualmente, certifique-se de que todos os campos tenham valores únicos
 
 ### Campos Repetíveis por Parte (repeatPerParty)
 
@@ -569,6 +761,12 @@ O sistema valida automaticamente:
    - ✅ Cada template deve ter `title` e `value`
    - ✅ Alertas se `answerTemplates` for usado em campos que não sejam `textarea`
 
+6. **Validação de Cláusulas Condicionais:**
+   - ✅ Blocos `{{#if}}` devem ter `{{/if}}` correspondente
+   - ✅ Condições dentro de `{{#if}}` devem referenciar campos existentes
+   - ✅ Sintaxe das condições deve ser válida (campo, operador, valor)
+   - ⚠️ Avisos sobre blocos `{{#if}}` aninhados (não recomendado)
+
 ## Processo de Importação
 
 1. **Upload do Arquivo:**
@@ -667,6 +865,13 @@ IMPORTANTE - Campos Repetíveis:
 - Exemplos: dados bancários, e-mails específicos, telefones individuais, qualificações
 - No contractText, use {{campo_id_formatted}} para campos repetíveis
 - Campos não repetíveis são preenchidos uma única vez no fluxo geral
+
+IMPORTANTE - Cláusulas Condicionais:
+- Use {{#if campo_id operator "valor"}}...{{/if}} no contractText para cláusulas opcionais
+- Exemplo: {{#if incluir_foro equals "Sim"}}\nCLÁUSULA X - FORO\n{{cidade_foro}}\n{{/if}}
+- Combine com conditionalLogic nos cards para controlar perguntas relacionadas
+- Operadores disponíveis: equals, notEquals, contains, greaterThan, lessThan
+- Suporta AND/OR: {{#if campo1 equals "A" AND campo2 greaterThan "10"}}
 
 Crie um template completo para: [TIPO DE CONTRATO DESEJADO]
 
@@ -796,6 +1001,13 @@ Requisitos:
 
 ## Changelog
 
+- **v1.2** (2025-01) - Cláusulas condicionais no texto + Reordenação de campos
+  - Nova sintaxe `{{#if condition}}...{{/if}}` para cláusulas condicionais no contractText
+  - Suporte a operadores AND/OR em cláusulas condicionais
+  - Campo `display_order` para controle de ordem de exibição
+  - Editor visual com drag-and-drop para reordenar campos
+  - Validação de sintaxe de cláusulas condicionais
+  - Documentação expandida com exemplos práticos
 - **v1.1** (2025-01) - Adição de campos repetíveis por parte
   - Novo campo `repeatPerParty` para coletar informações individuais
   - Suporte a formatação automática com `{{campo_id_formatted}}`
