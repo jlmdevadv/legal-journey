@@ -6,6 +6,12 @@ export const detectPlaceholders = (text: string): string[] => {
   
   while ((match = regex.exec(text)) !== null) {
     const variableName = match[1].trim();
+    
+    // Ignorar tags de controle condicional ({{#if}}, {{/if}}, etc.)
+    if (variableName.startsWith('#') || variableName.startsWith('/')) {
+      continue;
+    }
+    
     if (variableName && !matches.includes(variableName)) {
       matches.push(variableName);
     }
