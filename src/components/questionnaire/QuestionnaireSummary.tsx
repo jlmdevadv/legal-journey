@@ -13,7 +13,7 @@ import { validateAllVisibleRequiredFields, ValidationResult } from '@/utils/vali
 const QuestionnaireSummary = () => {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [validationResult, setValidationResult] = useState<ValidationResult>({
-    isValid: true,
+    isValid: false,
     invalidFieldIds: new Set(),
     invalidRepeatableFields: new Map()
   });
