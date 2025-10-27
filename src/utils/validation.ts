@@ -24,13 +24,34 @@ export const validateAllVisibleRequiredFields = (
   const visibleNonRepeatableFields = getNonRepeatableVisibleFields(fields, formValues);
   const requiredNonRepeatableFields = visibleNonRepeatableFields.filter(f => f.required === true);
   
+  // 🔍 LOG DETALHADO: Mostrar TODOS os campos visíveis
+  console.log('[VALIDATION-DEBUG] Campos não-repetíveis visíveis:', 
+    visibleNonRepeatableFields.map(f => ({ 
+      id: f.id, 
+      label: f.label, 
+      required: f.required,
+      value: formValues[f.id]
+    }))
+  );
+  
+  console.log('[VALIDATION-DEBUG] Campos não-repetíveis OBRIGATÓRIOS:', 
+    requiredNonRepeatableFields.map(f => ({ 
+      id: f.id, 
+      label: f.label,
+      value: formValues[f.id],
+      isEmpty: !formValues[f.id] || formValues[f.id].trim() === ''
+    }))
+  );
+  
   requiredNonRepeatableFields.forEach(field => {
     const value = formValues[field.id];
     const isEmpty = !value || value.trim() === '';
     
     if (isEmpty) {
       invalidFieldIds.add(field.id);
-      console.log(`[VALIDATION] Campo não-repetível obrigatório vazio: ${field.id}`);
+      console.log(`[VALIDATION] ❌ Campo não-repetível obrigatório vazio: ${field.id} (${field.label})`);
+    } else {
+      console.log(`[VALIDATION] ✅ Campo não-repetível obrigatório preenchido: ${field.id} (${field.label})`);
     }
   });
   
@@ -38,8 +59,26 @@ export const validateAllVisibleRequiredFields = (
   const visibleRepeatableFields = getRepeatableVisibleFields(fields, formValues);
   const requiredRepeatableFields = visibleRepeatableFields.filter(f => f.required === true);
   
+  // 🔍 LOG DETALHADO: Mostrar campos repetíveis
+  console.log('[VALIDATION-DEBUG] Campos repetíveis visíveis:', 
+    visibleRepeatableFields.map(f => ({ 
+      id: f.id, 
+      label: f.label, 
+      required: f.required
+    }))
+  );
+  
+  console.log('[VALIDATION-DEBUG] Campos repetíveis OBRIGATÓRIOS:', 
+    requiredRepeatableFields.map(f => f.id)
+  );
+  
   requiredRepeatableFields.forEach(field => {
     const fieldData = repeatableFieldsData.find(f => f.fieldId === field.id);
+    
+    console.log(`[VALIDATION-DEBUG] Verificando campo repetível: ${field.id}`, {
+      fieldData: fieldData,
+      partiesCount: partiesData.length
+    });
     
     partiesData.forEach(party => {
       // Buscar resposta da parte específica
@@ -52,14 +91,25 @@ export const validateAllVisibleRequiredFields = (
           invalidRepeatableFields.set(field.id, new Set());
         }
         invalidRepeatableFields.get(field.id)!.add(party.id);
-        console.log(`[VALIDATION] Campo repetível obrigatório vazio: ${field.id} (parte: ${party.fullName})`);
+        console.log(`[VALIDATION] ❌ Campo repetível obrigatório vazio: ${field.id} (parte: ${party.fullName})`);
+      } else {
+        console.log(`[VALIDATION] ✅ Campo repetível obrigatório preenchido: ${field.id} (parte: ${party.fullName})`);
       }
     });
   });
   
   const isValid = invalidFieldIds.size === 0 && invalidRepeatableFields.size === 0;
   
-  console.log(`[VALIDATION] Resultado: ${isValid ? '✅ VÁLIDO' : '❌ INVÁLIDO'} | Campos inválidos: ${invalidFieldIds.size} não-repetíveis, ${invalidRepeatableFields.size} repetíveis`);
+  console.log(`[VALIDATION] ========== RESULTADO FINAL ==========`);
+  console.log(`[VALIDATION] Status: ${isValid ? '✅ VÁLIDO' : '❌ INVÁLIDO'}`);
+  console.log(`[VALIDATION] Campos não-repetíveis inválidos (${invalidFieldIds.size}):`, Array.from(invalidFieldIds));
+  console.log(`[VALIDATION] Campos repetíveis inválidos (${invalidRepeatableFields.size}):`, 
+    Array.from(invalidRepeatableFields.entries()).map(([fieldId, partyIds]) => ({
+      fieldId,
+      partyIds: Array.from(partyIds)
+    }))
+  );
+  console.log(`[VALIDATION] =======================================`);
   
   return {
     isValid,
