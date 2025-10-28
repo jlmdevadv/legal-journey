@@ -10,21 +10,46 @@ export const useContractPreviewScroll = (
   formValues: Record<string, string>
 ) => {
   useEffect(() => {
-    const scrollToSection = (sectionId: string) => {
-      const section = document.getElementById(sectionId);
-      const scrollArea = document.querySelector('[data-contract-preview-scroll]');
+    // Delay para garantir que seções estejam renderizadas antes do scroll
+    const timer = setTimeout(() => {
+      console.log('[SCROLL-DEBUG] Index mudou:', currentQuestionIndex);
       
-      if (section && scrollArea) {
+      const scrollToSection = (sectionId: string) => {
+        console.log('[SCROLL-DEBUG] Tentando rolar para:', sectionId);
+        
+        const section = document.getElementById(sectionId);
+        const scrollArea = document.querySelector('[data-contract-preview-scroll]');
+        
+        if (!section) {
+          console.warn('[SCROLL-DEBUG] Seção não encontrada:', sectionId);
+          return;
+        }
+        
+        if (!scrollArea) {
+          console.warn('[SCROLL-DEBUG] ScrollArea não encontrada');
+          return;
+        }
+        
+        console.log('[SCROLL-DEBUG] Seção encontrada:', sectionId);
+        
         const scrollViewport = scrollArea.querySelector('[data-radix-scroll-area-viewport]');
         if (scrollViewport) {
           const sectionTop = section.offsetTop;
+          console.log('[SCROLL-DEBUG] Executando scroll para:', { sectionId, sectionTop });
+          
           scrollViewport.scrollTo({
             top: Math.max(0, sectionTop - 20),
             behavior: 'smooth'
           });
+        } else {
+          // Fallback: tentar scroll direto no scrollArea
+          console.warn('[SCROLL-DEBUG] ScrollViewport não encontrado, usando fallback');
+          (scrollArea as HTMLElement).scrollTo({
+            top: Math.max(0, section.offsetTop - 20),
+            behavior: 'smooth'
+          });
         }
-      }
-    };
+      };
 
     // Mapeamento de índices para seções do preview
     if (currentQuestionIndex === -1) {
@@ -64,6 +89,12 @@ export const useContractPreviewScroll = (
           const progress = templateQuestionIndex / visibleFields.length;
           const targetPosition = sectionTop + (sectionHeight * progress);
           
+          console.log('[SCROLL-DEBUG] Scroll proporcional no corpo:', { 
+            templateQuestionIndex, 
+            progress, 
+            targetPosition 
+          });
+          
           scrollViewport.scrollTo({
             top: Math.max(0, targetPosition - 100),
             behavior: 'smooth'
@@ -72,6 +103,8 @@ export const useContractPreviewScroll = (
           // Summary screen - scroll to end
           const sectionTop = section.offsetTop;
           const sectionHeight = section.offsetHeight;
+          console.log('[SCROLL-DEBUG] Scroll para o fim (summary)');
+          
           scrollViewport.scrollTo({
             top: sectionTop + sectionHeight - 100,
             behavior: 'smooth'
@@ -79,5 +112,8 @@ export const useContractPreviewScroll = (
         }
       }
     }
+    }, 100); // Delay de 100ms para garantir renderização
+    
+    return () => clearTimeout(timer);
   }, [currentQuestionIndex, numberOfParties, numberOfOtherParties, selectedTemplate, formValues]);
 };

@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Save, Plus, Info, Keyboard, Clock, Eye, Edit3, Download, Code } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Info, Keyboard, Clock, Eye, Edit3, Download, Code, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
+import { RenameTemplateModal } from './RenameTemplateModal';
+import { useContract } from '../../contexts/ContractContext';
 import FieldConfigModal from './FieldConfigModal';
 import TemplateVersionHistory from './TemplateVersionHistory';
 import SelectionConfirmationModal from './SelectionConfirmationModal';
@@ -24,6 +26,7 @@ interface TemplateEditorProps {
 }
 
 const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => {
+  const { renameTemplate } = useContract();
   const [editingTemplate, setEditingTemplate] = useState<ContractTemplate>(template);
   const [editMode, setEditMode] = useState<'edit' | 'preview'>('edit');
   const [selectedText, setSelectedText] = useState('');
@@ -36,6 +39,7 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
   const [changesDescription, setChangesDescription] = useState('');
   const [showSaveVersionDialog, setShowSaveVersionDialog] = useState(false);
   const [showConditionalClauseHelper, setShowConditionalClauseHelper] = useState(false);
+  const [renameModalOpen, setRenameModalOpen] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -276,6 +280,15 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
     toast.success('Cláusula condicional inserida!');
   };
 
+  const handleRenameTemplate = () => {
+    setRenameModalOpen(true);
+  };
+
+  const handleConfirmRename = (newName: string) => {
+    renameTemplate(editingTemplate.id, newName);
+    setEditingTemplate(prev => ({ ...prev, name: newName }));
+  };
+
   const handleFieldsReorder = (newFields: ContractField[]) => {
     // Atualizar display_order com base na nova posição
     const fieldsWithOrder = newFields.map((field, index) => ({
@@ -337,6 +350,15 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
           <h1 className="text-2xl font-bold text-contractPrimary">
             Editando: {editingTemplate.name}
           </h1>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRenameTemplate}
+            className="flex items-center gap-1"
+          >
+            <Pencil className="w-3 h-3" />
+            Renomear
+          </Button>
           {editingTemplate.version && (
             <span className="text-sm text-gray-500">
               (v{editingTemplate.version.version})
@@ -533,6 +555,13 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
         onOpenChange={setShowConditionalClauseHelper}
         availableFields={editingTemplate.fields}
         onInsert={handleInsertConditionalClause}
+      />
+
+      <RenameTemplateModal
+        open={renameModalOpen}
+        onOpenChange={setRenameModalOpen}
+        currentName={editingTemplate.name}
+        onConfirm={handleConfirmRename}
       />
 
       {/* Dialog para descrição de mudanças */}

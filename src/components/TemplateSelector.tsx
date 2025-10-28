@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useContract } from '../contexts/ContractContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, ArrowRight, Edit } from 'lucide-react';
+import { FileText, ArrowRight, Edit, Pencil } from 'lucide-react';
+import { RenameTemplateModal } from './admin/RenameTemplateModal';
 
 const TemplateSelector = () => {
   const { 
@@ -11,8 +12,12 @@ const TemplateSelector = () => {
     customTemplates,
     isLoadingTemplates,
     startEditingTemplate,
-    deleteCustomTemplate
+    deleteCustomTemplate,
+    renameTemplate
   } = useContract();
+
+  const [renameModalOpen, setRenameModalOpen] = useState(false);
+  const [templateToRename, setTemplateToRename] = useState<any>(null);
 
   if (isLoadingTemplates) {
     return (
@@ -38,6 +43,18 @@ const TemplateSelector = () => {
     e.stopPropagation();
     if (confirm('Tem certeza que deseja excluir este template?')) {
       deleteCustomTemplate(templateId);
+    }
+  };
+
+  const handleRenameTemplate = (e: React.MouseEvent, template: any) => {
+    e.stopPropagation();
+    setTemplateToRename(template);
+    setRenameModalOpen(true);
+  };
+
+  const handleConfirmRename = (newName: string) => {
+    if (templateToRename) {
+      renameTemplate(templateToRename.id, newName);
     }
   };
 
@@ -84,6 +101,15 @@ const TemplateSelector = () => {
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={(e) => handleRenameTemplate(e, template)}
+                    className="flex items-center gap-1"
+                  >
+                    <Pencil className="w-3 h-3" />
+                    Renomear
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={(e) => handleEditTemplate(e, template)}
                     className="flex items-center gap-1"
                   >
@@ -102,6 +128,12 @@ const TemplateSelector = () => {
                   )}
                 </div>
               )}
+              <RenameTemplateModal
+                open={renameModalOpen}
+                onOpenChange={setRenameModalOpen}
+                currentName={templateToRename?.name || ''}
+                onConfirm={handleConfirmRename}
+              />
             </CardContent>
           </Card>
         ))}

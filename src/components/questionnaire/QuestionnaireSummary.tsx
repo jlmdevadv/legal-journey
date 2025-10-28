@@ -131,7 +131,10 @@ const QuestionnaireSummary = () => {
                       <div className="flex-1">
                         <p className="font-bold">{party.fullName}</p>
                         <p className="text-muted-foreground">
-                          <span className="font-medium">{party.partyType}</span> • {party.cpf} • {party.city}/{party.state}
+                          <span className="font-medium">{party.partyType}</span> • {party.cpf}
+                          {party.profession && ` • ${party.profession}`}
+                          {party.email && ` • ${party.email}`}
+                          {` • ${party.city}/${party.state}`}
                         </p>
                       </div>
                       <Button
@@ -163,7 +166,10 @@ const QuestionnaireSummary = () => {
                       <div className="flex-1">
                         <p className="font-bold">{party.fullName}</p>
                         <p className="text-muted-foreground">
-                          <span className="font-medium">{party.partyType}</span> • {party.cpf} • {party.city}/{party.state}
+                          <span className="font-medium">{party.partyType}</span> • {party.cpf}
+                          {party.profession && ` • ${party.profession}`}
+                          {party.email && ` • ${party.email}`}
+                          {` • ${party.city}/${party.state}`}
                         </p>
                       </div>
                       <Button

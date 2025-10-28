@@ -4,6 +4,7 @@ import { PartyData, ContractField, RepeatableFieldResponse, ContractTemplate } f
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { getVisibleFields, getRepeatableVisibleFields, getNonRepeatableVisibleFields } from '@/utils/conditionalLogic';
+import { formatDateToBrazilian } from '@/utils/dateUtils';
 
 interface LocationData {
   city: string;
@@ -48,6 +49,7 @@ interface ContractContextType {
   addCustomTemplate: (template: ContractTemplate) => void;
   updateCustomTemplate: (id: string, template: ContractTemplate) => void;
   deleteCustomTemplate: (id: string) => void;
+  renameTemplate: (id: string, newName: string) => void;
   startEditingTemplate: (template: ContractTemplate) => void;
   finishEditingTemplate: () => void;
   saveEditingTemplate: (template: ContractTemplate) => void;
@@ -991,12 +993,6 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   // Manter fillContractTemplate para compatibilidade (aponta para preview)
   const fillContractTemplate = generatePreviewText;
 
-  const formatDateToBrazilian = (dateString: string): string => {
-    if (!dateString) return '';
-    const [year, month, day] = dateString.split('-');
-    return `${day}/${month}/${year}`;
-  };
-
   // Admin functions
   const loginAdmin = (username: string, password: string): boolean => {
     if (username === 'Administrador' && password === '123456') {
@@ -1095,6 +1091,48 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const renameTemplate = async (id: string, newName: string) => {
+    console.log('[RENAME] Renomeando template:', { id, newName });
+    
+    try {
+      const template = customTemplates.find(t => t.id === id);
+      if (!template) {
+        toast.error('Template não encontrado');
+        return;
+      }
+
+      const oldName = template.name;
+      
+      const { error } = await supabase
+        .from('contract_templates')
+        .update({ name: newName })
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      // Atualizar estado local
+      setCustomTemplates(prev =>
+        prev.map(t => t.id === id ? { ...t, name: newName } : t)
+      );
+
+      // Se o template sendo renomeado é o selecionado, atualizar também
+      if (selectedTemplate && selectedTemplate.id === id) {
+        setSelectedTemplate(prev => prev ? { ...prev, name: newName } : null);
+      }
+
+      // Se o template sendo renomeado está sendo editado, atualizar também
+      if (editingTemplate && editingTemplate.id === id) {
+        setEditingTemplate(prev => prev ? { ...prev, name: newName } : null);
+      }
+      
+      toast.success(`Template renomeado com sucesso!`);
+      console.log('[RENAME] Template renomeado:', { id, oldName, newName });
+    } catch (error) {
+      console.error('[RENAME] Erro ao renomear template:', error);
+      toast.error('Erro ao renomear template');
+    }
+  };
+
   const startEditingTemplate = (template: ContractTemplate) => {
     console.log('Starting to edit template:', template);
     const templateWithVersion = initializeTemplateVersion(template);
@@ -1181,7 +1219,9 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       fullName: '',
       nationality: '',
       maritalStatus: '',
+      profession: '',
       cpf: '',
+      email: '',
       address: '',
       city: '',
       state: '',
@@ -1200,7 +1240,9 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       fullName: '',
       nationality: '',
       maritalStatus: '',
+      profession: '',
       cpf: '',
+      email: '',
       address: '',
       city: '',
       state: '',
@@ -1253,7 +1295,21 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const formatPartyQualification = (party: PartyData): string => {
-    return `**${party.fullName.toUpperCase()}**, ${party.nationality}, ${party.maritalStatus}, inscrito(a) no CPF sob o nº ${party.cpf}, residente e domiciliado(a) na ${party.address}, ${party.city}, ${party.state}, na qualidade de **${party.partyType.toUpperCase()}**.`;
+    let qualification = `**${party.fullName.toUpperCase()}**, nacionalidade ${party.nationality}, ${party.maritalStatus}`;
+    
+    if (party.profession) {
+      qualification += `, ${party.profession}`;
+    }
+    
+    qualification += `, inscrito(a) no CPF sob o nº ${party.cpf}, residente e domiciliado(a) na ${party.address}, ${party.city}, ${party.state}`;
+    
+    if (party.email) {
+      qualification += `, e-mail ${party.email}`;
+    }
+    
+    qualification += `, na qualidade de **${party.partyType.toUpperCase()}**.`;
+    
+    return qualification;
   };
 
   const getContractingParties = (): string => {
@@ -1327,6 +1383,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         addCustomTemplate,
         updateCustomTemplate,
         deleteCustomTemplate,
+        renameTemplate,
         startEditingTemplate,
         finishEditingTemplate,
         saveEditingTemplate,

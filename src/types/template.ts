@@ -70,7 +70,9 @@ export interface PartyData {
   fullName: string;
   nationality: string;
   maritalStatus: string;
+  profession?: string;  // Novo campo opcional
   cpf: string;
+  email?: string;       // Novo campo opcional
   address: string;
   city: string;
   state: string;

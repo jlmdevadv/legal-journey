@@ -194,6 +194,17 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty, category = 'main', 
             </div>
 
             <div className="space-y-2">
+              <label className="text-sm font-medium">Profissão</label>
+              <Input
+                value={partyData.profession || ''}
+                onChange={(e) => updateField('profession', e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Ex: Engenheiro Civil"
+                className="text-base"
+              />
+            </div>
+
+            <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
                 CPF *
                 <TooltipProvider>
@@ -213,6 +224,18 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty, category = 'main', 
                 onKeyPress={handleKeyPress}
                 placeholder="000.000.000-00"
                 maxLength={14}
+                className="text-base"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">E-mail</label>
+              <Input
+                type="email"
+                value={partyData.email || ''}
+                onChange={(e) => updateField('email', e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Ex: joao@exemplo.com"
                 className="text-base"
               />
             </div>
