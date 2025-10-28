@@ -9,7 +9,7 @@ export interface TemplateImportJSON {
   cards: Array<{
     id: string;
     title: string;
-    type: 'text' | 'textarea' | 'select' | 'number' | 'email' | 'tel' | 'date';
+    type: 'text' | 'textarea' | 'select' | 'number' | 'email' | 'tel' | 'date' | 'info';
     placeholder?: string;
     required?: boolean;
     options?: string[];
@@ -33,6 +33,9 @@ export interface TemplateImportJSON {
       title: string;
       value: string;
     }>;
+    answerTemplateMode?: 'replace' | 'append';
+    includeValueInContract?: boolean;
+    infoContent?: string;
   }>;
   usePartySystem?: boolean;
 }
@@ -77,7 +80,7 @@ export const validateTemplateJSON = (json: any): { valid: boolean; errors: strin
     if (!card.type) {
       errors.push(`Card "${card.id || index + 1}": campo "type" é obrigatório`);
     } else {
-      const validTypes = ['text', 'textarea', 'select', 'number', 'email', 'tel', 'date'];
+      const validTypes = ['text', 'textarea', 'select', 'number', 'email', 'tel', 'date', 'info'];
       if (!validTypes.includes(card.type)) {
         errors.push(`Card "${card.id}": tipo "${card.type}" inválido. Tipos válidos: ${validTypes.join(', ')}`);
       }
@@ -85,6 +88,11 @@ export const validateTemplateJSON = (json: any): { valid: boolean; errors: strin
       // Se for select, options é obrigatório
       if (card.type === 'select' && !Array.isArray(card.options)) {
         errors.push(`Card "${card.id}": campos do tipo "select" requerem array "options"`);
+      }
+      
+      // Se for info, infoContent é obrigatório
+      if (card.type === 'info' && (!card.infoContent || !card.infoContent.trim())) {
+        errors.push(`Card "${card.id}": campos do tipo "info" requerem "infoContent"`);
       }
     }
     
@@ -135,16 +143,59 @@ export const validateTemplateJSON = (json: any): { valid: boolean; errors: strin
         });
       }
     }
+    
+    // Validar answerTemplateMode (se existir)
+    if (card.answerTemplateMode) {
+      if (!['replace', 'append'].includes(card.answerTemplateMode)) {
+        errors.push(`Card "${card.id}": answerTemplateMode deve ser "replace" ou "append"`);
+      }
+      
+      // Avisar se answerTemplateMode é usado mas não há answerTemplates
+      if (!card.answerTemplates || card.answerTemplates.length === 0) {
+        errors.push(`Card "${card.id}": answerTemplateMode requer "answerTemplates"`);
+      }
+      
+      // Avisar se answerTemplateMode é usado mas type não é textarea
+      if (card.type !== 'textarea') {
+        errors.push(`Card "${card.id}": answerTemplateMode só é válido para type="textarea"`);
+      }
+    }
+    
+    // Validar includeValueInContract (se existir)
+    if (card.includeValueInContract !== undefined) {
+      if (typeof card.includeValueInContract !== 'boolean') {
+        errors.push(`Card "${card.id}": includeValueInContract deve ser boolean`);
+      }
+      
+      // Avisar se usado em tipo diferente de select
+      if (card.type !== 'select') {
+        errors.push(`Card "${card.id}": includeValueInContract só é válido para type="select"`);
+      }
+    }
   });
   
   // Validar se placeholders no contractText têm cards correspondentes
   if (json.contractText && cardIds.size > 0) {
     const placeholders = detectPlaceholders(json.contractText);
     
+    // Placeholders gerados automaticamente pelo sistema
+    const SYSTEM_PLACEHOLDERS = [
+      'contracting_parties',
+      'other_involved',
+      'location_date',
+      'signatures',
+      'signing-date'
+    ];
+    
     // Construir um mapa de cards para validação eficiente
     const cardsMap = new Map<string, any>(json.cards.map(card => [card.id, card]));
     
     const missingCards = placeholders.filter(placeholder => {
+      // Ignorar placeholders do sistema
+      if (SYSTEM_PLACEHOLDERS.includes(placeholder)) {
+        return false; // Placeholder do sistema, não precisa de card
+      }
+      
       // Verificar correspondência direta (caso normal)
       if (cardIds.has(placeholder) || cardIds.has(sanitizeVariableName(placeholder))) {
         return false; // Placeholder válido
@@ -220,7 +271,10 @@ export const convertJSONToTemplate = (json: TemplateImportJSON): ContractTemplat
     aiAssistantLink: card.aiAssistantLink,
     conditionalLogic: card.conditionalLogic,
     repeatPerParty: card.repeatPerParty || false,
-    answerTemplates: card.answerTemplates
+    answerTemplates: card.answerTemplates,
+    answerTemplateMode: card.answerTemplateMode,
+    includeValueInContract: card.includeValueInContract,
+    infoContent: card.infoContent
   }));
   
   // Converter {{placeholders}} para [field-id] no texto do contrato
