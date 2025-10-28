@@ -863,6 +863,73 @@ const generateFinalDocument = useCallback((): string => {
 }, [selectedTemplate, formValues, locationData, /* ... */]);
 ```
 
+### 5.3. Tratamento Especial para `includeValueInContract` (v2.3)
+
+Campos `select` com `includeValueInContract: false` recebem tratamento especial durante a geração:
+
+#### No `generatePreviewText()`
+
+```typescript
+Object.entries(formValues).forEach(([fieldId, value]) => {
+  if (visibleFieldIds.has(fieldId)) {
+    const field = selectedTemplate.fields.find(f => f.id === fieldId);
+    
+    // ✅ Verificar se deve incluir valor no contrato
+    const shouldInclude = field?.includeValueInContract !== false;
+    
+    if (!shouldInclude && field?.type === 'select') {
+      // Substituir por string vazia
+      filledTemplate = filledTemplate.replace(placeholderPattern, '');
+      console.log(`[SELECT-OMIT] Campo "${fieldId}" omitido do preview`);
+    } else {
+      // Comportamento normal
+      const replacement = value.trim() ? value : `[${fieldId}]`;
+      filledTemplate = filledTemplate.replace(placeholderPattern, replacement);
+    }
+  }
+});
+```
+
+#### No `generateFinalDocument()`
+
+```typescript
+Object.entries(formValues).forEach(([fieldId, value]) => {
+  if (visibleFieldIds.has(fieldId)) {
+    const field = selectedTemplate.fields.find(f => f.id === fieldId);
+    const shouldInclude = field?.includeValueInContract !== false;
+    
+    if (!shouldInclude && field?.type === 'select') {
+      // Remover linha inteira
+      const lineRemovalPattern = new RegExp(`^.*\\[${escapedFieldId}\\].*\\n?`, 'gm');
+      filledTemplate = filledTemplate.replace(lineRemovalPattern, '');
+      console.log(`[SELECT-OMIT] Campo "${fieldId}" e sua linha removidos`);
+    } else if (field && !field.required && (!value || value.trim() === '')) {
+      // Smart Placeholder Replacement (comportamento existente)
+      // ...
+    } else {
+      // Substituição normal
+      filledTemplate = filledTemplate.replace(placeholderPattern, value || '');
+    }
+  }
+});
+```
+
+#### Fluxo de Decisão
+
+```mermaid
+graph TD
+    A[Campo Select com placeholder no texto] --> B{includeValueInContract?}
+    B -->|true/undefined| C[Substitui placeholder pelo valor selecionado]
+    B -->|false| D{É preview ou final?}
+    D -->|Preview| E[Substitui placeholder por string vazia]
+    D -->|Final| F[Remove linha inteira com placeholder]
+    C --> G[Contrato gerado]
+    E --> G
+    F --> G
+```
+
+**Nota:** O valor continua **salvo em `formValues`** e pode ser usado em `{{#if}}` normalmente.
+
 ---
 
 ## 6. Campos Repetíveis por Parte
@@ -1345,6 +1412,93 @@ const parseConditionalClauses = (text: string): string => {
 };
 ```
 
+### 9.5. Validações de Novos Recursos (v2.3)
+
+#### 9.5.1. Validação de Cards Informativos
+
+**No `FieldConfigModal.tsx`:**
+
+```typescript
+if (fieldData.type === 'info') {
+  if (!fieldData.infoContent || fieldData.infoContent.trim() === '') {
+    toast.error('O conteúdo informativo é obrigatório para cards do tipo "Informativo"');
+    return;
+  }
+  
+  // Gerar ID automático se não existir
+  if (!fieldData.id) {
+    const autoId = `info_${Date.now()}`;
+    setFieldData(prev => ({ ...prev, id: autoId }));
+  }
+}
+```
+
+**No questionário:**
+- Cards `type: 'info'` **não bloqueiam finalização** (não são considerados obrigatórios)
+- Navegação não valida campos (apenas avança/volta)
+
+#### 9.5.2. Validação de `answerTemplateMode`
+
+**Regras:**
+- Só é válido para `type: 'textarea'`
+- Se `answerTemplates` estiver vazio, propriedade é ignorada
+- Valor padrão é `'replace'` se não especificado
+
+**No `AnswerTemplatesSelector.tsx`:**
+
+```typescript
+if (!templates || templates.length === 0) {
+  return null; // Não renderiza se não há templates
+}
+```
+
+#### 9.5.3. Validação de `includeValueInContract`
+
+**Regras:**
+- Só é válido para `type: 'select'`
+- Padrão: `true` (mantém comportamento atual)
+- Valor ainda é salvo em `formValues` (disponível para `{{#if}}`)
+
+**No `FieldConfigModal.tsx`:**
+
+```typescript
+{fieldData.type === 'select' && (
+  <Checkbox
+    checked={fieldData.includeValueInContract !== false}
+    onCheckedChange={(checked) => 
+      setFieldData(prev => ({ 
+        ...prev, 
+        includeValueInContract: !!checked 
+      }))
+    }
+  />
+)}
+```
+
+#### 9.5.4. Validação de Campos Opcionais de `PartyData`
+
+**Regras:**
+- `profession` e `email` são **opcionais**
+- Não bloqueiam navegação ou finalização
+- Aparecem na qualificação apenas se preenchidos
+
+**No `PartyDataCard.tsx`:**
+
+```typescript
+const canProceed = () => {
+  return (
+    partyData.fullName.trim() !== '' &&
+    partyData.nationality.trim() !== '' &&
+    partyData.maritalStatus.trim() !== '' &&
+    partyData.cpf.trim() !== '' &&
+    partyData.address.trim() !== '' &&
+    partyData.city.trim() !== '' &&
+    partyData.state.trim() !== ''
+    // ← profession e email NÃO são verificados
+  );
+};
+```
+
 ---
 
 ## 10. Integração com Banco de Dados
@@ -1666,6 +1820,124 @@ Maria Santos: R$ 5.000,00
 Pedro Costa: R$ 3.000,00
 ```
 
+### 11.7. Campo Select Apenas para Lógica (v2.3)
+
+**Cenário:** Perguntar se o usuário quer incluir uma cláusula, sem mostrar "Sim"/"Não" no contrato.
+
+**Implementação:**
+
+```json
+{
+  "id": "incluir_testemunhas",
+  "title": "Este contrato precisa de testemunhas?",
+  "type": "select",
+  "options": ["Sim", "Não"],
+  "includeValueInContract": false
+}
+```
+
+**Template text:**
+```
+{{#if incluir_testemunhas equals "Sim"}}
+TESTEMUNHAS
+
+Ass: _______________  Ass: _______________
+{{/if}}
+```
+
+**Resultado se escolher "Sim":**
+```
+TESTEMUNHAS
+
+Ass: _______________  Ass: _______________
+```
+
+**Resultado se escolher "Não":**
+(Bloco inteiro é omitido)
+
+**Nota:** O valor "Sim"/"Não" **não aparece** em lugar nenhum, apenas controla a lógica.
+
+### 11.8. Múltiplas Seleções com Append (v2.3)
+
+**Cenário:** Usuário deve selecionar múltiplos papéis de um sócio.
+
+**Implementação:**
+
+```json
+{
+  "id": "papeis_socio",
+  "title": "Selecione os papéis deste sócio",
+  "type": "textarea",
+  "answerTemplateMode": "append",
+  "answerTemplates": [
+    { "title": "CEO", "value": "- CEO (Chief Executive Officer)" },
+    { "title": "CTO", "value": "- CTO (Chief Technology Officer)" },
+    { "title": "CFO", "value": "- CFO (Chief Financial Officer)" }
+  ]
+}
+```
+
+**Interação do usuário:**
+1. Clica "CEO" → Campo: `- CEO (Chief Executive Officer)`
+2. Clica "CTO" → Campo: `- CEO (Chief Executive Officer)\n- CTO (Chief Technology Officer)`
+3. Clica "CFO" → Campo: (3 itens acumulados)
+
+**Resultado no contrato:**
+```
+Este sócio terá os seguintes papéis:
+
+- CEO (Chief Executive Officer)
+- CTO (Chief Technology Officer)
+- CFO (Chief Financial Officer)
+```
+
+### 11.9. Card Informativo Condicional (v2.3)
+
+**Cenário:** Mostrar aviso apenas se usuário escolher incluir uma cláusula complexa.
+
+**Implementação:**
+
+```json
+{
+  "id": "incluir_vesting",
+  "title": "Incluir cláusula de vesting?",
+  "type": "select",
+  "options": ["Sim", "Não"],
+  "includeValueInContract": false
+},
+{
+  "id": "info_vesting",
+  "title": "⚠️ Atenção: Vesting Selecionado",
+  "type": "info",
+  "infoContent": "Você escolheu incluir vesting.\n\n**Importante:** Esta cláusula é complexa e pode afetar significativamente os direitos dos sócios.\n\nRecomenda-se consultar um advogado especializado.",
+  "conditionalLogic": {
+    "conditions": [
+      { "fieldId": "incluir_vesting", "operator": "equals", "value": "Sim" }
+    ],
+    "action": "show"
+  }
+},
+{
+  "id": "periodo_vesting",
+  "title": "Período de vesting (em anos)",
+  "type": "number",
+  "conditionalLogic": {
+    "conditions": [
+      { "fieldId": "incluir_vesting", "operator": "equals", "value": "Sim" }
+    ],
+    "action": "show"
+  }
+}
+```
+
+**Fluxo:**
+1. Usuário responde "Sim" em `incluir_vesting`
+2. Card informativo `info_vesting` **aparece automaticamente**
+3. Usuário lê o aviso e clica "Próxima"
+4. Campo `periodo_vesting` aparece
+
+**Nota:** Se responder "Não", nem o aviso nem o campo aparecem.
+
 ---
 
 ## 12. Limitações e Considerações
@@ -1879,6 +2151,180 @@ graph TD
     style FinalDoc fill:#d4edda
     style End fill:#d4edda
 ```
+
+---
+
+## 14. Componentes de UI dos Novos Recursos (v2.3)
+
+### 14.1. `QuestionnaireInfoCard.tsx`
+
+**Propósito:** Renderizar cards informativos (`type: 'info'`)
+
+**Props:**
+```typescript
+interface QuestionnaireInfoCardProps {
+  field: ContractField;          // Campo com type='info'
+  questionIndex: number;         // Índice atual
+  totalQuestions: number;        // Total de perguntas
+}
+```
+
+**Funcionalidades:**
+- Exibe `field.label` como título
+- Formata `field.infoContent` com suporte a `**negrito**` e `\n`
+- Botões Anterior/Próxima (sem validação)
+- Visual diferenciado (fundo azul claro, ícone de informação)
+
+**Formatação de conteúdo:**
+```typescript
+const formatContent = (content: string) => {
+  return content.split('\n').map((line, index) => {
+    const parts = line.split(/(\*\*.*?\*\*)/g);
+    return (
+      <p key={index} className="mb-2 last:mb-0">
+        {parts.map((part, i) => {
+          if (part.startsWith('**') && part.endsWith('**')) {
+            return <strong key={i}>{part.slice(2, -2)}</strong>;
+          }
+          return <span key={i}>{part}</span>;
+        })}
+      </p>
+    );
+  });
+};
+```
+
+### 14.2. `AnswerTemplatesSelector.tsx` (Atualizado)
+
+**Novas props:**
+```typescript
+interface AnswerTemplatesSelectorProps {
+  templates: AnswerTemplate[];
+  currentValue: string;          // ← NOVO: necessário para modo append
+  mode?: 'replace' | 'append';   // ← NOVO: controla comportamento
+  onSelectTemplate: (value: string) => void;
+}
+```
+
+**Comportamento visual:**
+
+**Modo `replace`:**
+- Botões normais
+- Mensagem: "Clique em uma sugestão para preencher"
+
+**Modo `append`:**
+- Botões com ícone `+`
+- Badge "Modo: Acumular"
+- Mensagem: "Clique nas sugestões para adicionar ao texto"
+
+**Lógica de inserção:**
+```typescript
+const handleTemplateClick = (templateValue: string) => {
+  if (mode === 'append' && currentValue.trim()) {
+    const newValue = currentValue.trim() + '\n' + templateValue;
+    onSelectTemplate(newValue);
+    console.log('[ANSWER-TEMPLATE] Modo APPEND');
+  } else {
+    onSelectTemplate(templateValue);
+    console.log('[ANSWER-TEMPLATE] Modo REPLACE');
+  }
+};
+```
+
+### 14.3. `FieldConfigModal.tsx` (Atualizações)
+
+**Novas seções adicionadas:**
+
+1. **Seletor de tipo com `'info'`:**
+```tsx
+<SelectContent>
+  <SelectItem value="text">Texto</SelectItem>
+  <SelectItem value="textarea">Texto Longo</SelectItem>
+  <SelectItem value="date">Data</SelectItem>
+  <SelectItem value="number">Número</SelectItem>
+  <SelectItem value="select">Seleção</SelectItem>
+  <SelectItem value="info">📄 Informativo</SelectItem> {/* ← NOVO */}
+</SelectContent>
+```
+
+2. **Checkbox para `includeValueInContract` (apenas `select`):**
+```tsx
+{fieldData.type === 'select' && (
+  <Checkbox
+    checked={fieldData.includeValueInContract !== false}
+    onCheckedChange={(checked) => 
+      setFieldData(prev => ({ ...prev, includeValueInContract: !!checked }))
+    }
+  />
+)}
+```
+
+3. **Seletor de `answerTemplateMode` (apenas `textarea` com templates):**
+```tsx
+{fieldData.type === 'textarea' && fieldData.answerTemplates?.length > 0 && (
+  <Select
+    value={fieldData.answerTemplateMode || 'replace'}
+    onValueChange={(value) => 
+      setFieldData(prev => ({ ...prev, answerTemplateMode: value as 'replace' | 'append' }))
+    }
+  >
+    <SelectContent>
+      <SelectItem value="replace">Substituir</SelectItem>
+      <SelectItem value="append">Acumular</SelectItem>
+    </SelectContent>
+  </Select>
+)}
+```
+
+4. **Seção específica para `type: 'info'`:**
+```tsx
+{fieldData.type === 'info' && (
+  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+    <Label htmlFor="info-content">Conteúdo da Informação *</Label>
+    <Textarea
+      id="info-content"
+      value={fieldData.infoContent || ''}
+      onChange={(e) => setFieldData(prev => ({ ...prev, infoContent: e.target.value }))}
+      placeholder="Digite o texto informativo. Use **texto** para negrito."
+      className="min-h-[150px]"
+    />
+  </div>
+)}
+```
+
+### 14.4. `PartyDataCard.tsx` (Atualizações)
+
+**Novos campos adicionados:**
+
+**Após "Estado Civil":**
+```tsx
+<div className="space-y-2">
+  <label className="text-sm font-medium">Profissão (opcional)</label>
+  <Input
+    value={partyData.profession || ''}
+    onChange={(e) => updateField('profession', e.target.value)}
+    placeholder="Ex: Engenheiro Civil"
+    className="text-base"
+  />
+</div>
+```
+
+**Após "CPF":**
+```tsx
+<div className="space-y-2">
+  <label className="text-sm font-medium">E-mail (opcional)</label>
+  <Input
+    type="email"
+    value={partyData.email || ''}
+    onChange={(e) => updateField('email', e.target.value)}
+    placeholder="Ex: joao@exemplo.com"
+    className="text-base"
+  />
+</div>
+```
+
+**Validação `canProceed()`:**
+- `profession` e `email` **não são verificados** (opcionais)
 
 ---
 
