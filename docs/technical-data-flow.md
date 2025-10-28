@@ -60,7 +60,7 @@ interface ContractTemplate {
 interface ContractField {
   id: string;                          // ID do campo (usado como placeholder)
   label: string;                       // Texto da pergunta
-  type: 'text' | 'textarea' | 'select' | 'number' | 'email' | 'tel' | 'date';
+  type: 'text' | 'textarea' | 'select' | 'number' | 'email' | 'tel' | 'date' | 'info';
   placeholder?: string;
   required?: boolean;
   options?: string[];                  // Para campos select
@@ -77,6 +77,9 @@ interface ContractField {
   conditionalLogic?: ConditionalLogic; // Controla VISIBILIDADE do campo
   repeatPerParty?: boolean;            // Campo repetível por cada parte
   answerTemplates?: AnswerTemplate[];  // Modelos de resposta pré-formatados
+  answerTemplateMode?: 'replace' | 'append';       // NOVO v2.3
+  includeValueInContract?: boolean;                 // NOVO v2.3 (apenas select)
+  infoContent?: string;                             // NOVO v2.3 (apenas type='info')
   display_order?: number;              // Ordem de exibição (0, 1, 2...)
 }
 ```
@@ -132,6 +135,170 @@ interface RepeatableFieldResponse {
   }[];
 }
 ```
+
+### 2.5. PartyData
+
+```typescript
+interface PartyData {
+  id: string;
+  fullName: string;
+  nationality: string;
+  maritalStatus: string;
+  profession?: string;        // ← NOVO v2.3 (opcional)
+  cpf: string;
+  email?: string;             // ← NOVO v2.3 (opcional)
+  address: string;
+  city: string;
+  state: string;
+  partyType: string;
+  category: 'main' | 'other';
+}
+```
+
+### 2.6. Novos Campos e Funcionalidades (v2.3.0)
+
+#### 2.6.1. `includeValueInContract` (Campos Select)
+
+**Propósito:** Permitir que campos `select` sejam usados apenas para controle de lógica, sem incluir o valor no contrato final.
+
+**Tipo:** `boolean` (padrão: `true`)
+
+**Quando é processado:**
+- Durante `generatePreviewText()`: Placeholder `{{fieldId}}` é substituído por string vazia
+- Durante `generateFinalDocument()`: Linha inteira contendo `{{fieldId}}` é removida
+
+**Exemplo:**
+
+```typescript
+// Campo no template
+{
+  id: "incluir_foro",
+  type: "select",
+  options: ["Sim", "Não"],
+  includeValueInContract: false
+}
+
+// FormValues
+{
+  "incluir_foro": "Sim"  // ← Valor é SALVO mas NÃO aparece no contrato
+}
+
+// Template text
+"Valor: {{incluir_foro}}\n\n{{#if incluir_foro equals \"Sim\"}}...{{/if}}"
+
+// Resultado
+"Valor: \n\n..." // ← Placeholder removido, mas {{#if}} funciona
+```
+
+#### 2.6.2. `answerTemplateMode` (Answer Templates)
+
+**Propósito:** Controlar como sugestões de `answerTemplates` são inseridas em campos `textarea`.
+
+**Tipo:** `'replace' | 'append'` (padrão: `'replace'`)
+
+**Comportamento:**
+- `'replace'`: Substitui todo o conteúdo do textarea (comportamento original)
+- `'append'`: Concatena com o conteúdo existente usando `\n` como separador
+
+**Processamento no componente `AnswerTemplatesSelector.tsx`:**
+
+```typescript
+const handleTemplateClick = (templateValue: string) => {
+  if (mode === 'append' && currentValue.trim()) {
+    const newValue = currentValue.trim() + '\n' + templateValue;
+    onSelectTemplate(newValue);
+  } else {
+    onSelectTemplate(templateValue);
+  }
+};
+```
+
+**Log gerado:**
+- `[ANSWER-TEMPLATE] Modo REPLACE: { value: "..." }`
+- `[ANSWER-TEMPLATE] Modo APPEND: { previous: "...", added: "..." }`
+
+#### 2.6.3. `type: 'info'` (Cards Informativos)
+
+**Propósito:** Exibir blocos puramente informativos no questionário, sem coletar dados.
+
+**Campos específicos:**
+- `infoContent` (obrigatório): Conteúdo do texto informativo
+- `title` (opcional): Título do card
+
+**Campos ignorados:** `placeholder`, `required`, `repeatPerParty`, `answerTemplates`, `options`
+
+**Campos que funcionam:** `conditionalLogic`, `display_order`
+
+**Renderização:** Componente `QuestionnaireInfoCard.tsx`
+
+**Características:**
+- Não gera placeholder no contrato
+- Não conta como campo obrigatório
+- Suporta formatação: `**negrito**` e quebras de linha `\n`
+- Navegação simples (Anterior/Próxima sem validação)
+
+**Exemplo:**
+
+```typescript
+{
+  id: "info_aviso",
+  title: "Atenção",
+  type: "info",
+  infoContent: "**Importante:** Leia com atenção.\n\nPróxima seção é crítica.",
+  display_order: 50
+}
+```
+
+#### 2.6.4. Campos Opcionais em `PartyData`
+
+**Novos campos:**
+- `profession?: string` - Profissão ou cargo da parte
+- `email?: string` - E-mail de contato
+
+**Comportamento:**
+- Aparecem na qualificação das partes **apenas se preenchidos**
+- Não bloqueiam finalização (opcionais)
+- Salvos no estado `partiesData` e `otherPartiesData`
+
+**Formato na qualificação:**
+
+```typescript
+let qualification = `nacionalidade ${nationality}, ${maritalStatus}`;
+if (profession) {
+  qualification += `, ${profession}`;
+}
+qualification += `, inscrito no CPF sob o nº ${cpf}, ...`;
+if (email) {
+  qualification += `, e-mail ${email}`;
+}
+```
+
+**Exemplo:**
+```
+João Silva, nacionalidade brasileira, solteiro, engenheiro civil, inscrito no CPF sob o nº 123.456.789-00, residente e domiciliado à Rua X, São Paulo, SP, e-mail joao@exemplo.com
+```
+
+#### 2.6.5. Formato de Data Uniformizado
+
+**Padrão:** dd/mm/aaaa em toda a interface
+
+**Armazenamento:**
+- `locationData.date`: Formato ISO (`YYYY-MM-DD`)
+- Função utilitária: `formatDateToBrazilian()` em `src/utils/dateUtils.ts`
+
+**Conversão:**
+```typescript
+export const formatDateToBrazilian = (dateString: string): string => {
+  if (!dateString) return '';
+  const [year, month, day] = dateString.split('-');
+  return `${day}/${month}/${year}`;
+};
+```
+
+**Uso:**
+- Preview: `formatDateToBrazilian(locationData.date)`
+- Final document: `formatDateToBrazilian(locationData.date)`
+- Summary: `new Date(locationData.date).toLocaleDateString('pt-BR')`
 
 ---
 
@@ -1597,6 +1764,41 @@ console.log('[DEBUG] Visible fields count:', visibleFields.length);
 console.log('[DEBUG] Repeatable fields count:', repeatableFields.length);
 ```
 
+#### Logs de Novos Recursos (v2.3)
+
+**Logs de `includeValueInContract`:**
+```typescript
+console.log('[SELECT-OMIT] Campo "X" omitido do preview (includeValueInContract=false)');
+console.log('[SELECT-OMIT] Campo "X" e sua linha removidos do documento final');
+```
+
+**Logs de `answerTemplateMode`:**
+```typescript
+console.log('[ANSWER-TEMPLATE] Modo REPLACE:', { value: '...' });
+console.log('[ANSWER-TEMPLATE] Modo APPEND:', { previous: '...', added: '...' });
+```
+
+**Logs de `type: 'info'`:**
+```typescript
+console.log('[INFO-CARD] Renderizando card informativo:', fieldId);
+```
+
+**Logs de `PartyData` (profession/email):**
+```typescript
+console.log('[PARTY-DATA] Dados salvos:', { 
+  id: partyData.id, 
+  name: partyData.fullName,
+  profession: partyData.profession,
+  email: partyData.email 
+});
+```
+
+**Logs de formato de data:**
+```typescript
+console.log('[DATE-INPUT] Data salva:', locationData.date); // Formato ISO
+console.log('[DATE-FORMAT] Convertido para BR:', formattedDate); // dd/mm/yyyy
+```
+
 ### 13.2. Ferramentas de Debug
 
 #### React DevTools
@@ -1684,6 +1886,32 @@ graph TD
 
 ### 15.1. Arquivos Principais
 
+**Context e Lógica:**
+- `src/contexts/ContractContext.tsx` - Gerenciamento de estado global
+- `src/utils/conditionalLogic.ts` - Avaliação de lógica condicional
+- `src/utils/dateUtils.ts` - ✅ **NOVO v2.3** - Formatação de datas
+
+**Componentes do Questionário:**
+- `src/components/QuestionnaireForm.tsx` - Renderização dinâmica de telas
+- `src/components/questionnaire/QuestionnaireQuestion.tsx` - Perguntas normais
+- `src/components/questionnaire/QuestionnaireInfoCard.tsx` - ✅ **NOVO v2.3** - Cards informativos
+- `src/components/questionnaire/RepeatableFieldCard.tsx` - Campos repetíveis
+- `src/components/questionnaire/PartyDataCard.tsx` - Dados das partes (**atualizado v2.3**)
+- `src/components/questionnaire/AnswerTemplatesSelector.tsx` - ✅ **ATUALIZADO v2.3** - Sugestões de resposta
+- `src/components/questionnaire/QuestionnaireSummary.tsx` - Resumo final (**atualizado v2.3**)
+
+**Componentes de Preview:**
+- `src/components/ContractPreview.tsx` - Preview em tempo real
+
+**Componentes Admin:**
+- `src/components/admin/TemplateEditor.tsx` - Editor de templates (**atualizado v2.3**)
+- `src/components/admin/FieldConfigModal.tsx` - ✅ **ATUALIZADO v2.3** - Configuração de campos
+- `src/components/admin/RenameTemplateModal.tsx` - ✅ **NOVO v2.3** - Renomear templates
+
+**Utilitários:**
+- `src/utils/templateExporter.ts` - ✅ **ATUALIZADO v2.3** - Exportação de templates
+- `src/utils/documentGenerators.ts` - Geração de documentos
+
 | Arquivo | Responsabilidade |
 |---------|-----------------|
 | `src/contexts/ContractContext.tsx` | Gerenciamento global de estado, lógica de negócio, geração de texto |
@@ -1759,5 +1987,39 @@ Para adicionar novas funcionalidades ao sistema:
 ---
 
 **Fim da Documentação Técnica**
+
+### 16. Glossário (Atualizado v2.3)
+
+**Termos existentes:**
+- **Template**: Modelo de contrato com placeholders e campos
+- **Field (Campo)**: Pergunta do questionário que coleta dados
+- **Placeholder**: Marcador no texto do contrato (ex: `{{nome}}`)
+- **FormValues**: Objeto que armazena respostas dos campos não-repetíveis
+- **ConditionalLogic**: Lógica que controla visibilidade de campos
+- **RepeatableField**: Campo preenchido uma vez por cada parte
+- **display_order**: Número que determina ordem de exibição dos campos
+- **PartyData**: Dados cadastrais de uma parte do contrato
+
+**Novos termos v2.3:**
+
+- **includeValueInContract**: Propriedade booleana de campos `select` que controla se o valor selecionado aparece no contrato final (padrão: `true`)
+
+- **answerTemplateMode**: Propriedade de campos `textarea` que define como sugestões são inseridas: `'replace'` (substitui) ou `'append'` (acumula)
+
+- **Card Informativo**: Campo do tipo `'info'` usado para exibir instruções ou avisos no questionário, sem coletar dados
+
+- **infoContent**: Propriedade que armazena o conteúdo de cards informativos, suportando formatação básica (negrito e quebras de linha)
+
+- **profession** (PartyData): Campo opcional que armazena a profissão ou cargo de uma parte do contrato
+
+- **email** (PartyData): Campo opcional que armazena o e-mail de contato de uma parte do contrato
+
+- **formatDateToBrazilian**: Função utilitária que converte datas de formato ISO (YYYY-MM-DD) para formato brasileiro (dd/mm/yyyy)
+
+---
+
+## Conclusão
+
+Este documento técnico fornece uma visão completa do fluxo de dados do sistema de geração de contratos, incluindo todas as funcionalidades implementadas até a versão 2.3.0.
 
 Para dúvidas ou sugestões, consulte o código-fonte diretamente ou entre em contato com a equipe de desenvolvimento.

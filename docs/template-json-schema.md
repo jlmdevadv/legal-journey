@@ -15,7 +15,7 @@ Este documento descreve o formato JSON utilizado para importar templates de cont
     {
       "id": "string (obrigatório, único)",
       "title": "string (obrigatório)",
-      "type": "text | textarea | select | number | email | tel | date (obrigatório)",
+      "type": "text | textarea | select | number | email | tel | date | info (obrigatório)",
       "placeholder": "string (opcional)",
       "required": "boolean (opcional, padrão: true)",
       "options": ["string"] (obrigatório apenas para type='select'),
@@ -26,12 +26,14 @@ Este documento descreve o formato JSON utilizado para importar templates de cont
       "videoLink": "string (opcional)",
       "aiAssistantLink": "string (opcional)",
       "repeatPerParty": "boolean (opcional, padrão: false)",
+      "includeValueInContract": "boolean (opcional, padrão: true, apenas para type='select')",
       "answerTemplates": [
         {
           "title": "string (obrigatório)",
           "value": "string (obrigatório)"
         }
       ],
+      "answerTemplateMode": "replace | append (opcional, padrão: replace, apenas para textarea com answerTemplates)",
       "conditionalLogic": {
         "conditions": [
           {
@@ -42,7 +44,9 @@ Este documento descreve o formato JSON utilizado para importar templates de cont
           }
         ],
         "action": "show | hide"
-      }
+      },
+      "display_order": "number (opcional)",
+      "infoContent": "string (obrigatório apenas para type='info')"
     }
   ],
   "usePartySystem": "boolean (opcional, padrão: true)"
@@ -78,6 +82,9 @@ Este documento descreve o formato JSON utilizado para importar templates de cont
 | `answerTemplates` | array | ❌ Não | Lista de sugestões de resposta pré-formatadas (apenas para `textarea`) |
 | `conditionalLogic` | object | ❌ Não | Regras de visibilidade condicional |
 | `display_order` | number | ❌ Não | Ordem de exibição do campo no questionário (gerado automaticamente ao reordenar no editor) |
+| `includeValueInContract` | boolean | ❌ Não | Se `false`, valor de campo `select` não aparece no contrato (apenas para lógica). Padrão: `true` |
+| `answerTemplateMode` | string | ❌ Não | Modo de inserção de `answerTemplates`: `replace` (substitui) ou `append` (acumula). Padrão: `replace` |
+| `infoContent` | string | ⚠️ Condicional | Conteúdo do card informativo. Obrigatório apenas para `type="info"` |
 
 ### Tipos de Campo Válidos
 
@@ -87,7 +94,43 @@ Este documento descreve o formato JSON utilizado para importar templates de cont
 - `number` - Campo numérico
 - `email` - Campo de e-mail (com validação)
 - `tel` - Campo de telefone
-- `date` - Campo de data (seletor de calendário)
+- `date` - Campo de data (seletor de calendário, formato dd/mm/aaaa)
+- `info` - **[NOVO v2.3]** Card puramente informativo (não coleta dados)
+
+### Formato de Data
+
+Campos do tipo `date` utilizam o **formato brasileiro (dd/mm/aaaa)** em todo o sistema:
+
+- ✅ **Na interface:** Seletor de calendário exibe datas em dd/mm/aaaa
+- ✅ **No banco de dados:** Armazenado em formato ISO (YYYY-MM-DD) internamente
+- ✅ **No contrato final:** Exibido como dd/mm/aaaa
+- ✅ **No resumo:** Exibido como dd/mm/aaaa
+
+**Exemplo:**
+```json
+{
+  "id": "data_inicio",
+  "title": "Data de início do contrato",
+  "type": "date",
+  "required": true
+}
+```
+
+**Usuário seleciona:** 15 de março de 2024  
+**Armazenado como:** `2024-03-15` (ISO)  
+**Exibido no contrato:** `15/03/2024`
+
+**Placeholder especial:** `[signing-date]`
+
+O sistema fornece um placeholder automático `[signing-date]` que insere a data de assinatura formatada:
+
+```json
+{
+  "contractText": "Contrato assinado em [signing-date]"
+}
+```
+
+**Resultado:** "Contrato assinado em 15/03/2024"
 
 ### Estrutura do HelpText
 
@@ -349,6 +392,517 @@ A propriedade `answerTemplates` permite oferecer **sugestões de resposta pré-f
 - ✅ Inclua placeholders editáveis no texto (ex: `[25]%`, `[nome da empresa]`)
 - ✅ Mantenha o placeholder do textarea instrutivo
 
+### Opção `includeValueInContract` para Campos Select
+
+**Introduzida em:** Versão 2.3.0  
+**Funcionalidade:** Controlar se o valor selecionado em um campo `select` deve aparecer no contrato final.
+
+#### Quando Usar
+
+✅ **Use `includeValueInContract: false` quando:**
+- O campo `select` serve **apenas para controle de lógica** (`{{#if}}` ou `conditionalLogic`)
+- Perguntas tipo "Deseja incluir cláusula X?" (Sim/Não) que não devem aparecer no texto
+- O valor selecionado é irrelevante para o leitor final do contrato
+
+❌ **NÃO use quando:**
+- O valor selecionado é parte importante do contrato (ex: "Tipo de contrato: Prestação de Serviços")
+- O usuário precisa ver a escolha no documento final
+
+#### Estrutura JSON
+
+```json
+{
+  "id": "incluir_foro",
+  "title": "Deseja incluir cláusula de foro?",
+  "type": "select",
+  "options": ["Sim", "Não"],
+  "required": true,
+  "includeValueInContract": false
+}
+```
+
+#### Comportamento
+
+| Valor | Comportamento |
+|-------|--------------|
+| `true` (padrão) | Valor selecionado aparece onde `{{incluir_foro}}` for usado no texto |
+| `false` | Placeholder `{{incluir_foro}}` é **removido** do contrato (mas valor ainda disponível para `{{#if}}`) |
+
+#### Exemplo Completo
+
+**Template JSON:**
+```json
+{
+  "contractText": "CLÁUSULA 1ª - OBJETO\n[objeto]\n\n{{#if incluir_foro equals \"Sim\"}}\nCLÁUSULA 8ª - FORO\n\nFica eleito o foro de {{cidade_foro}} para dirimir quaisquer questões.\n{{/if}}",
+  "cards": [
+    {
+      "id": "objeto",
+      "title": "Qual o objeto do contrato?",
+      "type": "textarea",
+      "required": true
+    },
+    {
+      "id": "incluir_foro",
+      "title": "Deseja incluir cláusula de foro?",
+      "type": "select",
+      "options": ["Sim", "Não"],
+      "required": true,
+      "includeValueInContract": false
+    },
+    {
+      "id": "cidade_foro",
+      "title": "Cidade do foro",
+      "type": "text",
+      "placeholder": "Ex: São Paulo - SP",
+      "conditionalLogic": {
+        "conditions": [
+          { "fieldId": "incluir_foro", "operator": "equals", "value": "Sim" }
+        ],
+        "action": "show"
+      }
+    }
+  ]
+}
+```
+
+**Respostas do Usuário:**
+- `objeto`: "Prestação de serviços de consultoria"
+- `incluir_foro`: "Sim" ← Este valor NÃO aparece no contrato
+- `cidade_foro`: "São Paulo - SP"
+
+**Resultado no Contrato:**
+```
+CLÁUSULA 1ª - OBJETO
+Prestação de serviços de consultoria
+
+CLÁUSULA 8ª - FORO
+
+Fica eleito o foro de São Paulo - SP para dirimir quaisquer questões.
+```
+
+**Note:** O valor "Sim" de `incluir_foro` não aparece em lugar nenhum, mas a cláusula foi incluída porque a condição `{{#if incluir_foro equals "Sim"}}` foi satisfeita.
+
+#### Casos de Uso Comuns
+
+1. **Controle de Cláusulas Opcionais:**
+```json
+{
+  "id": "incluir_confidencialidade",
+  "title": "Incluir cláusula de confidencialidade?",
+  "type": "select",
+  "options": ["Sim", "Não"],
+  "includeValueInContract": false
+}
+```
+
+2. **Decisões de Formato:**
+```json
+{
+  "id": "formato_pagamento",
+  "title": "Pagamento será à vista ou parcelado?",
+  "type": "select",
+  "options": ["À vista", "Parcelado"],
+  "includeValueInContract": false
+}
+```
+→ Usa o valor para mostrar diferentes blocos de texto, sem exibir a escolha explicitamente.
+
+3. **Perguntas de Sim/Não:**
+```json
+{
+  "id": "necessita_testemunhas",
+  "title": "Este contrato precisa de testemunhas?",
+  "type": "select",
+  "options": ["Sim", "Não"],
+  "includeValueInContract": false
+}
+```
+
+#### Dicas de Implementação
+
+✅ **Boas práticas:**
+- Combine com `conditionalLogic` em campos dependentes
+- Use com `{{#if}}` para controlar blocos de texto
+- Mantenha opções claras e binárias (Sim/Não, Incluir/Excluir)
+
+⚠️ **Cuidados:**
+- O valor ainda é **salvo** e pode ser usado em condições
+- Se você usar `{{incluir_foro}}` no texto E `includeValueInContract: false`, o placeholder será removido silenciosamente
+- Não afeta a validação de campo obrigatório
+
+### Modo de Inserção de `answerTemplates` (append vs replace)
+
+**Introduzida em:** Versão 2.3.0  
+**Funcionalidade:** Controlar como as sugestões de `answerTemplates` são inseridas em campos `textarea`.
+
+#### Modos Disponíveis
+
+| Modo | Comportamento | Quando Usar |
+|------|--------------|-------------|
+| `replace` (padrão) | Substitui **todo** o conteúdo do textarea | Cláusulas mutuamente exclusivas, opções únicas |
+| `append` | **Adiciona** ao final do conteúdo existente (com `\n`) | Seleções múltiplas, listas de itens, papéis acumulativos |
+
+#### Estrutura JSON
+
+```json
+{
+  "id": "papeis_socio",
+  "title": "Selecione os papéis deste sócio na empresa",
+  "type": "textarea",
+  "placeholder": "Clique nas sugestões para acumular...",
+  "answerTemplateMode": "append",
+  "answerTemplates": [
+    { "title": "CEO", "value": "- CEO: Responsável pela gestão geral" },
+    { "title": "CTO", "value": "- CTO: Responsável pela tecnologia" },
+    { "title": "CFO", "value": "- CFO: Responsável pelas finanças" }
+  ]
+}
+```
+
+#### Comportamento Visual
+
+**Modo `replace` (padrão):**
+- Botões normais sem ícone especial
+- Clicar **substitui** todo o conteúdo
+- Mensagem: "Clique em uma sugestão para preencher automaticamente"
+
+**Modo `append`:**
+- Botões com ícone `+` (plus)
+- Badge "Modo: Acumular" ao lado do título
+- Clicar **adiciona** ao conteúdo existente
+- Mensagem: "Clique nas sugestões para adicionar ao texto"
+
+#### Exemplo Prático
+
+**Cenário:** Definir múltiplos papéis de um sócio
+
+**JSON:**
+```json
+{
+  "id": "responsabilidades_socio",
+  "title": "Quais responsabilidades este sócio terá?",
+  "type": "textarea",
+  "placeholder": "Selecione abaixo ou digite manualmente...",
+  "answerTemplateMode": "append",
+  "answerTemplates": [
+    {
+      "title": "Gestão Estratégica",
+      "value": "- Responsável pela definição de estratégias de longo prazo e direcionamento geral da empresa."
+    },
+    {
+      "title": "Controle Financeiro",
+      "value": "- Responsável pela gestão financeira, contábil e fiscal da empresa."
+    },
+    {
+      "title": "Marketing e Vendas",
+      "value": "- Responsável pelas estratégias de marketing, captação de clientes e gestão comercial."
+    },
+    {
+      "title": "Desenvolvimento de Produto",
+      "value": "- Responsável pela criação, melhoria e manutenção dos produtos e serviços oferecidos."
+    }
+  ]
+}
+```
+
+**Interação do Usuário:**
+1. Usuário clica em "Gestão Estratégica"
+   - Campo: `- Responsável pela definição de estratégias...`
+2. Usuário clica em "Marketing e Vendas"
+   - Campo: `- Responsável pela definição de estratégias...\n- Responsável pelas estratégias de marketing...`
+3. Usuário clica em "Controle Financeiro"
+   - Campo: (3 itens acumulados com quebras de linha)
+
+**Resultado Final no Contrato:**
+```
+CLÁUSULA X - RESPONSABILIDADES
+
+João Silva terá as seguintes responsabilidades:
+
+- Responsável pela definição de estratégias de longo prazo e direcionamento geral da empresa.
+- Responsável pelas estratégias de marketing, captação de clientes e gestão comercial.
+- Responsável pela gestão financeira, contábil e fiscal da empresa.
+```
+
+#### Comparação de Casos de Uso
+
+**Use `replace` para:**
+
+1. **Políticas de Lucro (mutuamente exclusivas):**
+```json
+{
+  "id": "politica_lucros",
+  "answerTemplateMode": "replace",
+  "answerTemplates": [
+    { "title": "Reinvestimento Total", "value": "Todo lucro reinvestido..." },
+    { "title": "Distribuição Proporcional", "value": "Lucro distribuído..." }
+  ]
+}
+```
+
+2. **Cláusulas Alternativas:**
+```json
+{
+  "id": "clausula_rescisao",
+  "answerTemplateMode": "replace",
+  "answerTemplates": [
+    { "title": "Opção A: Multa 10%", "value": "A rescisão gerará multa de 10%..." },
+    { "title": "Opção B: Sem Multa", "value": "Não haverá multa rescisória..." }
+  ]
+}
+```
+
+**Use `append` para:**
+
+1. **Papéis Múltiplos de Sócios:**
+```json
+{
+  "id": "papeis",
+  "answerTemplateMode": "append",
+  "answerTemplates": [
+    { "title": "CEO", "value": "- CEO (Chief Executive Officer)" },
+    { "title": "CTO", "value": "- CTO (Chief Technology Officer)" }
+  ]
+}
+```
+
+2. **Benefícios Acumulativos:**
+```json
+{
+  "id": "beneficios",
+  "answerTemplateMode": "append",
+  "answerTemplates": [
+    { "title": "Vale-transporte", "value": "- Vale-transporte mensal" },
+    { "title": "Plano de saúde", "value": "- Plano de saúde familiar" },
+    { "title": "Vale-refeição", "value": "- Vale-refeição diário" }
+  ]
+}
+```
+
+3. **Características de Produto:**
+```json
+{
+  "id": "caracteristicas_produto",
+  "answerTemplateMode": "append",
+  "answerTemplates": [
+    { "title": "Garantia", "value": "• Garantia de 12 meses" },
+    { "title": "Suporte", "value": "• Suporte técnico 24/7" },
+    { "title": "Atualizações", "value": "• Atualizações gratuitas por 1 ano" }
+  ]
+}
+```
+
+#### Dicas de Implementação
+
+✅ **Boas práticas:**
+- Use prefixos consistentes (`-`, `•`, números) no modo `append` para listas
+- Mantenha valores curtos no modo `append` (máximo 150 caracteres por item)
+- No modo `replace`, valores podem ser longos (cláusulas completas)
+- Combine com placeholder instrutivo: "Clique nas sugestões para acumular"
+
+⚠️ **Cuidados:**
+- Modo `append` só faz sentido com `answerTemplates` (se vazio, propriedade é ignorada)
+- Usuário pode editar manualmente após inserção (em ambos os modos)
+- Quebras de linha (`\n`) são adicionadas automaticamente no modo `append`
+
+#### Validações
+
+- ✅ `answerTemplateMode` é válido **apenas** para campos `type: 'textarea'`
+- ✅ Se `answerTemplates` estiver vazio ou ausente, `answerTemplateMode` é ignorado
+- ✅ Valor padrão é sempre `'replace'` (não precisa especificar se quiser comportamento padrão)
+
+### Cards Informativos (type: 'info')
+
+**Introduzida em:** Versão 2.3.0  
+**Funcionalidade:** Inserir blocos puramente informativos no fluxo do questionário, sem coletar dados.
+
+#### O que são Cards Informativos?
+
+Cards informativos são telas especiais no questionário que:
+- ❌ **NÃO coletam dados** (não possuem valor, não geram placeholder)
+- ✅ **Exibem instruções, avisos ou contexto** para o usuário
+- ✅ **Suportam formatação** (negrito, quebras de linha)
+- ✅ **Podem ser condicionais** (aparecer apenas se certas condições forem atendidas)
+- ✅ **Têm navegação simples** (botões Anterior/Próxima, sem validação)
+
+#### Quando Usar
+
+✅ **Use cards informativos para:**
+- Instruções importantes antes de uma seção complexa
+- Avisos legais ou disclaimers
+- Separadores visuais entre etapas do questionário
+- Explicações de conceitos necessários para preencher campos seguintes
+- Mensagens contextuais baseadas em respostas anteriores
+
+❌ **NÃO use para:**
+- Substituir `helpText` de campos específicos (use o `helpText` do próprio campo)
+- Informações que deveriam estar no contrato final
+- Coleta de dados (use campos normais)
+
+#### Estrutura JSON Mínima
+
+```json
+{
+  "id": "info_introducao",
+  "title": "Importante: Leia antes de prosseguir",
+  "type": "info",
+  "infoContent": "Esta seção requer informações financeiras detalhadas.\n\nCertifique-se de ter em mãos:\n- Balanço patrimonial recente\n- Projeções de receita\n- Custos operacionais estimados"
+}
+```
+
+#### Campos Relevantes
+
+| Campo | Obrigatório | Descrição |
+|-------|------------|-----------|
+| `id` | ✅ Sim | Identificador único (não usado no contrato, mas necessário) |
+| `title` | ❌ Não | Título do card informativo (opcional, mas recomendado) |
+| `type` | ✅ Sim | Deve ser `"info"` |
+| `infoContent` | ✅ Sim | Conteúdo do texto informativo |
+| `conditionalLogic` | ❌ Não | Controle de visibilidade (funciona normalmente) |
+| `display_order` | ❌ Não | Posicionamento no questionário (funciona normalmente) |
+
+#### Campos Ignorados
+
+Os seguintes campos são **ignorados** para `type: 'info'`:
+- `placeholder`, `required`, `repeatPerParty`, `answerTemplates`, `options`
+
+#### Formatação do Conteúdo
+
+O campo `infoContent` suporta:
+
+1. **Negrito:** Use `**texto**` para destacar
+   - Exemplo: `**Atenção:** Este é um aviso importante`
+   - Resultado: **Atenção:** Este é um aviso importante
+
+2. **Quebras de Linha:** Use `\n` para criar parágrafos
+   - Exemplo: `Primeiro parágrafo.\n\nSegundo parágrafo.`
+
+3. **Listas Simples:** Use `- ` ou `• ` para itens
+   - Exemplo: `Documentos necessários:\n- CPF\n- RG\n- Comprovante de endereço`
+
+**Nota:** Markdown completo NÃO é suportado (apenas negrito e quebras de linha).
+
+#### Exemplo 1: Instruções de Seção
+
+```json
+{
+  "id": "info_secao_financeira",
+  "title": "📊 Seção Financeira",
+  "type": "info",
+  "infoContent": "Você está prestes a preencher informações financeiras críticas para o contrato.\n\n**Importante:**\n\nTodas as informações devem ser precisas e verificáveis. Estimativas devem ser claramente identificadas como tal.\n\nDuvidas? Consulte seu contador antes de prosseguir."
+}
+```
+
+**Interface Visual:**
+```
+┌──────────────────────────────────────────────────┐
+│ ℹ️ Informação 5 de 20                            │
+│                                                  │
+│ 📊 Seção Financeira                              │
+│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│
+│                                                  │
+│ Você está prestes a preencher informações       │
+│ financeiras críticas para o contrato.           │
+│                                                  │
+│ Importante:                                      │
+│                                                  │
+│ Todas as informações devem ser precisas...      │
+│                                                  │
+│ ┌──────────┐              ┌──────────┐          │
+│ │ Anterior │              │ Próxima  │          │
+│ └──────────┘              └──────────┘          │
+└──────────────────────────────────────────────────┘
+```
+
+#### Exemplo 2: Aviso Condicional
+
+```json
+{
+  "id": "info_aviso_foro",
+  "title": "⚠️ Atenção: Cláusula de Foro Selecionada",
+  "type": "info",
+  "infoContent": "Você escolheu incluir uma cláusula de foro no contrato.\n\n**Importante:** Certifique-se de que **todas as partes** concordam com a jurisdição escolhida antes de finalizar o contrato.\n\nA cláusula de foro pode afetar significativamente eventuais disputas futuras.",
+  "conditionalLogic": {
+    "conditions": [
+      { "fieldId": "incluir_foro", "operator": "equals", "value": "Sim" }
+    ],
+    "action": "show"
+  }
+}
+```
+
+**Comportamento:** Este card só aparece se o usuário escolher "Sim" em `incluir_foro`.
+
+#### Exemplo 3: Separador de Etapas
+
+```json
+{
+  "id": "info_fim_dados_basicos",
+  "title": "✅ Dados Básicos Concluídos",
+  "type": "info",
+  "infoContent": "Você concluiu o preenchimento dos dados básicos do contrato.\n\n**Próxima etapa:**\n\nAgora você definirá as cláusulas específicas e condições contratuais.\n\nEsta etapa pode levar aproximadamente 10-15 minutos.",
+  "display_order": 100
+}
+```
+
+#### Exemplo 4: Conceitos Explicativos
+
+```json
+{
+  "id": "info_o_que_e_vesting",
+  "title": "💡 O que é Vesting?",
+  "type": "info",
+  "infoContent": "**Vesting** é o processo de aquisição gradual de participação societária ao longo do tempo.\n\nExemplo: Se um sócio tem 10% com vesting de 4 anos, ele adquire:\n- Ano 1: 2.5%\n- Ano 2: 5% (acumulado)\n- Ano 3: 7.5% (acumulado)\n- Ano 4: 10% (total)\n\nIsso protege a empresa caso um sócio saia prematuramente."
+}
+```
+
+#### Dicas de UX
+
+✅ **Boas práticas:**
+- Use emojis no título para chamar atenção (📋, ⚠️, 💡, ✅, 📊)
+- Mantenha textos concisos (máximo 150-200 palavras)
+- Use negrito para destacar palavras-chave
+- Posicione estrategicamente usando `display_order`
+- Combine com `conditionalLogic` para contexto dinâmico
+
+⚠️ **Evite:**
+- Textos muito longos (usuário pode pular sem ler)
+- Informações que deveriam estar no contrato final
+- Usar como substituto de `helpText` em campos
+
+#### Validações
+
+- ✅ Campo `id` é obrigatório (mesmo que não usado no contrato)
+- ✅ Campo `infoContent` é obrigatório
+- ✅ Campo `title` é opcional mas recomendado
+- ❌ Campos como `placeholder`, `required`, `repeatPerParty` são ignorados
+- ✅ `conditionalLogic` funciona normalmente
+- ✅ `display_order` funciona normalmente
+
+#### Posicionamento no Questionário
+
+Cards informativos seguem a mesma lógica de ordenação que campos normais:
+- Respeita `display_order`
+- Pode ser posicionado em qualquer lugar do fluxo
+- Não conta como "campo obrigatório" (não bloqueia finalização)
+
+**Exemplo de sequência:**
+
+```json
+{
+  "cards": [
+    { "id": "nome_empresa", "type": "text", "display_order": 10 },
+    { "id": "info_aviso", "type": "info", "display_order": 20 },
+    { "id": "cnpj", "type": "text", "display_order": 30 }
+  ]
+}
+```
+
+**Ordem no questionário:**
+1. nome_empresa (campo normal)
+2. info_aviso **(card informativo)**
+3. cnpj (campo normal)
+
 ### Ordenação de Campos (display_order)
 
 **IMPORTANTE:** A ordem em que os campos aparecem no array `cards` do JSON **não determina** a ordem de exibição no questionário.
@@ -460,6 +1014,47 @@ Os pagamentos serão realizados conforme dados bancários abaixo:
 - João Silva: Banco Itaú, Agência 1234, Conta 56789-0
 - Maria Santos: Banco Bradesco, Agência 9876, Conta 54321-1
 ```
+
+### Dados das Partes (PartyData)
+
+O sistema coleta automaticamente os seguintes dados de cada parte do contrato:
+
+#### Campos Obrigatórios
+- **Nome Completo** (`fullName`)
+- **Nacionalidade** (`nationality`)
+- **Estado Civil** (`maritalStatus`)
+- **CPF** (`cpf`)
+- **Endereço** (`address`)
+- **Cidade** (`city`)
+- **Estado** (`state`)
+- **Tipo de Parte** (`partyType`) - Ex: "CONTRATANTE", "CONTRATADO", "SÓCIO", etc.
+
+#### Campos Opcionais (v2.3+)
+- **Profissão** (`profession`) - Ocupação ou cargo da parte
+- **E-mail** (`email`) - Endereço eletrônico de contato
+
+#### Placeholders Disponíveis no Contrato
+
+O sistema gera automaticamente placeholders formatados para as partes:
+
+| Placeholder | Conteúdo |
+|------------|----------|
+| `[contracting-parties]` | Lista formatada de todas as partes principais com qualificação completa |
+| `[other-involved]` | Lista formatada de outras partes envolvidas (se houver) |
+
+**Formato da qualificação:**
+
+Sem profissão/e-mail:
+```
+João Silva, nacionalidade brasileira, solteiro, inscrito no CPF sob o nº 123.456.789-00, residente e domiciliado à Rua Exemplo, 123, São Paulo, SP
+```
+
+Com profissão/e-mail (se preenchidos):
+```
+João Silva, nacionalidade brasileira, solteiro, engenheiro civil, inscrito no CPF sob o nº 123.456.789-00, residente e domiciliado à Rua Exemplo, 123, São Paulo, SP, e-mail joao@exemplo.com
+```
+
+**Nota:** Profissão e e-mail aparecem **apenas se preenchidos** pelo usuário (campos opcionais).
 
 ## Exemplos Práticos
 
@@ -992,6 +1587,43 @@ Requisitos:
    - Revise todos os IDs e placeholders
    - Teste o template após importar
 
+## Validações Automáticas
+
+### Validações Gerais
+
+O sistema realiza automaticamente as seguintes validações:
+
+- ✅ Todos os campos obrigatórios estão presentes
+- ✅ IDs dos cards são únicos
+- ✅ Tipos de campo são válidos
+- ✅ Campos `select` têm `options` preenchido
+- ✅ Todos os placeholders no `contractText` têm cards correspondentes
+- ✅ Campos com `repeatPerParty: true` usam `{{id_formatted}}` no texto
+- ✅ Sintaxe de cláusulas condicionais `{{#if}}` está correta
+
+### Validações Específicas de Novas Funcionalidades (v2.3)
+
+**Campos `select` com `includeValueInContract: false`:**
+- ✅ Campo `options` ainda é obrigatório
+- ✅ `conditionalLogic` funciona normalmente
+- ✅ Valor é salvo e pode ser usado em `{{#if}}`
+- ⚠️ Se placeholder `{{id}}` for usado no texto, será removido silenciosamente
+
+**Campos `textarea` com `answerTemplateMode: 'append'`:**
+- ✅ Campo `answerTemplates` é obrigatório (se vazio, `answerTemplateMode` é ignorado)
+- ✅ Funciona apenas para `type: 'textarea'` (outros tipos ignoram)
+- ⚠️ Usuário pode editar manualmente após acumulação
+
+**Campos `type: 'info'`:**
+- ✅ Campo `infoContent` é obrigatório
+- ✅ Campo `id` é gerado automaticamente se não fornecido
+- ✅ Campo `title` é opcional mas recomendado
+- ❌ Campos `placeholder`, `required`, `repeatPerParty`, `answerTemplates`, `options` são ignorados
+- ✅ `conditionalLogic` e `display_order` funcionam normalmente
+- ✅ Não conta como campo obrigatório (não bloqueia finalização)
+
+---
+
 ## Suporte e Recursos
 
 - **Documentação completa:** `docs/template-json-schema.md`
@@ -1001,18 +1633,58 @@ Requisitos:
 
 ## Changelog
 
-- **v1.2** (2025-01) - Cláusulas condicionais no texto + Reordenação de campos
-  - Nova sintaxe `{{#if condition}}...{{/if}}` para cláusulas condicionais no contractText
-  - Suporte a operadores AND/OR em cláusulas condicionais
-  - Campo `display_order` para controle de ordem de exibição
-  - Editor visual com drag-and-drop para reordenar campos
-  - Validação de sintaxe de cláusulas condicionais
-  - Documentação expandida com exemplos práticos
-- **v1.1** (2025-01) - Adição de campos repetíveis por parte
-  - Novo campo `repeatPerParty` para coletar informações individuais
-  - Suporte a formatação automática com `{{campo_id_formatted}}`
-  - Documentação e exemplos atualizados
-- **v1.0** (2025-01) - Versão inicial da especificação
-  - Suporte completo a lógica condicional
-  - Validação automática de placeholders
-  - Exportação/importação bidirecional
+### Versão 2.3.0 (Atual)
+
+**Novas funcionalidades:**
+
+1. **`includeValueInContract` para campos `select`**
+   - Permite usar campos `select` apenas para lógica, sem incluir o valor no contrato final
+   - Padrão: `true` (mantém comportamento atual)
+   - Útil para perguntas de controle como "Incluir cláusula X?" (Sim/Não)
+
+2. **`answerTemplateMode` para `answerTemplates`**
+   - Modo `replace` (padrão): Substitui conteúdo do textarea
+   - Modo `append`: Acumula sugestões selecionadas com quebra de linha
+   - Ideal para seleções múltiplas (papéis, benefícios, características)
+
+3. **Novo tipo de campo: `info`**
+   - Cards puramente informativos (não coletam dados)
+   - Suporta formatação básica (negrito, quebras de linha)
+   - Funciona com `conditionalLogic` para exibição condicional
+   - Útil para instruções, avisos e separadores de seção
+
+4. **Campos opcionais em `PartyData`**
+   - `profession` (profissão)
+   - `email` (e-mail de contato)
+   - Aparecem na qualificação das partes apenas se preenchidos
+
+5. **Formato de data uniformizado**
+   - Todas as datas exibidas em formato brasileiro (dd/mm/aaaa)
+   - Armazenamento interno continua em ISO (YYYY-MM-DD)
+
+### Versão 1.2 (2025-01)
+
+**Funcionalidades:**
+- Cláusulas condicionais no texto + Reordenação de campos
+- Nova sintaxe `{{#if condition}}...{{/if}}` para cláusulas condicionais no contractText
+- Suporte a operadores AND/OR em cláusulas condicionais
+- Campo `display_order` para controle de ordem de exibição
+- Editor visual com drag-and-drop para reordenar campos
+- Validação de sintaxe de cláusulas condicionais
+- Documentação expandida com exemplos práticos
+
+### Versão 1.1 (2025-01)
+
+**Funcionalidades:**
+- Adição de campos repetíveis por parte
+- Novo campo `repeatPerParty` para coletar informações individuais
+- Suporte a formatação automática com `{{campo_id_formatted}}`
+- Documentação e exemplos atualizados
+
+### Versão 1.0 (2025-01)
+
+**Funcionalidades:**
+- Versão inicial da especificação
+- Suporte completo a lógica condicional
+- Validação automática de placeholders
+- Exportação/importação bidirecional
