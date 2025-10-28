@@ -10,6 +10,7 @@ import LocationDateQuestion from './questionnaire/LocationDateQuestion';
 import OtherPartiesQuestion from './questionnaire/OtherPartiesQuestion';
 import OtherPartiesNumberQuestion from './questionnaire/OtherPartiesNumberQuestion';
 import RepeatableFieldCard from './questionnaire/RepeatableFieldCard';
+import QuestionnaireInfoCard from './questionnaire/QuestionnaireInfoCard';
 import { getNonRepeatableVisibleFields, getRepeatableVisibleFields } from '@/utils/conditionalLogic';
 import { useContractPreviewScroll } from '@/hooks/useContractPreviewScroll';
 
@@ -156,6 +157,20 @@ const QuestionnaireForm = () => {
     });
     
     if (templateIndex >= 0 && templateIndex < visibleFields.length) {
+      const currentField = visibleFields[templateIndex];
+      
+      // Verificar se é um card informativo
+      if (currentField.type === 'info') {
+        return (
+          <QuestionnaireInfoCard
+            field={currentField}
+            questionIndex={templateIndex}
+            totalQuestions={visibleFields.length}
+          />
+        );
+      }
+      
+      // Renderizar pergunta normal
       return <QuestionnaireQuestion />;
     }
     

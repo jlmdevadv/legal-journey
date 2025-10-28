@@ -40,7 +40,7 @@ export interface TemplateVersion {
 export interface ContractField {
   id: string;
   label: string;
-  type: 'text' | 'textarea' | 'select' | 'number' | 'email' | 'tel' | 'date';
+  type: 'text' | 'textarea' | 'select' | 'number' | 'email' | 'tel' | 'date' | 'info';
   placeholder?: string;
   required?: boolean;
   options?: string[];
@@ -53,6 +53,9 @@ export interface ContractField {
   conditionalLogic?: ConditionalLogic; // Lógica de visibilidade condicional
   repeatPerParty?: boolean; // Campo repetível para cada parte principal
   answerTemplates?: AnswerTemplate[]; // Modelos de resposta pré-formatados
+  answerTemplateMode?: 'replace' | 'append'; // Modo de inserção de answerTemplates
+  includeValueInContract?: boolean; // Se valor de select deve aparecer no contrato (padrão: true)
+  infoContent?: string; // Conteúdo para cards informativos (type='info')
   display_order?: number; // Ordem de exibição dos campos
 }
 

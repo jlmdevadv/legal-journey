@@ -859,12 +859,22 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     // 2. Replace campos normais VISÍVEIS (mantendo placeholders para campos vazios)
     Object.entries(formValues).forEach(([fieldId, value]) => {
       if (visibleFieldIds.has(fieldId)) {
+        const field = selectedTemplate.fields.find(f => f.id === fieldId);
         const escapedFieldId = fieldId.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
         const placeholderPattern = new RegExp(`\\[${escapedFieldId}\\]`, 'g');
         
-        // Se vazio, manter [fieldId] visível no preview
-        const replacement = value.trim() ? value : `[${fieldId}]`;
-        filledTemplate = filledTemplate.replace(placeholderPattern, replacement);
+        // Verificar includeValueInContract (Item 1)
+        const shouldInclude = field?.includeValueInContract !== false; // default: true
+        
+        if (!shouldInclude && field?.type === 'select') {
+          // Campo select que NÃO deve incluir valor no contrato
+          filledTemplate = filledTemplate.replace(placeholderPattern, '');
+          console.log(`[SELECT-OMIT] Campo "${fieldId}" omitido do preview (includeValueInContract=false)`);
+        } else {
+          // Comportamento normal: Se vazio, manter [fieldId] visível no preview
+          const replacement = value.trim() ? value : `[${fieldId}]`;
+          filledTemplate = filledTemplate.replace(placeholderPattern, replacement);
+        }
       }
     });
     
@@ -934,8 +944,16 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         const escapedFieldId = fieldId.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
         const placeholderPattern = new RegExp(`\\[${escapedFieldId}\\]`, 'g');
         
-        // Se campo opcional e vazio, remover linha inteira (Smart Placeholder Replacement)
-        if (field && !field.required && (!value || value.trim() === '')) {
+        // Verificar includeValueInContract (Item 1)
+        const shouldInclude = field?.includeValueInContract !== false;
+        
+        if (!shouldInclude && field?.type === 'select') {
+          // Campo select que NÃO deve incluir valor no contrato
+          const lineRemovalPattern = new RegExp(`^.*\\[${escapedFieldId}\\].*\\n?`, 'gm');
+          filledTemplate = filledTemplate.replace(lineRemovalPattern, '');
+          console.log(`[SELECT-OMIT] Campo "${fieldId}" e sua linha removidos do documento final`);
+        } else if (field && !field.required && (!value || value.trim() === '')) {
+          // Smart Placeholder Replacement: Remove linha inteira se campo opcional vazio
           const lineRemovalPattern = new RegExp(`^.*\\[${escapedFieldId}\\].*\\n?`, 'gm');
           filledTemplate = filledTemplate.replace(lineRemovalPattern, '');
           console.log(`[SMART-CLEANUP] Removendo linha do campo opcional vazio: ${fieldId}`);

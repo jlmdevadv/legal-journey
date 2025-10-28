@@ -140,6 +140,8 @@ const QuestionnaireQuestion = () => {
                   {currentField.answerTemplates && currentField.answerTemplates.length > 0 && (
                     <AnswerTemplatesSelector
                       templates={currentField.answerTemplates}
+                      currentValue={localValue}
+                      mode={currentField.answerTemplateMode || 'replace'}
                       onSelectTemplate={(value) => handleValueChange(value)}
                     />
                   )}

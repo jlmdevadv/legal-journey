@@ -37,7 +37,10 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field, ava
     aiAssistantLink: '',
     options: [],
     conditionalLogic: undefined,
-    answerTemplates: []
+    answerTemplates: [],
+    answerTemplateMode: 'replace',
+    includeValueInContract: true,
+    infoContent: ''
   });
 
   const [conditions, setConditions] = useState<FieldCondition[]>([]);
@@ -61,7 +64,10 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field, ava
         aiAssistantLink: field.aiAssistantLink || '',
         options: field.options || [],
         conditionalLogic: field.conditionalLogic,
-        answerTemplates: field.answerTemplates || []
+        answerTemplates: field.answerTemplates || [],
+        answerTemplateMode: field.answerTemplateMode || 'replace',
+        includeValueInContract: field.includeValueInContract !== undefined ? field.includeValueInContract : true,
+        infoContent: field.infoContent || ''
       });
       setConditions(field.conditionalLogic?.conditions || []);
       setShowConditionsEditor(!!field.conditionalLogic && field.conditionalLogic.conditions.length > 0);
@@ -80,7 +86,10 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field, ava
         aiAssistantLink: '',
         options: [],
         conditionalLogic: undefined,
-        answerTemplates: []
+        answerTemplates: [],
+        answerTemplateMode: 'replace',
+        includeValueInContract: true,
+        infoContent: ''
       });
       setConditions([]);
       setShowConditionsEditor(false);
@@ -189,7 +198,22 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field, ava
   };
 
   const handleSave = () => {
-    if (!fieldData.label || !fieldData.id) return;
+    // Validação específica para type='info'
+    if (fieldData.type === 'info') {
+      if (!fieldData.infoContent || fieldData.infoContent.trim() === '') {
+        toast.error('O conteúdo informativo é obrigatório para cards do tipo "Informativo"');
+        return;
+      }
+      
+      // Para type='info', gerar um ID automático se não existir
+      if (!fieldData.id) {
+        const autoId = `info_${Date.now()}`;
+        setFieldData(prev => ({ ...prev, id: autoId }));
+      }
+    } else {
+      // Validação normal
+      if (!fieldData.label || !fieldData.id) return;
+    }
 
     // Validar fieldIds nas condições
     if (fieldData.conditionalLogic && fieldData.conditionalLogic.conditions.length > 0) {
@@ -212,18 +236,31 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field, ava
 
     const completeField: ContractField = {
       id: fieldData.id,
-      label: fieldData.label,
+      label: fieldData.label || '', // Opcional para type='info'
       type: fieldData.type as any,
-      placeholder: fieldData.placeholder || `Digite ${fieldData.label.toLowerCase()}`,
-      required: fieldData.required || false,
-      repeatPerParty: fieldData.repeatPerParty || false,
+      ...(fieldData.type !== 'info' && { 
+        placeholder: fieldData.placeholder || `Digite ${fieldData.label?.toLowerCase() || 'informação'}` 
+      }),
+      ...(fieldData.type !== 'info' && { required: fieldData.required || false }),
+      ...(fieldData.type !== 'info' && { repeatPerParty: fieldData.repeatPerParty || false }),
+      ...(fieldData.type === 'info' && fieldData.infoContent && { infoContent: fieldData.infoContent }),
       ...(fieldData.howToFill && { howToFill: fieldData.howToFill }),
       ...(fieldData.whyImportant && { whyImportant: fieldData.whyImportant }),
       ...(fieldData.videoLink && { videoLink: fieldData.videoLink }),
       ...(fieldData.aiAssistantLink && { aiAssistantLink: fieldData.aiAssistantLink }),
       ...(fieldData.type === 'select' && fieldData.options && { options: fieldData.options }),
-      ...(fieldData.conditionalLogic && fieldData.conditionalLogic.conditions.length > 0 && { conditionalLogic: fieldData.conditionalLogic }),
-      ...(fieldData.answerTemplates && fieldData.answerTemplates.length > 0 && { answerTemplates: fieldData.answerTemplates })
+      ...(fieldData.type === 'select' && fieldData.includeValueInContract !== undefined && { 
+        includeValueInContract: fieldData.includeValueInContract 
+      }),
+      ...(fieldData.conditionalLogic && fieldData.conditionalLogic.conditions.length > 0 && { 
+        conditionalLogic: fieldData.conditionalLogic 
+      }),
+      ...(fieldData.type === 'textarea' && fieldData.answerTemplates && fieldData.answerTemplates.length > 0 && { 
+        answerTemplates: fieldData.answerTemplates 
+      }),
+      ...(fieldData.type === 'textarea' && fieldData.answerTemplateMode && { 
+        answerTemplateMode: fieldData.answerTemplateMode 
+      })
     };
 
     onSave(completeField);
@@ -295,6 +332,7 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field, ava
                     <SelectItem value="date">Data</SelectItem>
                     <SelectItem value="number">Número</SelectItem>
                     <SelectItem value="select">Seleção</SelectItem>
+                    <SelectItem value="info">📄 Informativo</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -306,31 +344,85 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field, ava
                   value={fieldData.placeholder}
                   onChange={(e) => setFieldData(prev => ({ ...prev, placeholder: e.target.value }))}
                   placeholder="Ex: Digite o nome completo"
+                  disabled={fieldData.type === 'info'}
                 />
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="field-required"
-                  checked={fieldData.required}
-                  onCheckedChange={(checked) => setFieldData(prev => ({ ...prev, required: !!checked }))}
-                />
-                <Label htmlFor="field-required">Campo obrigatório</Label>
-              </div>
+              {/* Conteúdo informativo (apenas para type='info') */}
+              {fieldData.type === 'info' && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-md space-y-3">
+                  <div className="flex items-center gap-2 text-blue-700 font-semibold">
+                    <span>📄 Card Informativo</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Este card exibirá apenas informações ao usuário, sem coletar dados.
+                    Suporta **negrito** usando asteriscos duplos.
+                  </p>
+                  <div>
+                    <Label htmlFor="info-content">Conteúdo da Informação *</Label>
+                    <Textarea
+                      id="info-content"
+                      value={fieldData.infoContent || ''}
+                      onChange={(e) => setFieldData(prev => ({ ...prev, infoContent: e.target.value }))}
+                      placeholder="Digite o texto informativo aqui. Use **texto** para negrito."
+                      className="min-h-[150px] font-mono text-sm"
+                      rows={8}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Dica: Use quebras de linha para organizar o conteúdo em parágrafos.
+                    </p>
+                  </div>
+                </div>
+              )}
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="repeat-per-party"
-                  checked={fieldData.repeatPerParty || false}
-                  onCheckedChange={(checked) => setFieldData(prev => ({ ...prev, repeatPerParty: !!checked }))}
-                />
-                <Label htmlFor="repeat-per-party" className="cursor-pointer">
-                  <span className="font-medium">Repetir esta pergunta para cada Parte Principal</span>
-                  <span className="block text-xs text-muted-foreground mt-1">
-                    O campo será exibido uma vez para cada parte do contrato
-                  </span>
-                </Label>
-              </div>
+              {fieldData.type !== 'info' && (
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="field-required"
+                    checked={fieldData.required}
+                    onCheckedChange={(checked) => setFieldData(prev => ({ ...prev, required: !!checked }))}
+                  />
+                  <Label htmlFor="field-required">Campo obrigatório</Label>
+                </div>
+              )}
+
+              {fieldData.type !== 'info' && (
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="repeat-per-party"
+                    checked={fieldData.repeatPerParty || false}
+                    onCheckedChange={(checked) => setFieldData(prev => ({ ...prev, repeatPerParty: !!checked }))}
+                  />
+                  <Label htmlFor="repeat-per-party" className="cursor-pointer">
+                    <span className="font-medium">Repetir esta pergunta para cada Parte Principal</span>
+                    <span className="block text-xs text-muted-foreground mt-1">
+                      O campo será exibido uma vez para cada parte do contrato
+                    </span>
+                  </Label>
+                </div>
+              )}
+
+              {/* Opção includeValueInContract para campos select */}
+              {fieldData.type === 'select' && (
+                <div className="flex items-center space-x-2 mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <Checkbox
+                    id="include-value"
+                    checked={fieldData.includeValueInContract !== false}
+                    onCheckedChange={(checked) => 
+                      setFieldData(prev => ({ 
+                        ...prev, 
+                        includeValueInContract: !!checked 
+                      }))
+                    }
+                  />
+                  <Label htmlFor="include-value" className="cursor-pointer">
+                    <span className="font-medium">Incluir valor selecionado no contrato</span>
+                    <span className="block text-xs text-muted-foreground mt-1">
+                      Desmarque se o campo é apenas para controle de lógica (conditionalLogic ou cláusulas condicionais)
+                    </span>
+                  </Label>
+                </div>
+              )}
 
               {/* Options for select type */}
               {fieldData.type === 'select' && (
@@ -534,9 +626,33 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field, ava
           {/* Answer Templates */}
           {fieldData.type === 'textarea' && (
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center justify-between">
-                  Modelos de Resposta (Opcional)
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Modelos de Resposta (Opcional)</CardTitle>
+                <div className="flex items-center gap-2">
+                  {/* Seletor de modo */}
+                  {fieldData.type === 'textarea' && fieldData.answerTemplates && fieldData.answerTemplates.length > 0 && (
+                    <div className="flex items-center gap-2 mr-4">
+                      <Label className="text-xs text-muted-foreground">Modo:</Label>
+                      <Select
+                        value={fieldData.answerTemplateMode || 'replace'}
+                        onValueChange={(value) => 
+                          setFieldData(prev => ({ 
+                            ...prev, 
+                            answerTemplateMode: value as 'replace' | 'append' 
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="h-8 w-32 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="replace">Substituir</SelectItem>
+                          <SelectItem value="append">Acumular</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <Button
                     type="button"
                     variant="outline"
@@ -555,13 +671,31 @@ const FieldConfigModal = ({ open, onOpenChange, onSave, selectedText, field, ava
                       </>
                     )}
                   </Button>
-                </CardTitle>
-              </CardHeader>
+                </div>
+              </div>
+            </CardHeader>
               {showAnswerTemplatesEditor && (
                 <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Configure sugestões de resposta pré-formatadas que o usuário pode selecionar com um clique.
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      Configure sugestões de resposta pré-formatadas que o usuário pode selecionar com um clique.
+                    </p>
+                    {/* Explicação do modo */}
+                    {fieldData.answerTemplates && fieldData.answerTemplates.length > 0 && (
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-md text-xs">
+                        <span className="font-semibold">Modo Selecionado:</span>
+                        {fieldData.answerTemplateMode === 'append' ? (
+                          <p className="mt-1">
+                            <strong>Acumular:</strong> Cada clique adiciona ao texto existente (útil para múltiplas seleções).
+                          </p>
+                        ) : (
+                          <p className="mt-1">
+                            <strong>Substituir:</strong> Cada clique substitui todo o conteúdo do campo (padrão).
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
                   {fieldData.answerTemplates && fieldData.answerTemplates.length > 0 && (
                     <div className="space-y-3">

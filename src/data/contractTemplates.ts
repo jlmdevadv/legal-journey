@@ -17,7 +17,7 @@ export interface ContractTemplate {
 export interface ContractField {
   id: string;
   label: string;
-  type: 'text' | 'textarea' | 'date' | 'number' | 'select' | 'email' | 'tel';
+  type: 'text' | 'textarea' | 'date' | 'number' | 'select' | 'email' | 'tel' | 'info';
   placeholder?: string;
   options?: string[];
   required?: boolean;
@@ -29,6 +29,10 @@ export interface ContractField {
   helpVideo?: string;
   conditionalLogic?: any;
   repeatPerParty?: boolean;
+  answerTemplates?: any[];
+  answerTemplateMode?: 'replace' | 'append';
+  includeValueInContract?: boolean;
+  infoContent?: string;
 }
 
 export const contractTemplates: ContractTemplate[] = [

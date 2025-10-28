@@ -117,6 +117,8 @@ const RepeatableFieldCard = ({
             {field.answerTemplates && field.answerTemplates.length > 0 && (
               <AnswerTemplatesSelector
                 templates={field.answerTemplates}
+                currentValue={localValue}
+                mode={field.answerTemplateMode || 'replace'}
                 onSelectTemplate={(value) => handleValueChange(value)}
               />
             )}

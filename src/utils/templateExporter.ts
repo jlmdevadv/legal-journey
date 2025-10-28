@@ -18,7 +18,7 @@ export const exportTemplateToJSON = (template: ContractTemplate): string => {
     cards: template.fields.map(field => ({
       id: field.id,
       title: field.label,
-      type: field.type,
+      type: field.type as any,
       placeholder: field.placeholder,
       required: field.required,
       options: field.options,
@@ -30,7 +30,10 @@ export const exportTemplateToJSON = (template: ContractTemplate): string => {
       aiAssistantLink: field.aiAssistantLink,
       conditionalLogic: field.conditionalLogic,
       repeatPerParty: field.repeatPerParty,
-      answerTemplates: field.answerTemplates
+      answerTemplates: field.answerTemplates,
+      answerTemplateMode: field.answerTemplateMode,
+      includeValueInContract: field.includeValueInContract,
+      infoContent: field.infoContent
     })),
     usePartySystem: template.usePartySystem
   };
