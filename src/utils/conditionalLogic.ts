@@ -88,7 +88,9 @@ export const getRepeatableVisibleFields = (
   fields: ContractField[],
   formValues: Record<string, string>
 ): ContractField[] => {
-  return getVisibleFields(fields, formValues).filter(field => field.repeatPerParty === true);
+  return getVisibleFields(fields, formValues).filter(field => 
+    field.repeatPerParty === true && field.type !== 'info'
+  );
 };
 
 /**
@@ -98,5 +100,7 @@ export const getNonRepeatableVisibleFields = (
   fields: ContractField[],
   formValues: Record<string, string>
 ): ContractField[] => {
-  return getVisibleFields(fields, formValues).filter(field => !field.repeatPerParty);
+  return getVisibleFields(fields, formValues).filter(field => 
+    !field.repeatPerParty && field.type !== 'info'
+  );
 };
