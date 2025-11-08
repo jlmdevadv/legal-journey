@@ -483,51 +483,60 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     
-    // ============ BLOCO 2: PERGUNTAS UNIFICADAS (0+) ============
-    if (currentQuestionIndex >= 0 && currentQuestionIndex < 9998) {
-      const allFields = getAllVisibleFieldsSorted();
-      
-      // Verificar se índice está dentro do array
-      if (currentQuestionIndex >= allFields.length) {
-        // Acabaram as perguntas, ir para Location/Date
-        console.log('[DEBUG] BLOCO 2 - Finished all questions, going to Location/Date');
-        setCurrentQuestionIndex(9998);
-        setCurrentPartyLoopIndex(0); // Reset
-        return;
-      }
-      
-      const currentField = allFields[currentQuestionIndex];
-      
-      console.log('[DEBUG] BLOCO 2 - Current field:', {
+  // ============ BLOCO 2: PERGUNTAS UNIFICADAS (0+) ============
+  if (currentQuestionIndex >= 0 && currentQuestionIndex < 9998) {
+    const allFields = getAllVisibleFieldsSorted();
+    
+    // Verificar se índice está dentro do array (proteção adicional)
+    if (currentQuestionIndex >= allFields.length) {
+      console.error('[DEBUG] ERRO: currentQuestionIndex fora dos limites!', {
         currentQuestionIndex,
-        currentPartyLoopIndex,
-        fieldId: currentField.id,
-        isRepeatable: currentField.repeatPerParty,
-        numberOfParties
+        allFieldsLength: allFields.length
       });
-      
-      // CASO 1: Campo repetível → verificar se ainda há partes para responder
-      if (currentField.repeatPerParty === true && numberOfParties > 0) {
-        if (currentPartyLoopIndex < numberOfParties - 1) {
-          // Ainda há partes para responder este campo
-          console.log('[DEBUG] BLOCO 2 - Next party for same field');
-          setCurrentPartyLoopIndex(prev => prev + 1);
-          return;
-        } else {
-          // Última parte já respondeu, avançar para próximo campo
-          console.log('[DEBUG] BLOCO 2 - All parties answered, next field');
-          setCurrentPartyLoopIndex(0); // Reset para próximo campo repetível
-          setCurrentQuestionIndex(prev => prev + 1);
-          return;
-        }
-      }
-      
-      // CASO 2: Campo não repetível → avançar direto para próximo campo
-      console.log('[DEBUG] BLOCO 2 - Non-repeatable field, next field');
-      setCurrentPartyLoopIndex(0); // Garantir reset
-      setCurrentQuestionIndex(prev => prev + 1);
+      setCurrentQuestionIndex(9998);
+      setCurrentPartyLoopIndex(0);
       return;
     }
+    
+    const currentField = allFields[currentQuestionIndex];
+    
+    console.log('[DEBUG] BLOCO 2 - Current field:', {
+      currentQuestionIndex,
+      currentPartyLoopIndex,
+      fieldId: currentField.id,
+      isRepeatable: currentField.repeatPerParty,
+      numberOfParties,
+      totalFields: allFields.length,
+      isLastField: currentQuestionIndex === allFields.length - 1
+    });
+    
+    // CASO 1: Campo repetível e ainda há partes para responder
+    if (currentField.repeatPerParty === true && numberOfParties > 0) {
+      if (currentPartyLoopIndex < numberOfParties - 1) {
+        // Ainda há partes para responder este campo
+        console.log('[DEBUG] BLOCO 2 - Próxima parte para o mesmo campo');
+        setCurrentPartyLoopIndex(prev => prev + 1);
+        return;
+      }
+      // Se chegou aqui: última parte já respondeu, devemos avançar
+    }
+    
+    // Se chegou aqui: campo não repetível OU última parte de campo repetível
+    // Resetar o loop de partes para o próximo card
+    setCurrentPartyLoopIndex(0);
+    
+    // CASO 2: Verificar se este é o ÚLTIMO campo da lista
+    if (currentQuestionIndex === allFields.length - 1) {
+      console.log('[DEBUG] BLOCO 2 - ✅ Fim de todos os campos. Transição para Local/Data (9998)');
+      setCurrentQuestionIndex(9998);
+      return;
+    }
+    
+    // CASO 3: Não é o último campo, avançar para o próximo
+    console.log('[DEBUG] BLOCO 2 - Próximo campo no display_order');
+    setCurrentQuestionIndex(prev => prev + 1);
+    return;
+  }
 
     // ============ BLOCO 3: Location/Date (9998) ============
     if (currentQuestionIndex === 9998) {

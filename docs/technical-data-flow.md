@@ -374,20 +374,81 @@ const getAllVisibleFieldsSorted = (): ContractField[] => {
 };
 ```
 
-### 15.5. Lógica de Navegação (nextQuestion)
+### 15.5. Lógica de Navegação (nextQuestion) - Bloco 2
 
-**Para campos repetíveis:**
-1. Se `currentPartyLoopIndex < numberOfParties - 1`: incrementar `currentPartyLoopIndex` (mesma pergunta, próxima parte)
-2. Senão: resetar `currentPartyLoopIndex = 0` e incrementar `currentQuestionIndex` (próxima pergunta)
+**Estrutura Corrigida (v3.1):**
 
-**Para campos não-repetíveis:**
-1. Incrementar `currentQuestionIndex` diretamente
+```typescript
+const allFields = getAllVisibleFieldsSorted();
+const currentField = allFields[currentQuestionIndex];
 
-**Para cards informativos:**
-1. Incrementar `currentQuestionIndex` diretamente (sem validação)
+// CASO 1: Campo repetível com mais partes para responder
+if (currentField.repeatPerParty === true && currentPartyLoopIndex < numberOfParties - 1) {
+  setCurrentPartyLoopIndex(prev => prev + 1); // Próxima parte, mesmo campo
+  return;
+}
+
+// Se chegou aqui: campo não repetível OU última parte de campo repetível
+setCurrentPartyLoopIndex(0); // Resetar loop de partes
+
+// CASO 2: Último campo do template → Transicionar para Bloco 3
+if (currentQuestionIndex === allFields.length - 1) {
+  setCurrentQuestionIndex(9998); // Ir para Location/Date
+  return;
+}
+
+// CASO 3: Não é o último campo → Avançar para próximo campo
+setCurrentQuestionIndex(prev => prev + 1);
+```
+
+**Fluxo de Decisão:**
+
+```
+┌─────────────────────────────────────┐
+│  Está em campo repetível?           │
+│  E há mais partes para responder?   │
+└─────────────┬───────────────────────┘
+              │
+     ┌────────┴────────┐
+     │ SIM             │ NÃO
+     │                 │
+     ▼                 ▼
+┌─────────────┐  ┌──────────────────────┐
+│ Incrementar │  │ Resetar partyIndex=0 │
+│ partyIndex  │  └──────────┬───────────┘
+└─────────────┘             │
+                            ▼
+                  ┌─────────────────────┐
+                  │ É o último campo?   │
+                  │ (index = length-1)  │
+                  └──────────┬──────────┘
+                             │
+                    ┌────────┴────────┐
+                    │ SIM             │ NÃO
+                    │                 │
+                    ▼                 ▼
+          ┌──────────────────┐  ┌────────────────┐
+          │ Ir para 9998     │  │ Incrementar    │
+          │ (Location/Date)  │  │ questionIndex  │
+          └──────────────────┘  └────────────────┘
+```
+
+**Ponto Crítico:**
+A verificação `currentQuestionIndex === allFields.length - 1` DEVE ocorrer ANTES de qualquer incremento de `currentQuestionIndex` para garantir a transição correta para o Bloco 3.
+
+**Exemplo Prático:**
+```
+Template com 3 campos visíveis (allFields.length = 3):
+- Índices válidos: 0, 1, 2
+- Último índice: 2 (= length - 1)
+
+Quando currentQuestionIndex = 2:
+  ✅ CORRETO: Verificar if (2 === 3-1) → true → setCurrentQuestionIndex(9998)
+  ❌ ERRADO:  setCurrentQuestionIndex(3) → índice inválido → renderiza null
+```
 
 **Fim do Bloco 2:**
-Quando `currentQuestionIndex >= allFields.length`, transitar para Location/Date (9998)
+A transição para o Bloco 3 (Location/Date - índice 9998) ocorre quando `currentQuestionIndex === allFields.length - 1`, garantindo que o último campo seja processado corretamente antes da transição.
 
 ### 15.6. Lógica de Navegação (previousQuestion)
 
