@@ -11,13 +11,14 @@ import OtherPartiesQuestion from './questionnaire/OtherPartiesQuestion';
 import OtherPartiesNumberQuestion from './questionnaire/OtherPartiesNumberQuestion';
 import RepeatableFieldCard from './questionnaire/RepeatableFieldCard';
 import QuestionnaireInfoCard from './questionnaire/QuestionnaireInfoCard';
-import { getNonRepeatableVisibleFields, getRepeatableVisibleFields } from '@/utils/conditionalLogic';
+import { getVisibleFields } from '@/utils/conditionalLogic';
 import { useContractPreviewScroll } from '@/hooks/useContractPreviewScroll';
 
 const QuestionnaireForm = () => {
   const { 
     selectedTemplate, 
-    currentQuestionIndex, 
+    currentQuestionIndex,
+    currentPartyLoopIndex, // ✅ NOVO v3.0
     isQuestionnaireMode, 
     numberOfParties, 
     partiesData,
@@ -26,15 +27,18 @@ const QuestionnaireForm = () => {
     formValues
   } = useContract();
 
-  // Calculate visible fields based on conditional logic
-  const visibleFields = useMemo(() => {
+  // ✅ NOVO v3.0: Calcular campos visíveis ordenados por display_order
+  const allVisibleFields = useMemo(() => {
     if (!selectedTemplate) return [];
-    return getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
-  }, [selectedTemplate, formValues]);
-
-  const repeatableFields = useMemo(() => {
-    if (!selectedTemplate) return [];
-    return getRepeatableVisibleFields(selectedTemplate.fields, formValues);
+    
+    const visible = getVisibleFields(selectedTemplate.fields, formValues);
+    const sorted = [...visible].sort((a, b) => {
+      const orderA = a.display_order ?? 999999;
+      const orderB = b.display_order ?? 999999;
+      return orderA - orderB;
+    });
+    
+    return sorted;
   }, [selectedTemplate, formValues]);
 
   // Auto-scroll preview to match current question
@@ -99,86 +103,75 @@ const QuestionnaireForm = () => {
     }
   }
 
-  // Show location and date question (MUST be checked BEFORE repeatable fields!)
-  if (currentQuestionIndex === -3) {
-    console.log('[DEBUG] Showing LocationDateQuestion');
-    return <LocationDateQuestion />;
-  }
-
-  // ============ BLOCO 2: PERGUNTAS REPETÍVEIS (0 - 999) ============
-  if (currentQuestionIndex >= 0 && currentQuestionIndex < 1000) {
-    const partyIndex = Math.floor(currentQuestionIndex / repeatableFields.length);
-    const fieldIndex = currentQuestionIndex % repeatableFields.length;
-    const currentField = repeatableFields[fieldIndex];
-    const currentParty = partiesData[partyIndex];
+  // ============ BLOCO 2: PERGUNTAS UNIFICADAS (0+) ============
+  if (currentQuestionIndex >= 0 && currentQuestionIndex < 9998) {
+    if (currentQuestionIndex >= allVisibleFields.length) {
+      console.error('[DEBUG] ERROR: currentQuestionIndex out of bounds!', {
+        currentQuestionIndex,
+        allVisibleFieldsLength: allVisibleFields.length
+      });
+      return null;
+    }
     
-    console.log('[DEBUG] BLOCO 2 - Rendering repeatable field:', {
+    const currentField = allVisibleFields[currentQuestionIndex];
+    
+    console.log('[DEBUG] BLOCO 2 - Rendering unified question:', {
       currentQuestionIndex,
-      partyIndex,
-      fieldIndex,
-      hasField: !!currentField,
-      hasParty: !!currentParty
+      currentPartyLoopIndex,
+      fieldId: currentField.id,
+      fieldType: currentField.type,
+      isRepeatable: currentField.repeatPerParty
     });
     
-    if (currentField && currentParty) {
-      const isLastField = fieldIndex === repeatableFields.length - 1;
-      const isLastParty = partyIndex === numberOfParties - 1;
+    // CASO 1: Card informativo
+    if (currentField.type === 'info') {
+      return (
+        <QuestionnaireInfoCard
+          field={currentField}
+          questionIndex={currentQuestionIndex}
+          totalQuestions={allVisibleFields.length}
+        />
+      );
+    }
+    
+    // CASO 2: Campo repetível
+    if (currentField.repeatPerParty === true) {
+      const currentParty = partiesData[currentPartyLoopIndex];
+      
+      if (!currentParty) {
+        console.error('[DEBUG] ERROR: No party data for index!', {
+          currentPartyLoopIndex,
+          partiesDataLength: partiesData.length
+        });
+        return null;
+      }
+      
+      const isLastField = currentQuestionIndex === allVisibleFields.length - 1;
+      const isLastParty = currentPartyLoopIndex === numberOfParties - 1;
       
       return (
         <RepeatableFieldCard
           field={currentField}
           partyId={currentParty.id}
           partyName={currentParty.fullName}
-          partyIndex={partyIndex}
+          partyIndex={currentPartyLoopIndex}
           totalParties={numberOfParties}
-          fieldIndex={fieldIndex}
-          totalFields={repeatableFields.length}
+          fieldIndex={currentQuestionIndex}
+          totalFields={allVisibleFields.length}
           isLastField={isLastField}
           isLastParty={isLastParty}
         />
       );
     }
+    
+    // CASO 3: Campo não repetível
+    return <QuestionnaireQuestion />;
   }
 
-  // ============ Location/Date (-3) - TRANSIÇÃO ENTRE BLOCOS ============
-  if (currentQuestionIndex === -3) {
-    console.log('[DEBUG] Showing LocationDateQuestion');
+  // ============ BLOCO 3: Location/Date (9998) ============
+  if (currentQuestionIndex === 9998) {
+    console.log('[DEBUG] BLOCO 3 - Showing LocationDateQuestion');
     return <LocationDateQuestion />;
-  }
-
-  // ============ BLOCO 3: PERGUNTAS NÃO-REPETÍVEIS (1000 - 9998) ============
-  if (currentQuestionIndex >= 1000 && currentQuestionIndex < 9999) {
-    const templateIndex = currentQuestionIndex - 1000;
-    
-    console.log('[DEBUG] BLOCO 3 - Rendering non-repeatable question:', {
-      currentQuestionIndex,
-      templateIndex,
-      visibleFieldsLength: visibleFields.length
-    });
-    
-    if (templateIndex >= 0 && templateIndex < visibleFields.length) {
-      const currentField = visibleFields[templateIndex];
-      
-      // Verificar se é um card informativo
-      if (currentField.type === 'info') {
-        return (
-          <QuestionnaireInfoCard
-            field={currentField}
-            questionIndex={templateIndex}
-            totalQuestions={visibleFields.length}
-          />
-        );
-      }
-      
-      // Renderizar pergunta normal
-      return <QuestionnaireQuestion />;
-    }
-    
-    console.error('[DEBUG] ERROR: templateIndex out of bounds!', {
-      currentQuestionIndex,
-      templateIndex,
-      visibleFieldsLength: visibleFields.length
-    });
   }
 
   // ============ BLOCO 4: SUMÁRIO (9999) ============
@@ -190,8 +183,7 @@ const QuestionnaireForm = () => {
   // ============ ERRO: Índice não reconhecido ============
   console.error('[DEBUG] ERROR: Invalid currentQuestionIndex!', {
     currentQuestionIndex,
-    visibleFieldsLength: visibleFields.length,
-    repeatableFieldsLength: repeatableFields.length
+    allVisibleFieldsLength: allVisibleFields.length
   });
 
   return null;

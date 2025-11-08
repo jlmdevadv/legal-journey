@@ -16,6 +16,7 @@ interface ContractContextType {
   selectedTemplate: ContractTemplate | null;
   formValues: Record<string, string>;
   currentQuestionIndex: number;
+  currentPartyLoopIndex: number; // ✅ NOVO v3.0
   isQuestionnaireMode: boolean;
   isAdminMode: boolean;
   isAdminLoggedIn: boolean;
@@ -31,6 +32,7 @@ interface ContractContextType {
   locationData: LocationData;
   repeatableFieldsData: RepeatableFieldResponse[];
   isEditingFromSummary: boolean;
+  getAllVisibleFieldsSorted: () => ContractField[]; // ✅ NOVO v3.0
   selectTemplate: (template: ContractTemplate) => void;
   updateFormValue: (fieldId: string, value: string) => void;
   resetForm: () => void;
@@ -95,6 +97,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   });
   const [repeatableFieldsData, setRepeatableFieldsData] = useState<RepeatableFieldResponse[]>([]);
   const [isEditingFromSummary, setIsEditingFromSummary] = useState(false);
+  const [currentPartyLoopIndex, setCurrentPartyLoopIndex] = useState<number>(0); // ✅ NOVO v3.0
 
   // Load templates and party types from Supabase on mount
   useEffect(() => {
@@ -366,6 +369,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     setNumberOfParties(0);
     setPartiesData([]);
     setCurrentPartyIndex(0);
+    setCurrentPartyLoopIndex(0); // ✅ NOVO v3.0
     setLocationData({ city: '', state: '', date: '' });
     setRepeatableFieldsData([]);
   };
@@ -381,17 +385,42 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     setCurrentQuestionIndex(-1);
   };
 
+  // ✅ NOVO v3.0: Helper para obter campos ordenados
+  const getAllVisibleFieldsSorted = (): ContractField[] => {
+    if (!selectedTemplate) return [];
+    
+    const visible = getVisibleFields(selectedTemplate.fields, formValues);
+    const sorted = [...visible].sort((a, b) => {
+      const orderA = a.display_order ?? 999999;
+      const orderB = b.display_order ?? 999999;
+      return orderA - orderB;
+    });
+    
+    console.log('[DEBUG] getAllVisibleFieldsSorted:', {
+      totalFields: sorted.length,
+      order: sorted.map(f => ({ id: f.id, display_order: f.display_order, repeatable: f.repeatPerParty }))
+    });
+    
+    return sorted;
+  };
+
   const nextQuestion = (option?: string) => {
     // ============ HELPER FUNCTION ============
     // Helper function: transição de outras partes para próximo bloco
     const transitionFromOtherPartiesToNext = () => {
       if (!selectedTemplate) return;
       
-      const repeatableFields = getRepeatableVisibleFields(selectedTemplate.fields, formValues);
-      if (repeatableFields.length > 0 && numberOfParties > 0) {
-        setCurrentQuestionIndex(0); // → BLOCO 2: Primeira Repetível
+      const allFields = getAllVisibleFieldsSorted();
+      
+      if (allFields.length > 0) {
+        // Ir para primeira pergunta do template (BLOCO 2 unificado)
+        console.log('[DEBUG] Transitioning to first template question');
+        setCurrentQuestionIndex(0);
+        setCurrentPartyLoopIndex(0);
       } else {
-        setCurrentQuestionIndex(-3); // → Location/Date
+        // Sem perguntas, ir direto para Location/Date
+        console.log('[DEBUG] No template questions, going to Location/Date');
+        setCurrentQuestionIndex(9998);
       }
     };
     
@@ -454,70 +483,56 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     
-    // ============ BLOCO 2: PERGUNTAS REPETÍVEIS (0 - 999) ============
-    if (currentQuestionIndex >= 0 && currentQuestionIndex < 1000) {
-      if (!selectedTemplate) return;
+    // ============ BLOCO 2: PERGUNTAS UNIFICADAS (0+) ============
+    if (currentQuestionIndex >= 0 && currentQuestionIndex < 9998) {
+      const allFields = getAllVisibleFieldsSorted();
       
-      const repeatableFields = getRepeatableVisibleFields(selectedTemplate.fields, formValues);
-      const totalRepeatableQuestions = numberOfParties * repeatableFields.length;
-      const isLastRepeatable = (currentQuestionIndex === totalRepeatableQuestions - 1);
+      // Verificar se índice está dentro do array
+      if (currentQuestionIndex >= allFields.length) {
+        // Acabaram as perguntas, ir para Location/Date
+        console.log('[DEBUG] BLOCO 2 - Finished all questions, going to Location/Date');
+        setCurrentQuestionIndex(9998);
+        setCurrentPartyLoopIndex(0); // Reset
+        return;
+      }
       
-      console.log('[DEBUG] BLOCO 2 - Repeatable navigation:', {
+      const currentField = allFields[currentQuestionIndex];
+      
+      console.log('[DEBUG] BLOCO 2 - Current field:', {
         currentQuestionIndex,
-        totalRepeatableQuestions,
-        isLastRepeatable
+        currentPartyLoopIndex,
+        fieldId: currentField.id,
+        isRepeatable: currentField.repeatPerParty,
+        numberOfParties
       });
       
-      if (isLastRepeatable) {
-        // Terminamos as repetíveis, ir para Location/Date
-        setCurrentQuestionIndex(-3);
-      } else {
-        // Próxima pergunta repetível
-        setCurrentQuestionIndex(prev => prev + 1);
+      // CASO 1: Campo repetível → verificar se ainda há partes para responder
+      if (currentField.repeatPerParty === true && numberOfParties > 0) {
+        if (currentPartyLoopIndex < numberOfParties - 1) {
+          // Ainda há partes para responder este campo
+          console.log('[DEBUG] BLOCO 2 - Next party for same field');
+          setCurrentPartyLoopIndex(prev => prev + 1);
+          return;
+        } else {
+          // Última parte já respondeu, avançar para próximo campo
+          console.log('[DEBUG] BLOCO 2 - All parties answered, next field');
+          setCurrentPartyLoopIndex(0); // Reset para próximo campo repetível
+          setCurrentQuestionIndex(prev => prev + 1);
+          return;
+        }
       }
+      
+      // CASO 2: Campo não repetível → avançar direto para próximo campo
+      console.log('[DEBUG] BLOCO 2 - Non-repeatable field, next field');
+      setCurrentPartyLoopIndex(0); // Garantir reset
+      setCurrentQuestionIndex(prev => prev + 1);
       return;
     }
-    
-    // ============ Location/Date (-3) → BLOCO 3 ou BLOCO 4 ============
-    if (currentQuestionIndex === -3) {
-      if (!selectedTemplate) return;
-      
-      const nonRepeatableFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
-      
-      console.log('[DEBUG] After location/date:', {
-        nonRepeatableFieldsLength: nonRepeatableFields.length
-      });
-      
-      if (nonRepeatableFields.length > 0) {
-        setCurrentQuestionIndex(1000); // → BLOCO 3: Primeira Não-Repetível
-      } else {
-        setCurrentQuestionIndex(9999); // → BLOCO 4: Sumário
-      }
-      return;
-    }
-    
-    // ============ BLOCO 3: PERGUNTAS NÃO-REPETÍVEIS (1000 - 9998) ============
-    if (currentQuestionIndex >= 1000 && currentQuestionIndex < 9999) {
-      if (!selectedTemplate) return;
-      
-      const nonRepeatableFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
-      const currentTemplateIndex = currentQuestionIndex - 1000;
-      const isLastNonRepeatable = (currentTemplateIndex === nonRepeatableFields.length - 1);
-      
-      console.log('[DEBUG] BLOCO 3 - Non-repeatable navigation:', {
-        currentQuestionIndex,
-        currentTemplateIndex,
-        totalNonRepeatableFields: nonRepeatableFields.length,
-        isLastNonRepeatable
-      });
-      
-      if (isLastNonRepeatable) {
-        // Última pergunta não-repetível, ir para o Sumário
-        setCurrentQuestionIndex(9999); // → BLOCO 4: Sumário
-      } else {
-        // Próxima pergunta não-repetível
-        setCurrentQuestionIndex(prev => prev + 1);
-      }
+
+    // ============ BLOCO 3: Location/Date (9998) ============
+    if (currentQuestionIndex === 9998) {
+      // Ir para Sumário
+      setCurrentQuestionIndex(9999);
       return;
     }
     
@@ -534,64 +549,88 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     
     // ============ BLOCO 4: SUMÁRIO (9999) ============
     if (currentQuestionIndex === 9999) {
-      if (!selectedTemplate) return;
-      
-      const nonRepeatableFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
-      if (nonRepeatableFields.length > 0) {
-        // Voltar para última não-repetível
-        setCurrentQuestionIndex(1000 + nonRepeatableFields.length - 1);
-      } else {
-        // Voltar para Location/Date
-        setCurrentQuestionIndex(-3);
-      }
+      // Voltar para Location/Date
+      setCurrentQuestionIndex(9998);
       return;
     }
     
-    // ============ BLOCO 3: PERGUNTAS NÃO-REPETÍVEIS (1000 - 9998) ============
-    if (currentQuestionIndex >= 1000 && currentQuestionIndex < 9999) {
-      if (currentQuestionIndex === 1000) {
-        // Primeira não-repetível, voltar para Location/Date
-        setCurrentQuestionIndex(-3);
-      } else {
-        // Voltar para pergunta anterior
-        setCurrentQuestionIndex(prev => prev - 1);
-      }
-      return;
-    }
-    
-    // ============ Location/Date (-3) ============
-    if (currentQuestionIndex === -3) {
-      if (!selectedTemplate) return;
+    // ============ BLOCO 3: Location/Date (9998) ============
+    if (currentQuestionIndex === 9998) {
+      const allFields = getAllVisibleFieldsSorted();
       
-      const repeatableFields = getRepeatableVisibleFields(selectedTemplate.fields, formValues);
-      const totalRepeatableQuestions = numberOfParties * repeatableFields.length;
-      
-      if (totalRepeatableQuestions > 0) {
-        // Voltar para última repetível
-        setCurrentQuestionIndex(totalRepeatableQuestions - 1);
-      } else if (numberOfOtherParties > 0) {
-        // Voltar para última other party
-        setCurrentQuestionIndex(-2000 + numberOfOtherParties - 1);
-      } else {
-        // Voltar para "other parties" question
-        setCurrentQuestionIndex(-4);
-      }
-      return;
-    }
-    
-    // ============ BLOCO 2: PERGUNTAS REPETÍVEIS (0 - 999) ============
-    if (currentQuestionIndex >= 0 && currentQuestionIndex < 1000) {
-      if (currentQuestionIndex === 0) {
-        // Primeira repetível, voltar para outras partes ou main parties
+      if (allFields.length === 0) {
+        // Não há perguntas, voltar para outras partes ou main parties
         if (numberOfOtherParties > 0) {
           setCurrentQuestionIndex(-2000 + numberOfOtherParties - 1);
         } else {
           setCurrentQuestionIndex(-4);
         }
+        return;
+      }
+      
+      // Voltar para última pergunta do template
+      const lastField = allFields[allFields.length - 1];
+      
+      if (lastField.repeatPerParty && numberOfParties > 0) {
+        // Última pergunta é repetível → posicionar na última parte
+        setCurrentQuestionIndex(allFields.length - 1);
+        setCurrentPartyLoopIndex(numberOfParties - 1);
       } else {
-        setCurrentQuestionIndex(prev => prev - 1);
+        // Última pergunta não é repetível
+        setCurrentQuestionIndex(allFields.length - 1);
+        setCurrentPartyLoopIndex(0);
       }
       return;
+    }
+    
+    // ============ BLOCO 2: PERGUNTAS UNIFICADAS (0+) ============
+    if (currentQuestionIndex >= 0 && currentQuestionIndex < 9998) {
+      const allFields = getAllVisibleFieldsSorted();
+      
+      // Primeira pergunta do template
+      if (currentQuestionIndex === 0 && currentPartyLoopIndex === 0) {
+        // Voltar para outras partes ou main parties
+        if (numberOfOtherParties > 0) {
+          setCurrentQuestionIndex(-2000 + numberOfOtherParties - 1);
+        } else {
+          setCurrentQuestionIndex(-4);
+        }
+        return;
+      }
+      
+      const currentField = allFields[currentQuestionIndex];
+      
+      console.log('[DEBUG] BLOCO 2 - Previous navigation:', {
+        currentQuestionIndex,
+        currentPartyLoopIndex,
+        fieldId: currentField?.id,
+        isRepeatable: currentField?.repeatPerParty
+      });
+      
+      // CASO 1: Campo repetível com partyIndex > 0 → voltar para parte anterior
+      if (currentField?.repeatPerParty && currentPartyLoopIndex > 0) {
+        console.log('[DEBUG] BLOCO 2 - Previous party for same field');
+        setCurrentPartyLoopIndex(prev => prev - 1);
+        return;
+      }
+      
+      // CASO 2: Voltar para campo anterior
+      if (currentQuestionIndex > 0) {
+        const prevField = allFields[currentQuestionIndex - 1];
+        
+        if (prevField.repeatPerParty && numberOfParties > 0) {
+          // Campo anterior é repetível → posicionar na última parte
+          console.log('[DEBUG] BLOCO 2 - Previous field (repeatable, last party)');
+          setCurrentQuestionIndex(prev => prev - 1);
+          setCurrentPartyLoopIndex(numberOfParties - 1);
+        } else {
+          // Campo anterior não é repetível
+          console.log('[DEBUG] BLOCO 2 - Previous field (non-repeatable)');
+          setCurrentQuestionIndex(prev => prev - 1);
+          setCurrentPartyLoopIndex(0);
+        }
+        return;
+      }
     }
     
     // ============ BLOCO 1: SISTEMA (Índices Negativos) ============
@@ -1376,6 +1415,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         selectedTemplate,
         formValues,
         currentQuestionIndex,
+        currentPartyLoopIndex, // ✅ NOVO v3.0
         isQuestionnaireMode,
         isAdminMode,
         isAdminLoggedIn,
@@ -1383,6 +1423,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         isLoadingTemplates,
         editingTemplate,
         isEditingFromSummary,
+        getAllVisibleFieldsSorted, // ✅ NOVO v3.0
         selectTemplate,
         updateFormValue,
         resetForm,

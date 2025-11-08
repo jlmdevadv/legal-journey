@@ -104,3 +104,22 @@ export const getNonRepeatableVisibleFields = (
     !field.repeatPerParty && field.type !== 'info'
   );
 };
+
+/**
+ * Retorna todos os campos visíveis ordenados por display_order
+ * (Inclui repetíveis, não-repetíveis e info cards)
+ * ⚠️ Esta é a função UNIFICADA usada na navegação v3.0
+ */
+export const getAllVisibleFieldsSorted = (
+  fields: ContractField[],
+  formValues: Record<string, string>
+): ContractField[] => {
+  const visible = getVisibleFields(fields, formValues);
+  
+  // Ordenar por display_order (campos sem display_order vão para o final)
+  return [...visible].sort((a, b) => {
+    const orderA = a.display_order ?? 999999;
+    const orderB = b.display_order ?? 999999;
+    return orderA - orderB;
+  });
+};

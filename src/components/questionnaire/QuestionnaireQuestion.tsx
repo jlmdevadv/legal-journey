@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useContract } from '../../contexts/ContractContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,44 +11,37 @@ import { Progress } from '@/components/ui/progress';
 import QuestionnaireHelp from './QuestionnaireHelp';
 import FieldConfigModal from '../admin/FieldConfigModal';
 import AnswerTemplatesSelector from './AnswerTemplatesSelector';
-import { getNonRepeatableVisibleFields } from '@/utils/conditionalLogic';
 
 const QuestionnaireQuestion = () => {
   const { 
     selectedTemplate, 
     formValues, 
-    currentQuestionIndex, 
-    numberOfParties,
+    currentQuestionIndex,
     isAdminMode,
     isEditingFromSummary,
     updateFormValue, 
     nextQuestion, 
     previousQuestion,
     saveAndReturnToSummary,
-    updateSelectedTemplateField
+    updateSelectedTemplateField,
+    getAllVisibleFieldsSorted // ✅ NOVO v3.0
   } = useContract();
   
   const inputRef = useRef<HTMLInputElement>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [localValue, setLocalValue] = useState('');
 
-  // Calculate visible fields dynamically based on conditional logic
-  const visibleFields = useMemo(() => {
-    if (!selectedTemplate) return [];
-    return getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
-  }, [selectedTemplate, formValues]);
-
-  // Calculate the actual template question index (BLOCO 3: 1000-9998)
-  const templateQuestionIndex = currentQuestionIndex - 1000;
+  // ✅ NOVO v3.0: Obter campo atual diretamente do array ordenado
+  const allFields = getAllVisibleFieldsSorted();
   
-  if (!selectedTemplate || templateQuestionIndex < 0 || templateQuestionIndex >= visibleFields.length) {
+  if (!selectedTemplate || currentQuestionIndex < 0 || currentQuestionIndex >= allFields.length) {
     return null;
   }
 
-  const currentField = visibleFields[templateQuestionIndex];
+  const currentField = allFields[currentQuestionIndex];
   const currentValue = formValues[currentField.id] || '';
-  const progress = ((templateQuestionIndex + 1) / visibleFields.length) * 100;
-  const isLastQuestion = templateQuestionIndex === visibleFields.length - 1;
+  const progress = ((currentQuestionIndex + 1) / allFields.length) * 100;
+  const isLastQuestion = currentQuestionIndex === allFields.length - 1;
   const canProceed = !currentField.required || currentValue.trim() !== '';
 
   // Sincronizar valor local com formValues
@@ -85,7 +78,7 @@ const QuestionnaireQuestion = () => {
 
   const handleFieldUpdate = (updatedField: any) => {
     console.log('Handling field update:', updatedField);
-    updateSelectedTemplateField(templateQuestionIndex, updatedField);
+    updateSelectedTemplateField(currentQuestionIndex, updatedField);
     setShowEditModal(false);
   };
 
@@ -96,7 +89,7 @@ const QuestionnaireQuestion = () => {
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm text-gray-500">
-                Pergunta {templateQuestionIndex + 1} de {visibleFields.length}
+                Pergunta {currentQuestionIndex + 1} de {allFields.length}
               </span>
               <div className="flex items-center gap-2">
                 {isAdminMode && (

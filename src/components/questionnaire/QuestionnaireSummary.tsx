@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ArrowLeft, CheckCircle, Edit, Printer, AlertCircle } from 'lucide-react';
 import DocumentDownloader from '../DocumentDownloader';
 import ContractPreviewModal from '../ContractPreviewModal';
-import { getRepeatableVisibleFields, getNonRepeatableVisibleFields } from '@/utils/conditionalLogic';
+import { getRepeatableVisibleFields, getNonRepeatableVisibleFields, getVisibleFields } from '@/utils/conditionalLogic';
 import { validateAllVisibleRequiredFields, ValidationResult } from '@/utils/validation';
 
 const QuestionnaireSummary = () => {
@@ -78,24 +78,28 @@ const QuestionnaireSummary = () => {
   });
 
   const navigateToRepeatableField = (fieldId: string, partyId: string) => {
-    const repeatableFields = getRepeatableVisibleFields(selectedTemplate.fields, formValues);
-    const fieldIndex = repeatableFields.findIndex(f => f.id === fieldId);
+    // ✅ NOVO v3.0: Usar getAllVisibleFieldsSorted para encontrar índice global
+    const allFields = selectedTemplate?.fields ? 
+      (() => {
+        const visible = getVisibleFields(selectedTemplate.fields, formValues);
+        return [...visible].sort((a, b) => {
+          const orderA = a.display_order ?? 999999;
+          const orderB = b.display_order ?? 999999;
+          return orderA - orderB;
+        });
+      })() : [];
     
-    // Encontrar o índice real da parte no array partiesData
+    const globalIndex = allFields.findIndex(f => f.id === fieldId);
     const partyIndex = partiesData.findIndex(p => p.id === partyId);
     
-    if (fieldIndex >= 0 && partyIndex >= 0) {
-      // NOVA FÓRMULA SIMPLES: índice linear no Bloco 2 (0-999)
-      const index = (partyIndex * repeatableFields.length) + fieldIndex;
-      console.log('[DEBUG] Navigating to repeatable field (BLOCO 2):', { 
+    if (globalIndex >= 0 && partyIndex >= 0) {
+      console.log('[DEBUG] Navigating to repeatable field (BLOCO 2 v3.0):', { 
         fieldId, 
         partyId, 
         partyIndex, 
-        fieldIndex, 
-        totalRepeatableFields: repeatableFields.length,
-        calculatedIndex: index 
+        globalIndex
       });
-      goToQuestion(index, true);
+      goToQuestion(globalIndex, true);
     }
   };
 
@@ -194,7 +198,7 @@ const QuestionnaireSummary = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => goToQuestion(-3, true)}
+                onClick={() => goToQuestion(9998, true)}
                 className="text-gray-600 hover:text-gray-700 p-1"
               >
                 <Edit className="w-4 h-4" />
@@ -280,11 +284,25 @@ const QuestionnaireSummary = () => {
           {/* Campos Não-Repetíveis */}
           {(() => {
             const nonRepeatableFields = getNonRepeatableVisibleFields(selectedTemplate.fields, formValues);
+            
+            // ✅ NOVO v3.0: Função helper para encontrar índice global
+            const findGlobalIndex = (fieldId: string): number => {
+              const allFields = (() => {
+                const visible = getVisibleFields(selectedTemplate.fields, formValues);
+                return [...visible].sort((a, b) => {
+                  const orderA = a.display_order ?? 999999;
+                  const orderB = b.display_order ?? 999999;
+                  return orderA - orderB;
+                });
+              })();
+              return allFields.findIndex(f => f.id === fieldId);
+            };
+            
             if (nonRepeatableFields.length > 0) {
               return (
                 <div className="grid gap-4">
                   <h4 className="font-semibold text-gray-900">Informações Gerais do Contrato</h4>
-                  {nonRepeatableFields.map((field, index) => (
+                  {nonRepeatableFields.map((field) => (
                     <div 
                       key={field.id} 
                       className={`border rounded-lg p-4 ${
@@ -304,7 +322,7 @@ const QuestionnaireSummary = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => goToQuestion(1000 + index, true)}
+                          onClick={() => goToQuestion(findGlobalIndex(field.id), true)}
                           className={isFieldInvalid(field.id) ? 'text-red-600 hover:text-red-700 p-1' : 'text-blue-600 hover:text-blue-700 p-1'}
                         >
                           <Edit className="w-4 h-4" />

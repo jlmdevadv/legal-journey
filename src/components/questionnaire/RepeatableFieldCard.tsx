@@ -40,7 +40,8 @@ const RepeatableFieldCard = ({
     previousQuestion,
     nextQuestion,
     isEditingFromSummary,
-    saveAndReturnToSummary
+    saveAndReturnToSummary,
+    currentQuestionIndex // ✅ NOVO v3.0 - para calcular progresso correto
   } = useContract();
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -52,10 +53,8 @@ const RepeatableFieldCard = ({
     setLocalValue(currentValue);
   }, [currentValue, field.id, partyId]);
   
-  // Progress: considera tanto partes quanto campos
-  const totalSteps = totalParties * totalFields;
-  const currentStep = (partyIndex * totalFields) + fieldIndex + 1;
-  const progress = (currentStep / totalSteps) * 100;
+  // ✅ NOVO v3.0: Progress baseado no índice global unificado
+  const progress = ((currentQuestionIndex + 1) / totalFields) * 100;
 
   useEffect(() => {
     inputRef.current?.focus();

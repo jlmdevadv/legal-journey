@@ -302,7 +302,224 @@ export const formatDateToBrazilian = (dateString: string): string => {
 
 ---
 
-## 3. Ciclo de Vida do Preenchimento
+## 15. Arquitetura de Navegação Unificada (v3.0)
+
+### 15.1. Visão Geral
+
+A partir da versão 3.0, o sistema utiliza uma **arquitetura de navegação unificada** que respeita estritamente o `display_order` definido nos templates, mesclando cards informativos, campos repetíveis e não-repetíveis em um fluxo lógico e intuitivo.
+
+### 15.2. Nova Estrutura de Blocos
+
+```
+BLOCO 1: Sistema - Partes (índices negativos)
+  -1:    Welcome
+  -2:    Party Number
+  -1000 a -1000+N-1: Main Parties Data
+  -4:    Other Parties Question
+  -5:    Other Parties Number
+  -2000 a -2000+M-1: Other Parties Data
+
+BLOCO 2: Template - Perguntas Unificadas (índices 0 a X)
+  - Todos os campos visíveis do template
+  - Ordenados por display_order
+  - Campos repetíveis fazem loop por partes usando currentPartyLoopIndex
+
+BLOCO 3: Sistema - Local/Data (índice 9998)
+
+BLOCO 4: Sistema - Sumário (índice 9999)
+```
+
+### 15.3. Estados de Navegação
+
+**`currentQuestionIndex`:** Índice global no array `allVisibleFieldsSorted` (0 a X para perguntas do template)
+
+**`currentPartyLoopIndex`:** Índice da parte atual (0 a numberOfParties-1) quando em campo repetível
+
+**Exemplo de Fluxo:**
+```
+Template: [
+  { id: "objeto", display_order: 1, repeatPerParty: false },
+  { id: "obrigacoes", display_order: 2, repeatPerParty: true },
+  { id: "prazo", display_order: 3, repeatPerParty: false }
+]
+
+Navegação (2 partes):
+currentQuestionIndex=0, currentPartyLoopIndex=0 → "objeto" (não repetível)
+currentQuestionIndex=1, currentPartyLoopIndex=0 → "obrigacoes" - Parte 1
+currentQuestionIndex=1, currentPartyLoopIndex=1 → "obrigacoes" - Parte 2
+currentQuestionIndex=2, currentPartyLoopIndex=0 → "prazo" (não repetível)
+currentQuestionIndex=3 → transição para Location/Date (9998)
+```
+
+### 15.4. Função `getAllVisibleFieldsSorted()`
+
+Função central da navegação v3.0 que retorna array de campos:
+1. Filtra por `conditionalLogic` (campos visíveis)
+2. Ordena por `display_order`
+3. Campos sem `display_order` vão para o final (ordem 999999)
+
+**Implementação:**
+```typescript
+const getAllVisibleFieldsSorted = (): ContractField[] => {
+  if (!selectedTemplate) return [];
+  
+  const visible = getVisibleFields(selectedTemplate.fields, formValues);
+  const sorted = [...visible].sort((a, b) => {
+    const orderA = a.display_order ?? 999999;
+    const orderB = b.display_order ?? 999999;
+    return orderA - orderB;
+  });
+  
+  return sorted;
+};
+```
+
+### 15.5. Lógica de Navegação (nextQuestion)
+
+**Para campos repetíveis:**
+1. Se `currentPartyLoopIndex < numberOfParties - 1`: incrementar `currentPartyLoopIndex` (mesma pergunta, próxima parte)
+2. Senão: resetar `currentPartyLoopIndex = 0` e incrementar `currentQuestionIndex` (próxima pergunta)
+
+**Para campos não-repetíveis:**
+1. Incrementar `currentQuestionIndex` diretamente
+
+**Para cards informativos:**
+1. Incrementar `currentQuestionIndex` diretamente (sem validação)
+
+**Fim do Bloco 2:**
+Quando `currentQuestionIndex >= allFields.length`, transitar para Location/Date (9998)
+
+### 15.6. Lógica de Navegação (previousQuestion)
+
+**Para campos repetíveis com `currentPartyLoopIndex > 0`:**
+1. Decrementar `currentPartyLoopIndex` (voltar para parte anterior da mesma pergunta)
+
+**Para outros casos:**
+1. Decrementar `currentQuestionIndex`
+2. Se campo anterior é repetível: posicionar em `currentPartyLoopIndex = numberOfParties - 1` (última parte)
+3. Se não: posicionar em `currentPartyLoopIndex = 0`
+
+### 15.7. Renderização no QuestionnaireForm
+
+```typescript
+const allVisibleFields = useMemo(() => {
+  if (!selectedTemplate) return [];
+  
+  const visible = getVisibleFields(selectedTemplate.fields, formValues);
+  return [...visible].sort((a, b) => {
+    const orderA = a.display_order ?? 999999;
+    const orderB = b.display_order ?? 999999;
+    return orderA - orderB;
+  });
+}, [selectedTemplate, formValues]);
+
+// Renderização
+const currentField = allVisibleFields[currentQuestionIndex];
+
+if (currentField.type === 'info') {
+  return <QuestionnaireInfoCard />;
+}
+
+if (currentField.repeatPerParty === true) {
+  const currentParty = partiesData[currentPartyLoopIndex];
+  return <RepeatableFieldCard partyIndex={currentPartyLoopIndex} />;
+}
+
+return <QuestionnaireQuestion />;
+```
+
+### 15.8. Navegação do Sumário
+
+O sumário usa a função `findGlobalIndex` para mapear campos de volta aos índices globais:
+
+```typescript
+const findGlobalIndex = (fieldId: string): number => {
+  const allFields = getAllVisibleFieldsSorted();
+  return allFields.findIndex(f => f.id === fieldId);
+};
+
+// Ao clicar em "Editar" de um campo não-repetível:
+onClick={() => goToQuestion(findGlobalIndex(field.id), true)}
+
+// Para campos repetíveis, encontrar índice global e usar currentPartyLoopIndex:
+const globalIndex = findGlobalIndex(field.id);
+goToQuestion(globalIndex, true);
+```
+
+### 15.9. Benefícios da Arquitetura Unificada
+
+✅ **Fluxo Lógico:** Perguntas aparecem na ordem exata definida pelo admin via `display_order`
+
+✅ **UX Profissional:** Questionário segue estrutura natural do contrato (ex: primeiro pergunta sobre o objeto da venda, depois sobre obrigações)
+
+✅ **Estabilidade:** Mantém componentes existentes (`QuestionnaireQuestion`, `RepeatableFieldCard`, `QuestionnaireInfoCard`), muda apenas orquestração
+
+✅ **Flexibilidade:** Suporta mix de cards informativos, repetíveis e não-repetíveis em qualquer ordem
+
+✅ **Rastreabilidade:** Logs detalhados de navegação incluem `currentQuestionIndex`, `currentPartyLoopIndex`, `fieldId`, e tipo
+
+### 15.10. Migração de Arquitetura (v2.x → v3.0)
+
+**Mudanças principais:**
+
+| Aspecto | v2.x | v3.0 |
+|---------|------|------|
+| **Blocos** | 4 blocos (Partes, Repetíveis, Não-Repetíveis, Sumário) | 4 blocos (Partes, **Unificado**, Local/Data, Sumário) |
+| **Índices do Bloco 2** | 0-999 (só repetíveis) | 0-X (todos os campos ordenados) |
+| **Índices do Bloco 3** | 1000-9998 (não-repetíveis) | 9998 (Location/Date) |
+| **Estado de navegação** | `currentQuestionIndex` | `currentQuestionIndex` + `currentPartyLoopIndex` |
+| **Ordem das perguntas** | Agrupadas por tipo | Segue `display_order` do template |
+
+**Estados removidos:** Nenhum
+
+**Estados adicionados:** `currentPartyLoopIndex: number`
+
+**Funções adicionadas:** `getAllVisibleFieldsSorted(): ContractField[]`
+
+### 15.11. Exemplo Completo de Fluxo
+
+**Template:**
+```typescript
+{
+  fields: [
+    { id: "tipo_contrato", type: "select", display_order: 1 },
+    { id: "info_aviso", type: "info", display_order: 2 },
+    { id: "objeto", type: "textarea", display_order: 3 },
+    { id: "obrigacoes", type: "textarea", repeatPerParty: true, display_order: 4 },
+    { id: "prazo", type: "text", display_order: 5 }
+  ]
+}
+```
+
+**Navegação (2 partes):**
+
+| currentQuestionIndex | currentPartyLoopIndex | Campo | Tipo |
+|----------------------|-----------------------|-------|------|
+| -2 | 0 | Party Number | Sistema |
+| -1000 | 0 | Parte Principal 1 | Sistema |
+| -1001 | 0 | Parte Principal 2 | Sistema |
+| -4 | 0 | Other Parties Question | Sistema |
+| **0** | **0** | **tipo_contrato** | **Não-repetível** |
+| **1** | **0** | **info_aviso** | **Card informativo** |
+| **2** | **0** | **objeto** | **Não-repetível** |
+| **3** | **0** | **obrigacoes - Parte 1** | **Repetível** |
+| **3** | **1** | **obrigacoes - Parte 2** | **Repetível** |
+| **4** | **0** | **prazo** | **Não-repetível** |
+| 9998 | 0 | Location/Date | Sistema |
+| 9999 | 0 | Sumário | Sistema |
+
+**Logs de Debug:**
+```
+[DEBUG] BLOCO 2 - Current field: { currentQuestionIndex: 3, currentPartyLoopIndex: 0, fieldId: 'obrigacoes', isRepeatable: true }
+[DEBUG] BLOCO 2 - Next party for same field
+[DEBUG] BLOCO 2 - Current field: { currentQuestionIndex: 3, currentPartyLoopIndex: 1, fieldId: 'obrigacoes', isRepeatable: true }
+[DEBUG] BLOCO 2 - All parties answered, next field
+[DEBUG] BLOCO 2 - Current field: { currentQuestionIndex: 4, currentPartyLoopIndex: 0, fieldId: 'prazo', isRepeatable: false }
+```
+
+---
+
+## 16. Sistema de Validação
 
 ### 3.1. Inicialização
 
