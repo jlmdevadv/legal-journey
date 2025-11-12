@@ -450,7 +450,73 @@ Quando currentQuestionIndex = 2:
 **Fim do Bloco 2:**
 A transição para o Bloco 3 (Location/Date - índice 9998) ocorre quando `currentQuestionIndex === allFields.length - 1`, garantindo que o último campo seja processado corretamente antes da transição.
 
-### 15.6. Lógica de Navegação (previousQuestion)
+### 15.6. Gerenciamento de Estado Dependente (Other Parties)
+
+**Problema Resolvido (v3.1):**
+Estado "zumbi" onde `numberOfOtherParties` e `otherPartiesData` permaneciam populados mesmo quando o usuário mudava de "Sim" para "Não" na pergunta de Outras Partes.
+
+**Solução Implementada:**
+
+#### 15.6.1. Estado de Controle Explícito
+
+```typescript
+const [hasOtherParties, setHasOtherParties] = useState<boolean>(false);
+```
+
+Este estado rastreia explicitamente a decisão do usuário sobre incluir outras partes.
+
+#### 15.6.2. Função de Limpeza Atômica
+
+```typescript
+const updateHasOtherParties = (value: boolean) => {
+  setHasOtherParties(value);
+  
+  if (value === false) {
+    // Limpeza atômica de estados dependentes
+    setNumberOfOtherPartiesState(0);
+    setOtherPartiesData([]);
+  }
+};
+```
+
+**Princípio de Design:** Toda mudança em um estado de controle (`hasOtherParties`) deve acionar automaticamente a limpeza/atualização de seus estados dependentes.
+
+#### 15.6.3. Pontos de Acionamento
+
+1. **Navegação Normal (Índice -4):**
+   - Usuário clica "Sim" → `updateHasOtherParties(true)` → Preserva dados
+   - Usuário clica "Não" → `updateHasOtherParties(false)` → **Limpa dados**
+
+2. **Reset de Formulário:**
+   - `resetForm()` agora inclui limpeza de `numberOfOtherParties`, `otherPartiesData` e `hasOtherParties`
+
+3. **Edição via Sumário:**
+   - Ao retornar ao índice -4 e mudar resposta, a função `updateHasOtherParties` garante limpeza imediata
+
+#### 15.6.4. Fluxo de Limpeza
+
+```
+Usuário em -4 (Other Parties Question)
+│
+├─ Clica "Sim"
+│  └─ updateHasOtherParties(true)
+│     └─ hasOtherParties = true
+│     └─ Dados preservados ✅
+│
+└─ Clica "Não"
+   └─ updateHasOtherParties(false)
+      ├─ hasOtherParties = false
+      ├─ numberOfOtherParties = 0 ✅
+      └─ otherPartiesData = [] ✅
+```
+
+**Benefícios:**
+- ✅ **Integridade do Estado:** Dados dependentes sempre sincronizados com decisão do usuário
+- ✅ **Código Limpo:** Lógica de limpeza encapsulada em uma função
+- ✅ **Robustez:** Funciona em todos os cenários (navegação normal, edição, reset)
+- ✅ **Rastreabilidade:** Logs detalhados de limpeza para debug
+
+### 15.7. Lógica de Navegação (previousQuestion)
 
 **Para campos repetíveis com `currentPartyLoopIndex > 0`:**
 1. Decrementar `currentPartyLoopIndex` (voltar para parte anterior da mesma pergunta)
@@ -460,7 +526,7 @@ A transição para o Bloco 3 (Location/Date - índice 9998) ocorre quando `curre
 2. Se campo anterior é repetível: posicionar em `currentPartyLoopIndex = numberOfParties - 1` (última parte)
 3. Se não: posicionar em `currentPartyLoopIndex = 0`
 
-### 15.7. Renderização no QuestionnaireForm
+### 15.8. Renderização no QuestionnaireForm
 
 ```typescript
 const allVisibleFields = useMemo(() => {
@@ -489,7 +555,7 @@ if (currentField.repeatPerParty === true) {
 return <QuestionnaireQuestion />;
 ```
 
-### 15.8. Navegação do Sumário
+### 15.9. Navegação do Sumário
 
 O sumário usa a função `findGlobalIndex` para mapear campos de volta aos índices globais:
 

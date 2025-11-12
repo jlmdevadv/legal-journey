@@ -28,6 +28,8 @@ interface ContractContextType {
   currentPartyIndex: number;
   numberOfOtherParties: number;
   otherPartiesData: PartyData[];
+  hasOtherParties: boolean; // ✅ NOVO - Estado de controle
+  updateHasOtherParties: (value: boolean) => void; // ✅ NOVO - Função de limpeza atômica
   partyTypes: any[];
   locationData: LocationData;
   repeatableFieldsData: RepeatableFieldResponse[];
@@ -89,6 +91,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   const [currentPartyIndex, setCurrentPartyIndex] = useState<number>(0);
   const [numberOfOtherParties, setNumberOfOtherPartiesState] = useState<number>(0);
   const [otherPartiesData, setOtherPartiesData] = useState<PartyData[]>([]);
+  const [hasOtherParties, setHasOtherParties] = useState<boolean>(false); // ✅ NOVO - Estado de controle
   const [partyTypes, setPartyTypes] = useState<any[]>([]);
   const [locationData, setLocationData] = useState<LocationData>({
     city: "",
@@ -358,6 +361,8 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const resetForm = () => {
+    console.log('[RESET] Resetting form and clearing all state');
+    
     setFormValues({});
     setSelectedTemplate(null);
     setCurrentQuestionIndex(-1);
@@ -365,9 +370,14 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     setNumberOfParties(0);
     setPartiesData([]);
     setCurrentPartyIndex(0);
-    setCurrentPartyLoopIndex(0); // ✅ NOVO v3.0
+    setCurrentPartyLoopIndex(0);
+    setNumberOfOtherPartiesState(0); // ✅ Limpar numberOfOtherParties
+    setOtherPartiesData([]); // ✅ Limpar otherPartiesData
+    setHasOtherParties(false); // ✅ Resetar decisão sobre outras partes
     setLocationData({ city: "", state: "", date: "" });
     setRepeatableFieldsData([]);
+    
+    console.log('[RESET] ✅ Form reset completed');
   };
 
   const startQuestionnaire = () => {
@@ -398,6 +408,35 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return sorted;
+  };
+
+  /**
+   * Atualiza a decisão sobre incluir 'Outras Partes' e limpa os
+   * estados dependentes (numberOfOtherParties, otherPartiesData)
+   * se a resposta for 'Não', garantindo a integridade do estado.
+   *
+   * @param {boolean} value - O novo valor (true=Sim, false=Não) para 'hasOtherParties'.
+   */
+  const updateHasOtherParties = (value: boolean) => {
+    console.log('[CLEANUP] updateHasOtherParties called:', { value });
+    
+    // 1. Atualiza o estado de controle principal
+    setHasOtherParties(value);
+
+    // 2. Lógica de Limpeza Atômica
+    if (value === false) {
+      // Se o usuário "desistiu" de incluir outras partes,
+      // limpamos proativamente os estados dependentes.
+      console.log('[CLEANUP] hasOtherParties set to false. Cleaning up dependent state:', {
+        previousNumberOfOtherParties: numberOfOtherParties,
+        previousOtherPartiesDataLength: otherPartiesData.length
+      });
+      
+      setNumberOfOtherPartiesState(0);
+      setOtherPartiesData([]);
+      
+      console.log('[CLEANUP] ✅ Dependent state cleaned successfully.');
+    }
   };
 
   const nextQuestion = (option?: string) => {
@@ -451,8 +490,12 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     // Other Parties Question (-4) → Other Parties Number (-5) ou pular
     if (currentQuestionIndex === -4) {
       if (option === "withOtherParties") {
+        console.log('[NAVIGATION] User chose to include other parties');
+        updateHasOtherParties(true); // ✅ Atualizar estado (sem limpeza)
         setCurrentQuestionIndex(-5);
       } else {
+        console.log('[NAVIGATION] User chose NOT to include other parties');
+        updateHasOtherParties(false); // ✅ Atualizar estado + LIMPAR dados
         // Pular outras partes, ir para repeatable fields ou location
         transitionFromOtherPartiesToNext();
       }
@@ -668,6 +711,8 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
 
     // Other Parties Number (-5) → Other Parties Question (-4)
     if (currentQuestionIndex === -5) {
+      console.log('[NAVIGATION] Going back from Other Parties Number to Other Parties Question');
+      // Nota: NÃO limpamos dados aqui, pois o usuário pode estar apenas revisando
       setCurrentQuestionIndex(-4);
       return;
     }
@@ -1465,6 +1510,8 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         currentPartyIndex,
         numberOfOtherParties,
         otherPartiesData,
+        hasOtherParties, // ✅ NOVO - Estado de controle
+        updateHasOtherParties, // ✅ NOVO - Função de limpeza atômica
         partyTypes,
         setNumberOfParties: handleSetNumberOfParties,
         setNumberOfOtherParties: handleSetNumberOfOtherParties,
