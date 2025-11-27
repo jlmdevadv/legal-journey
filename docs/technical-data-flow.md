@@ -684,7 +684,7 @@ const handleTemplateSelect = (template: ContractTemplate) => {
 };
 ```
 
-### 3.2. Fluxo do Questionário - Índices
+### 3.2. Fluxo do Questionário - Índices (Atualizado v3.0)
 
 O `currentQuestionIndex` determina qual tela é exibida:
 
@@ -692,14 +692,15 @@ O `currentQuestionIndex` determina qual tela é exibida:
 |--------|--------------|
 | `-1` | Tela de boas-vindas (`QuestionnaireWelcome`) |
 | `-2` | Seleção do número de partes (`PartyNumberQuestion`) |
-| `-1000 a -1000 + N` | Dados das N partes principais (`PartyDataCard`) |
-| `-3` | Perguntar se há outras partes envolvidas (`OtherPartiesQuestion`) |
-| `-4` | Número de outras partes (`OtherPartiesNumberQuestion`) |
-| `-2000 a -2000 + M` | Dados das M outras partes (`PartyDataCard`) |
-| `-5` | Local e data de assinatura (`LocationDateQuestion`) |
-| `0 a 999` | Campos repetíveis por parte (`RepeatableFieldCard`) |
-| `1000 a 9998` | Campos não-repetíveis visíveis (`QuestionnaireQuestion`) |
+| `-1000 a -1000 + N-1` | Dados das N partes principais (`PartyDataCard`) |
+| `-4` | Perguntar se há outras partes envolvidas (`OtherPartiesQuestion`) |
+| `-5` | Número de outras partes (`OtherPartiesNumberQuestion`) |
+| `-2000 a -2000 + M-1` | Dados das M outras partes (`PartyDataCard`) |
+| `0 a X` | **Perguntas unificadas do template** (ordenadas por `display_order`) |
+| `9998` | Local e data de assinatura (`LocationDateQuestion`) |
 | `9999` | Resumo final (`QuestionnaireSummary`) |
+
+**Nota (v3.0):** O intervalo `0 a X` contém TODOS os campos visíveis do template (informativos, repetíveis e não-repetíveis) ordenados por `display_order`. Campos repetíveis usam `currentPartyLoopIndex` para iterar pelas partes.
 
 ### 3.3. Cálculo de Campos Visíveis
 
@@ -744,27 +745,14 @@ export const getRepeatableVisibleFields = (
 };
 ```
 
-### 3.4. Navegação Dinâmica
+### 3.4. Navegação Dinâmica (v3.0)
 
-A navegação **pula automaticamente** índices de campos ocultos:
+A navegação agora utiliza uma **arquitetura unificada** que:
+1. Agrupa todos os campos visíveis em um único bloco (índices `0+`)
+2. Usa `currentQuestionIndex` para o campo atual
+3. Usa `currentPartyLoopIndex` para iterar partes em campos repetíveis
 
-```typescript
-const handleNext = () => {
-  // ... validações ...
-  
-  // Para campos não-repetíveis, pular campos ocultos
-  if (currentQuestionIndex >= 1000 && currentQuestionIndex < 9998) {
-    const currentFieldIndex = currentQuestionIndex - 1000;
-    const nextFieldIndex = currentFieldIndex + 1;
-    
-    if (nextFieldIndex < visibleFields.length) {
-      setCurrentQuestionIndex(1000 + nextFieldIndex);
-    } else {
-      setCurrentQuestionIndex(9999); // Resumo
-    }
-  }
-};
-```
+**Veja a Seção 15 para detalhes completos da arquitetura de navegação v3.0.**
 
 ---
 
@@ -1324,38 +1312,31 @@ interface RepeatableFieldResponse {
 ]
 ```
 
-### 6.3. Fluxo de Preenchimento
+### 6.3. Fluxo de Preenchimento (Atualizado v3.0)
 
-**Mapeamento de índices (0-999):**
+**⚠️ IMPORTANTE:** A partir da v3.0, a navegação de campos repetíveis mudou significativamente.
 
+**Arquitetura Antiga (v2.x):**
+- Índices `0-999` eram dedicados a campos repetíveis
+- Fórmula: `partyIndex = Math.floor(index / totalFields)`
+
+**Arquitetura Nova (v3.0):**
+- Índices `0+` contêm TODOS os campos unificados
+- `currentQuestionIndex`: índice do campo no array ordenado
+- `currentPartyLoopIndex`: índice da parte atual (0 a numberOfParties-1)
+
+**Navegação em campo repetível:**
 ```typescript
-const repeatableFields = getRepeatableVisibleFields(
-  selectedTemplate.fields,
-  formValues
-);
+// Mesmo campo para todas as partes
+currentQuestionIndex = 3 (campo "obrigacoes")
+currentPartyLoopIndex: 0 → 1 → 2 (percorre partes)
 
-const totalRepeatableQuestions = repeatableFields.length * partiesData.length;
-
-// Índice 0-999 → qual parte + qual campo?
-const partyIndex = Math.floor(currentQuestionIndex / repeatableFields.length);
-const fieldIndex = currentQuestionIndex % repeatableFields.length;
-
-const currentParty = partiesData[partyIndex];
-const currentField = repeatableFields[fieldIndex];
+// Depois avança para próximo campo
+currentQuestionIndex = 4 (campo "prazo")
+currentPartyLoopIndex: 0 (reset)
 ```
 
-**Exemplo:**
-- 3 partes
-- 2 campos repetíveis (`cargo`, `participacao`)
-
-| `currentQuestionIndex` | Parte | Campo |
-|------------------------|-------|-------|
-| 0 | João (0) | cargo |
-| 1 | João (0) | participacao |
-| 2 | Maria (1) | cargo |
-| 3 | Maria (1) | participacao |
-| 4 | Pedro (2) | cargo |
-| 5 | Pedro (2) | participacao |
+**Veja Seção 15 para detalhes completos.**
 
 **Atualização de valor:**
 
@@ -1498,22 +1479,32 @@ const handleDragEnd = (event: DragEndEvent) => {
 
 ### 7.4. Impacto no Questionário
 
-```typescript
-// Em QuestionnaireForm.tsx
-const visibleFields = useMemo(() => {
-  // Campos já estão ordenados por display_order desde o início
-  return getNonRepeatableVisibleFields(
-    selectedTemplate.fields,
-    formValues
-  );
-}, [selectedTemplate?.fields, formValues]);
+### 7.4. Impacto no Questionário (v3.0)
 
-// Renderização
-if (currentQuestionIndex >= 1000 && currentQuestionIndex < 9998) {
-  const fieldIndex = currentQuestionIndex - 1000;
-  const field = visibleFields[fieldIndex]; // Ordem correta!
+```typescript
+// Em QuestionnaireForm.tsx (v3.0)
+const allVisibleFields = useMemo(() => {
+  const visible = getVisibleFields(selectedTemplate.fields, formValues);
+  return [...visible].sort((a, b) => {
+    const orderA = a.display_order ?? 999999;
+    const orderB = b.display_order ?? 999999;
+    return orderA - orderB;
+  });
+}, [selectedTemplate, formValues]);
+
+// Renderização unificada
+if (currentQuestionIndex >= 0 && currentQuestionIndex < 9998) {
+  const currentField = allVisibleFields[currentQuestionIndex];
   
-  return <QuestionnaireQuestion field={field} />;
+  if (currentField.type === 'info') {
+    return <QuestionnaireInfoCard />;
+  }
+  
+  if (currentField.repeatPerParty === true) {
+    return <RepeatableFieldCard partyIndex={currentPartyLoopIndex} />;
+  }
+  
+  return <QuestionnaireQuestion />;
 }
 ```
 
@@ -2759,6 +2750,9 @@ const handleTemplateClick = (templateValue: string) => {
 | Versão | Data | Mudanças |
 |--------|------|----------|
 | 1.0 | 2025-01 | Documentação técnica inicial completa |
+| 2.3 | 2025-XX | Novos recursos: `includeValueInContract`, `answerTemplateMode`, cards info |
+| 3.0 | 2025-XX | **Arquitetura de Navegação Unificada**: `currentPartyLoopIndex`, `getAllVisibleFieldsSorted()` |
+| 3.1 | 2025-XX | **Correções Críticas**: Transição Bloco 2→3, limpeza de estado dependente (`hasOtherParties`, `updateHasOtherParties`) |
 
 ---
 
@@ -2775,6 +2769,8 @@ Para adicionar novas funcionalidades ao sistema:
 7. **Atualizar JSON schema:** Modificar `docs/template-json-schema.md`
 
 ---
+
+Este documento técnico fornece uma visão completa do fluxo de dados do sistema de geração de contratos, incluindo todas as funcionalidades implementadas até a **versão 3.1** com a arquitetura de navegação unificada.
 
 **Fim da Documentação Técnica**
 
