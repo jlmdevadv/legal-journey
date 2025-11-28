@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 
 interface UseAutoSaveOptions {
   onSave: () => Promise<void>;
@@ -11,13 +11,21 @@ export const useAutoSave = ({ onSave, interval = 30000, enabled = true }: UseAut
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const onSaveRef = useRef(onSave);
+
+  // Keep onSave reference updated
+  useEffect(() => {
+    onSaveRef.current = onSave;
+  }, [onSave]);
 
   useEffect(() => {
-    if (!enabled) return;
-
-    // Clear any existing timeout
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
+    if (!enabled) {
+      // Clear any existing timeout when disabled
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      return;
     }
 
     // Set up auto-save
@@ -25,9 +33,10 @@ export const useAutoSave = ({ onSave, interval = 30000, enabled = true }: UseAut
       try {
         setIsSaving(true);
         setError(null);
-        await onSave();
+        await onSaveRef.current();
         setLastSaved(new Date());
       } catch (err: any) {
+        console.error('Auto-save error:', err);
         setError(err.message || 'Erro ao salvar');
       } finally {
         setIsSaving(false);
@@ -39,7 +48,7 @@ export const useAutoSave = ({ onSave, interval = 30000, enabled = true }: UseAut
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [onSave, interval, enabled]);
+  }, [interval, enabled]);
 
   const saveNow = async () => {
     try {
