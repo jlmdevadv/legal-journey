@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useContract } from '../../contexts/ContractContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -19,7 +20,8 @@ interface PartyDataCardProps {
 }
 
 const PartyDataCard = ({ partyIndex, partyData, isLastParty, category = 'main', title }: PartyDataCardProps) => {
-  const { updatePartyData, nextQuestion, previousQuestion, partyTypes, isAdminMode, addPartyType, isEditingFromSummary, saveAndReturnToSummary } = useContract();
+  const { updatePartyData, nextQuestion, previousQuestion, partyTypes, addPartyType, isEditingFromSummary, saveAndReturnToSummary } = useContract();
+  const { isAdmin } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const [showAddTypeModal, setShowAddTypeModal] = useState(false);
   const [newTypeName, setNewTypeName] = useState('');
@@ -273,7 +275,7 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty, category = 'main', 
                       {type.name}
                     </SelectItem>
                   ))}
-                  {isAdminMode && (
+                  {isAdmin && (
                     <SelectItem value="__add_new__" className="text-primary font-semibold">
                       + Adicionar novo tipo
                     </SelectItem>

@@ -1,6 +1,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useContract } from '../../contexts/ContractContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,15 +18,16 @@ const QuestionnaireQuestion = () => {
     selectedTemplate, 
     formValues, 
     currentQuestionIndex,
-    isAdminMode,
     isEditingFromSummary,
     updateFormValue, 
     nextQuestion, 
     previousQuestion,
     saveAndReturnToSummary,
     updateSelectedTemplateField,
-    getAllVisibleFieldsSorted // ✅ NOVO v3.0
+    getAllVisibleFieldsSorted
   } = useContract();
+  
+  const { isAdmin } = useAuth();
   
   const inputRef = useRef<HTMLInputElement>(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -92,7 +94,7 @@ const QuestionnaireQuestion = () => {
                 Pergunta {currentQuestionIndex + 1} de {allFields.length}
               </span>
               <div className="flex items-center gap-2">
-                {isAdminMode && (
+                {isAdmin && (
                   <Button
                     variant="outline"
                     size="sm"

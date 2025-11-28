@@ -1,112 +1,120 @@
-
 import React, { useState } from 'react';
-import { FileText, Shield, Plus, FileJson } from 'lucide-react';
-import { useContract } from '../contexts/ContractContext';
+import { Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import AdminLogin from './admin/AdminLogin';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Shield, User, LogOut } from 'lucide-react';
 import AddTemplateModal from './admin/AddTemplateModal';
 import TemplateImporter from './admin/TemplateImporter';
 
 const Navbar = () => {
-  const { 
-    isAdminLoggedIn, 
-    isAdminMode, 
-    toggleAdminMode
-  } = useContract();
-  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const { user, isAdmin, signOut } = useAuth();
   const [showAddTemplate, setShowAddTemplate] = useState(false);
   const [showImporter, setShowImporter] = useState(false);
 
-  const handleAdminButtonClick = () => {
-    if (isAdminLoggedIn) {
-      toggleAdminMode();
-    } else {
-      setShowAdminLogin(true);
-    }
-  };
-
   return (
-    <>
-      <header className="bg-white text-contractPrimary shadow-sm border-b border-gray-100">
-        <div className="container mx-auto py-4 px-6 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <FileText className="w-6 h-6" />
-            <h1 className="text-xl font-bold">Legal Journey</h1>
-          </div>
-          
-          <div className="flex items-center gap-6">
-            <nav>
-              <ul className="flex space-x-6">
-                <li>
-                  <a href="/" className="hover:text-blue-500 transition-colors font-medium">
-                    Início
-                  </a>
-                </li>
-                <li>
-                  <a href="#templates" className="hover:text-blue-500 transition-colors font-medium">
-                    Modelos
-                  </a>
-                </li>
-                <li>
-                  <a href="#about" className="hover:text-blue-500 transition-colors font-medium">
-                    Sobre
-                  </a>
-                </li>
-              </ul>
-            </nav>
-
-            <div className="flex gap-2">
-              <Button
-                variant={isAdminMode ? "default" : "outline"}
-                onClick={handleAdminButtonClick}
-                className="flex items-center gap-2"
-                size="sm"
-              >
-                <Shield className="w-4 h-4" />
-                {isAdminLoggedIn ? (isAdminMode ? 'Sair Admin' : 'Modo Administrador') : 'Modo Administrador'}
-              </Button>
-              
-              {isAdminMode && (
-                <>
-                  <Button
-                    onClick={() => setShowAddTemplate(true)}
-                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-                    size="sm"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Adicionar Modelo
-                  </Button>
-                  <Button
-                    onClick={() => setShowImporter(true)}
-                    variant="secondary"
-                    className="flex items-center gap-2"
-                    size="sm"
-                  >
-                    <FileJson className="w-4 h-4" />
-                    Importar JSON
-                  </Button>
-                </>
-              )}
+    <header className="bg-white shadow-sm sticky top-0 z-50">
+      <nav className="container mx-auto px-4 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-8">
+            <Link to="/" className="text-xl font-bold text-contractPrimary">
+              Legal Journey
+            </Link>
+            <div className="hidden md:flex space-x-6">
+              <a href="/" className="text-gray-700 hover:text-contractPrimary transition">
+                Início
+              </a>
+              <a href="/#templates" className="text-gray-700 hover:text-contractPrimary transition">
+                Modelos
+              </a>
+              <a href="/#about" className="text-gray-700 hover:text-contractPrimary transition">
+                Sobre
+              </a>
             </div>
           </div>
-        </div>
-      </header>
 
-      <AdminLogin 
-        open={showAdminLogin} 
-        onOpenChange={setShowAdminLogin} 
-      />
-      
-      <AddTemplateModal 
-        open={showAddTemplate} 
-        onOpenChange={setShowAddTemplate} 
-      />
-      
-      <TemplateImporter 
-        open={showImporter} 
-        onOpenChange={setShowImporter}
-      />
-    </>
+          <div className="flex items-center gap-3">
+            {user ? (
+              <>
+                <Link to="/meus-contratos">
+                  <Button variant="ghost">
+                    Meus Contratos
+                  </Button>
+                </Link>
+                
+                {isAdmin && (
+                  <>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowAddTemplate(true)}
+                    >
+                      Adicionar Modelo
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowImporter(true)}
+                    >
+                      Importar JSON
+                    </Button>
+                  </>
+                )}
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                      <Avatar>
+                        <AvatarFallback className="bg-primary text-primary-foreground">
+                          {user.email?.[0]?.toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <div className="flex items-center justify-start gap-2 p-2">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">{user.email}</p>
+                        {isAdmin && (
+                          <p className="text-xs leading-none text-muted-foreground flex items-center gap-1">
+                            <Shield className="w-3 h-3" />
+                            Administrador
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => signOut()}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Sair</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : (
+              <Link to="/auth">
+                <Button>
+                  <User className="mr-2 h-4 w-4" />
+                  Entrar
+                </Button>
+              </Link>
+            )}
+          </div>
+        </div>
+      </nav>
+
+      {isAdmin && (
+        <>
+          <AddTemplateModal 
+            open={showAddTemplate} 
+            onOpenChange={setShowAddTemplate} 
+          />
+          <TemplateImporter 
+            open={showImporter} 
+            onOpenChange={setShowImporter} 
+          />
+        </>
+      )}
+    </header>
   );
 };
 

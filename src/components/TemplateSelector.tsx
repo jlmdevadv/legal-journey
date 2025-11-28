@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useContract } from '../contexts/ContractContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, ArrowRight, Edit, Pencil } from 'lucide-react';
@@ -8,13 +9,14 @@ import { RenameTemplateModal } from './admin/RenameTemplateModal';
 const TemplateSelector = () => {
   const { 
     selectTemplate, 
-    isAdminMode, 
     customTemplates,
     isLoadingTemplates,
     startEditingTemplate,
     deleteCustomTemplate,
     renameTemplate
   } = useContract();
+  
+  const { isAdmin } = useAuth();
 
   const [renameModalOpen, setRenameModalOpen] = useState(false);
   const [templateToRename, setTemplateToRename] = useState<any>(null);
@@ -76,7 +78,7 @@ const TemplateSelector = () => {
                 <FileText className="w-5 h-5" />
                 <div className="flex flex-col">
                   <span>{template.name}</span>
-                  {isAdminMode && template.version && (
+                  {isAdmin && template.version && (
                     <span className="text-xs text-gray-500 font-normal">
                       {template.version.version} {template.version.date}
                     </span>
@@ -96,7 +98,7 @@ const TemplateSelector = () => {
               <CardDescription className="text-sm text-gray-600">
                 {template.description}
               </CardDescription>
-              {isAdminMode && (
+              {isAdmin && (
                 <div className="mt-3 pt-3 border-t flex gap-2">
                   <Button
                     variant="outline"
