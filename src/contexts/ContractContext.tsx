@@ -12,14 +12,36 @@ interface LocationData {
   date: string;
 }
 
+interface SavedContract {
+  id: string;
+  user_id: string;
+  template_id: string | null;
+  name: string;
+  status: 'draft' | 'completed' | 'archived';
+  form_values: Record<string, string>;
+  parties_data: PartyData[];
+  number_of_parties: number;
+  other_parties_data: PartyData[];
+  number_of_other_parties: number;
+  has_other_parties: boolean;
+  location_data: LocationData;
+  repeatable_fields_data: RepeatableFieldResponse[];
+  current_question_index: number;
+  current_party_loop_index: number;
+  generated_document: string | null;
+  created_at: string;
+  updated_at: string;
+  contract_templates?: {
+    name: string;
+  } | null;
+}
+
 interface ContractContextType {
   selectedTemplate: ContractTemplate | null;
   formValues: Record<string, string>;
   currentQuestionIndex: number;
-  currentPartyLoopIndex: number; // ✅ NOVO v3.0
+  currentPartyLoopIndex: number;
   isQuestionnaireMode: boolean;
-  isAdminMode: boolean;
-  isAdminLoggedIn: boolean;
   customTemplates: ContractTemplate[];
   isLoadingTemplates: boolean;
   editingTemplate: ContractTemplate | null;
@@ -28,13 +50,14 @@ interface ContractContextType {
   currentPartyIndex: number;
   numberOfOtherParties: number;
   otherPartiesData: PartyData[];
-  hasOtherParties: boolean; // ✅ NOVO - Estado de controle
-  updateHasOtherParties: (value: boolean) => void; // ✅ NOVO - Função de limpeza atômica
+  hasOtherParties: boolean;
+  updateHasOtherParties: (value: boolean) => void;
   partyTypes: any[];
   locationData: LocationData;
   repeatableFieldsData: RepeatableFieldResponse[];
   isEditingFromSummary: boolean;
-  getAllVisibleFieldsSorted: () => ContractField[]; // ✅ NOVO v3.0
+  currentSavedContractId: string | null;
+  getAllVisibleFieldsSorted: () => ContractField[];
   selectTemplate: (template: ContractTemplate) => void;
   updateFormValue: (fieldId: string, value: string) => void;
   resetForm: () => void;
@@ -47,9 +70,6 @@ interface ContractContextType {
   saveAndReturnToSummary: () => void;
   startQuestionnaire: () => void;
   finishQuestionnaire: () => void;
-  loginAdmin: (username: string, password: string) => boolean;
-  logoutAdmin: () => void;
-  toggleAdminMode: () => void;
   addCustomTemplate: (template: ContractTemplate) => void;
   updateCustomTemplate: (id: string, template: ContractTemplate) => void;
   deleteCustomTemplate: (id: string) => void;
@@ -70,6 +90,10 @@ interface ContractContextType {
   updateRepeatableFieldValue: (fieldId: string, partyId: string, value: string) => void;
   getRepeatableFieldValue: (fieldId: string, partyId: string) => string;
   getRepeatableFieldFormattedText: (fieldId: string) => string;
+  saveContract: (name?: string) => Promise<string | null>;
+  loadContract: (contractId: string) => Promise<boolean>;
+  listUserContracts: () => Promise<SavedContract[]>;
+  deleteContract: (contractId: string) => Promise<boolean>;
 }
 
 const ContractContext = createContext<ContractContextType | undefined>(undefined);
@@ -79,11 +103,8 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(-1);
   const [isQuestionnaireMode, setIsQuestionnaireMode] = useState(false);
-  const [isAdminMode, setIsAdminMode] = useState(false);
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => {
-    return localStorage.getItem("admin_logged_in") === "true";
-  });
   const [customTemplates, setCustomTemplates] = useState<ContractTemplate[]>([]);
+  const [currentSavedContractId, setCurrentSavedContractId] = useState<string | null>(null);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
   const [editingTemplate, setEditingTemplate] = useState<ContractTemplate | null>(null);
   const [numberOfParties, setNumberOfParties] = useState<number>(0);
@@ -1116,24 +1137,126 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   // Manter fillContractTemplate para compatibilidade (aponta para preview)
   const fillContractTemplate = generatePreviewText;
 
-  // Admin functions
-  const loginAdmin = (username: string, password: string): boolean => {
-    if (username === "Administrador" && password === "123456") {
-      setIsAdminLoggedIn(true);
-      localStorage.setItem("admin_logged_in", "true");
-      return true;
+  // Contract Persistence Functions
+  const saveContract = async (name?: string): Promise<string | null> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !selectedTemplate) return null;
+
+      const contractData: any = {
+        id: currentSavedContractId,
+        user_id: user.id,
+        template_id: selectedTemplate.id,
+        name: name || `${selectedTemplate.name} - ${new Date().toLocaleDateString('pt-BR')}`,
+        status: currentQuestionIndex === 9999 ? 'completed' : 'draft',
+        form_values: formValues,
+        parties_data: partiesData,
+        number_of_parties: numberOfParties,
+        other_parties_data: otherPartiesData,
+        number_of_other_parties: numberOfOtherParties,
+        has_other_parties: hasOtherParties,
+        location_data: locationData,
+        repeatable_fields_data: repeatableFieldsData,
+        current_question_index: currentQuestionIndex,
+        current_party_loop_index: currentPartyLoopIndex,
+        generated_document: currentQuestionIndex === 9999 ? generateFinalDocument() : null,
+        last_accessed_at: new Date().toISOString(),
+      };
+
+      const { data, error } = await supabase
+        .from('saved_contracts')
+        .upsert([contractData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setCurrentSavedContractId(data.id);
+        return data.id;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Erro ao salvar contrato:', error);
+      toast.error('Erro ao salvar contrato');
+      return null;
     }
-    return false;
   };
 
-  const logoutAdmin = () => {
-    setIsAdminLoggedIn(false);
-    setIsAdminMode(false);
-    localStorage.removeItem("admin_logged_in");
+  const loadContract = async (contractId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from('saved_contracts')
+        .select('*, contract_templates(*)')
+        .eq('id', contractId)
+        .single();
+
+      if (error || !data) {
+        toast.error('Erro ao carregar contrato');
+        return false;
+      }
+
+      // Restaurar estado completo
+      setSelectedTemplate(data.contract_templates as any);
+      setFormValues((data.form_values || {}) as any);
+      setPartiesData((data.parties_data || []) as any);
+      setNumberOfParties(data.number_of_parties || 0);
+      setOtherPartiesData((data.other_parties_data || []) as any);
+      setNumberOfOtherPartiesState(data.number_of_other_parties || 0);
+      setHasOtherParties(data.has_other_parties || false);
+      setLocationData((data.location_data || { city: '', state: '', date: new Date().toISOString().split('T')[0] }) as any);
+      setRepeatableFieldsData((data.repeatable_fields_data || []) as any);
+      setCurrentQuestionIndex(data.current_question_index || -1);
+      setCurrentPartyLoopIndex(data.current_party_loop_index || 0);
+      setCurrentSavedContractId(contractId);
+      setIsQuestionnaireMode(true);
+
+      toast.success('Contrato carregado com sucesso!');
+      return true;
+    } catch (error) {
+      console.error('Erro ao carregar contrato:', error);
+      toast.error('Erro ao carregar contrato');
+      return false;
+    }
   };
 
-  const toggleAdminMode = () => {
-    setIsAdminMode((prev) => !prev);
+  const listUserContracts = async (): Promise<SavedContract[]> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from('saved_contracts')
+        .select('id, name, status, template_id, updated_at, contract_templates(name)')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+
+      return data as SavedContract[] || [];
+    } catch (error) {
+      console.error('Erro ao listar contratos:', error);
+      return [];
+    }
+  };
+
+  const deleteContract = async (contractId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('saved_contracts')
+        .delete()
+        .eq('id', contractId);
+
+      if (error) throw error;
+
+      toast.success('Contrato excluído com sucesso!');
+      return true;
+    } catch (error) {
+      console.error('Erro ao excluir contrato:', error);
+      toast.error('Erro ao excluir contrato');
+      return false;
+    }
   };
 
   const addCustomTemplate = async (template: ContractTemplate) => {
@@ -1473,15 +1596,14 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         selectedTemplate,
         formValues,
         currentQuestionIndex,
-        currentPartyLoopIndex, // ✅ NOVO v3.0
+        currentPartyLoopIndex,
         isQuestionnaireMode,
-        isAdminMode,
-        isAdminLoggedIn,
         customTemplates,
         isLoadingTemplates,
         editingTemplate,
         isEditingFromSummary,
-        getAllVisibleFieldsSorted, // ✅ NOVO v3.0
+        currentSavedContractId,
+        getAllVisibleFieldsSorted,
         selectTemplate,
         updateFormValue,
         resetForm,
@@ -1494,9 +1616,6 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         saveAndReturnToSummary,
         startQuestionnaire,
         finishQuestionnaire,
-        loginAdmin,
-        logoutAdmin,
-        toggleAdminMode,
         addCustomTemplate,
         updateCustomTemplate,
         deleteCustomTemplate,
@@ -1510,8 +1629,8 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         currentPartyIndex,
         numberOfOtherParties,
         otherPartiesData,
-        hasOtherParties, // ✅ NOVO - Estado de controle
-        updateHasOtherParties, // ✅ NOVO - Função de limpeza atômica
+        hasOtherParties,
+        updateHasOtherParties,
         partyTypes,
         setNumberOfParties: handleSetNumberOfParties,
         setNumberOfOtherParties: handleSetNumberOfOtherParties,
@@ -1527,6 +1646,10 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         updateRepeatableFieldValue,
         getRepeatableFieldValue,
         getRepeatableFieldFormattedText,
+        saveContract,
+        loadContract,
+        listUserContracts,
+        deleteContract,
       }}
     >
       {children}
