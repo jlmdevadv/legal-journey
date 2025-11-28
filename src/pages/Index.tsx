@@ -8,11 +8,74 @@ import QuestionnaireForm from '../components/QuestionnaireForm';
 import ContractPreview from '../components/ContractPreview';
 import TemplateEditor from '../components/admin/TemplateEditor';
 import { useContract } from '../contexts/ContractContext';
-import { HelpCircle, Info, PlayCircle, Bot, ChevronDown, ChevronUp, BookOpen, GraduationCap, Users } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAutoSave } from '@/hooks/useAutoSave';
+import { HelpCircle, Info, PlayCircle, Bot, ChevronDown, ChevronUp, BookOpen, GraduationCap, Users, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
+
+// Questionnaire with auto-save
+const QuestionnaireWithAutoSave = () => {
+  const { user } = useAuth();
+  const { 
+    saveContract, 
+    currentQuestionIndex, 
+    selectedTemplate,
+    formValues,
+    partiesData,
+    otherPartiesData,
+    locationData,
+    repeatableFieldsData
+  } = useContract();
+
+  // Enable auto-save only when user is logged in and not on welcome/summary screens
+  const shouldAutoSave = user && currentQuestionIndex >= -2 && currentQuestionIndex < 9999;
+
+  const { isSaving, lastSaved } = useAutoSave({
+    onSave: async () => {
+      if (!selectedTemplate) return;
+      await saveContract();
+    },
+    interval: 30000, // 30 seconds
+    enabled: shouldAutoSave
+  });
+
+  return (
+    <div className="container mx-auto px-4 py-6">
+      <div className="flex flex-col md:flex-row gap-6">
+        <div className="md:w-1/2 print:hidden">
+          <QuestionnaireForm />
+          
+          {/* Auto-save indicator */}
+          {user && (
+            <div className="mt-2 flex items-center justify-end text-xs text-muted-foreground">
+              {isSaving ? (
+                <>
+                  <Save className="w-3 h-3 mr-1 animate-pulse" />
+                  <span>Salvando...</span>
+                </>
+              ) : lastSaved ? (
+                <>
+                  <Save className="w-3 h-3 mr-1" />
+                  <span>Salvo às {lastSaved.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                </>
+              ) : null}
+            </div>
+          )}
+        </div>
+        <div className="md:w-1/2 print:w-full">
+          <div className="sticky top-6">
+            <ScrollArea className="h-[calc(100vh-8rem)]" data-contract-preview-scroll>
+              <ContractPreview />
+            </ScrollArea>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // FAQ data
 const faqData = [
@@ -44,7 +107,15 @@ const faqData = [
 
 // Main content with conditional rendering based on template selection
 const ContractContent = () => {
-  const { selectedTemplate, isQuestionnaireMode, editingTemplate, finishEditingTemplate, saveEditingTemplate } = useContract();
+  const { 
+    selectedTemplate, 
+    isQuestionnaireMode, 
+    editingTemplate, 
+    finishEditingTemplate, 
+    saveEditingTemplate,
+    saveContract,
+    currentQuestionIndex
+  } = useContract();
   const [openFaqItems, setOpenFaqItems] = useState<Set<number>>(new Set());
 
   const toggleFaqItem = (index: number) => {
@@ -233,22 +304,7 @@ const ContractContent = () => {
 
   // Show questionnaire mode (one question at a time)
   if (isQuestionnaireMode || selectedTemplate.fields.length > 0) {
-    return (
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-col md:flex-row gap-6">
-          <div className="md:w-1/2 print:hidden">
-            <QuestionnaireForm />
-          </div>
-          <div className="md:w-1/2 print:w-full">
-            <div className="sticky top-6">
-              <ScrollArea className="h-[calc(100vh-8rem)]" data-contract-preview-scroll>
-                <ContractPreview />
-              </ScrollArea>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <QuestionnaireWithAutoSave />;
   }
 
   // Fallback to old form (shouldn't normally reach here)
