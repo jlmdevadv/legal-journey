@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useContract } from '../../contexts/ContractContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, CheckCircle, Edit, Printer, AlertCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Edit, Printer, AlertCircle, Save } from 'lucide-react';
 import DocumentDownloader from '../DocumentDownloader';
 import ContractPreviewModal from '../ContractPreviewModal';
 import { getRepeatableVisibleFields, getNonRepeatableVisibleFields, getVisibleFields } from '@/utils/conditionalLogic';
@@ -12,11 +13,13 @@ import { validateAllVisibleRequiredFields, ValidationResult } from '@/utils/vali
 
 const QuestionnaireSummary = () => {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [isSavingManually, setIsSavingManually] = useState(false);
   const [validationResult, setValidationResult] = useState<ValidationResult>({
     isValid: false,
     invalidFieldIds: new Set(),
     invalidRepeatableFields: new Map()
   });
+  const { user } = useAuth();
   const { 
     selectedTemplate, 
     formValues, 
@@ -33,7 +36,8 @@ const QuestionnaireSummary = () => {
     partiesData,
     otherPartiesData,
     repeatableFieldsData,
-    numberOfParties
+    numberOfParties,
+    saveContract
   } = useContract();
 
   if (!selectedTemplate) return null;
@@ -100,6 +104,17 @@ const QuestionnaireSummary = () => {
         globalIndex
       });
       goToQuestion(globalIndex, true);
+    }
+  };
+
+  const handleManualSave = async () => {
+    if (!user) return;
+    
+    setIsSavingManually(true);
+    try {
+      await saveContract(undefined, true); // showToast = true
+    } finally {
+      setIsSavingManually(false);
     }
   };
 
@@ -382,6 +397,17 @@ const QuestionnaireSummary = () => {
                 disabled={!validationResult.isValid}
                 className="border-blue-200 text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
               />
+              {user && (
+                <Button
+                  onClick={handleManualSave}
+                  disabled={isSavingManually}
+                  variant="outline"
+                  className="border-green-200 text-green-600 hover:bg-green-50 flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  {isSavingManually ? 'Salvando...' : 'Salvar Contrato'}
+                </Button>
+              )}
             </div>
           </div>
           

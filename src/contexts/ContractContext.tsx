@@ -90,7 +90,7 @@ interface ContractContextType {
   updateRepeatableFieldValue: (fieldId: string, partyId: string, value: string) => void;
   getRepeatableFieldValue: (fieldId: string, partyId: string) => string;
   getRepeatableFieldFormattedText: (fieldId: string) => string;
-  saveContract: (name?: string) => Promise<string | null>;
+  saveContract: (name?: string, showToast?: boolean) => Promise<string | null>;
   loadContract: (contractId: string) => Promise<boolean>;
   listUserContracts: () => Promise<SavedContract[]>;
   deleteContract: (contractId: string) => Promise<boolean>;
@@ -1138,7 +1138,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   const fillContractTemplate = generatePreviewText;
 
   // Contract Persistence Functions
-  const saveContract = async (name?: string): Promise<string | null> => {
+  const saveContract = async (name?: string, showToast: boolean = false): Promise<string | null> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || !selectedTemplate) return null;
@@ -1173,6 +1173,12 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
 
       if (data) {
         setCurrentSavedContractId(data.id);
+        
+        // Show toast only if explicitly requested (for manual saves)
+        if (showToast) {
+          toast.success('Contrato salvo com sucesso!');
+        }
+        
         return data.id;
       }
 
