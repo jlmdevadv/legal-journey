@@ -142,6 +142,7 @@ const ContractPreviewModal = ({ open, onOpenChange }: ContractPreviewModalProps)
         </div>
 
         <div className="flex-shrink-0 flex justify-end gap-3 pt-4 border-t">
+          {/* TEMPORARIAMENTE DESABILITADO - Impressão/PDF em desenvolvimento
           <Button 
             onClick={handlePrint}
             variant="outline"
@@ -150,6 +151,7 @@ const ContractPreviewModal = ({ open, onOpenChange }: ContractPreviewModalProps)
             <Printer className="w-4 h-4" />
             Imprimir
           </Button>
+          */}
           <DocumentDownloader
             documentData={getDocumentData()}
             filename={selectedTemplate.name}

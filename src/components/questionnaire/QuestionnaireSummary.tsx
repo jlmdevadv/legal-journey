@@ -381,6 +381,7 @@ const QuestionnaireSummary = () => {
               >
                 Visualizar Contrato
               </Button>
+              {/* TEMPORARIAMENTE DESABILITADO - Impressão/PDF em desenvolvimento
               <Button 
                 onClick={handlePrint}
                 disabled={!validationResult.isValid}
@@ -389,6 +390,7 @@ const QuestionnaireSummary = () => {
                 <Printer className="w-4 h-4" />
                 Imprimir
               </Button>
+              */}
               <DocumentDownloader
                 documentData={getDocumentData()}
                 filename={selectedTemplate.name}
