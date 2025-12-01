@@ -129,6 +129,7 @@ const DocumentDownloader = ({
           </div>
         </DropdownMenuItem>
         
+        {/* TEMPORARIAMENTE DESABILITADO - Geração de PDF em desenvolvimento
         <DropdownMenuItem
           onClick={() => handleDownload('pdf')}
           disabled={isDownloading}
@@ -140,6 +141,7 @@ const DocumentDownloader = ({
             <span className="text-xs text-gray-500">{getFormatDescription('pdf')}</span>
           </div>
         </DropdownMenuItem>
+        */}
       </DropdownMenuContent>
     </DropdownMenu>
   );
