@@ -29,8 +29,8 @@ const QuestionnaireWithAutoSave = () => {
     repeatableFieldsData
   } = useContract();
 
-  // Enable auto-save only when user is logged in and not on welcome/summary screens
-  const shouldAutoSave = user && currentQuestionIndex >= -2 && currentQuestionIndex < 9999;
+  // Enable auto-save when user is logged in (including summary screen)
+  const shouldAutoSave = user && currentQuestionIndex >= -2;
 
   const { isSaving, lastSaved } = useAutoSave({
     onSave: async () => {
@@ -40,6 +40,21 @@ const QuestionnaireWithAutoSave = () => {
     interval: 30000, // 30 seconds
     enabled: shouldAutoSave
   });
+
+  // Save on card change
+  const prevIndexRef = React.useRef(currentQuestionIndex);
+  React.useEffect(() => {
+    const prevIndex = prevIndexRef.current;
+    const currentIndex = currentQuestionIndex;
+    
+    // Save when index changes and auto-save is enabled
+    if (prevIndex !== currentIndex && shouldAutoSave && prevIndex !== -1) {
+      console.log('[SAVE-ON-CHANGE] Salvando ao mudar de pergunta...');
+      saveContract();
+    }
+    
+    prevIndexRef.current = currentIndex;
+  }, [currentQuestionIndex, shouldAutoSave, saveContract]);
 
   return (
     <div className="container mx-auto px-4 py-6">

@@ -10,26 +10,55 @@ export const useAutoSave = ({ onSave, interval = 30000, enabled = true }: UseAut
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const onSaveRef = useRef(onSave);
+  const prevEnabledRef = useRef(enabled);
 
   // Keep onSave reference updated
   useEffect(() => {
     onSaveRef.current = onSave;
   }, [onSave]);
 
+  // Save when transitioning from enabled to disabled
+  useEffect(() => {
+    const wasEnabled = prevEnabledRef.current;
+    const isNowDisabled = !enabled;
+    
+    if (wasEnabled && isNowDisabled) {
+      console.log('[AUTO-SAVE] Salvando ao desabilitar...');
+      const performSaveOnDisable = async () => {
+        try {
+          setIsSaving(true);
+          setError(null);
+          await onSaveRef.current();
+          setLastSaved(new Date());
+        } catch (err: any) {
+          console.error('Auto-save on disable error:', err);
+          setError(err.message || 'Erro ao salvar');
+        } finally {
+          setIsSaving(false);
+        }
+      };
+      performSaveOnDisable();
+    }
+    
+    prevEnabledRef.current = enabled;
+  }, [enabled]);
+
+  // Recurring auto-save with setInterval
   useEffect(() => {
     if (!enabled) {
-      // Clear any existing timeout when disabled
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
+      // Clear any existing interval when disabled
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
       return;
     }
 
-    // Set up auto-save
-    timeoutRef.current = setTimeout(async () => {
+    // Set up recurring auto-save
+    intervalRef.current = setInterval(async () => {
+      console.log('[AUTO-SAVE] Salvando automaticamente...');
       try {
         setIsSaving(true);
         setError(null);
@@ -44,8 +73,8 @@ export const useAutoSave = ({ onSave, interval = 30000, enabled = true }: UseAut
     }, interval);
 
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
       }
     };
   }, [interval, enabled]);
