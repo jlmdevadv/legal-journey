@@ -1144,7 +1144,6 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       if (!user || !selectedTemplate) return null;
 
       const contractData: any = {
-        id: currentSavedContractId,
         user_id: user.id,
         template_id: selectedTemplate.id,
         name: name || `${selectedTemplate.name} - ${new Date().toLocaleDateString('pt-BR')}`,
@@ -1162,6 +1161,11 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         generated_document: currentQuestionIndex === 9999 ? generateFinalDocument() : null,
         last_accessed_at: new Date().toISOString(),
       };
+
+      // Only include ID for existing contracts (updates)
+      if (currentSavedContractId) {
+        contractData.id = currentSavedContractId;
+      }
 
       const { data, error } = await supabase
         .from('saved_contracts')
