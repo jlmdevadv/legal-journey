@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-import { ContractProvider } from '../contexts/ContractContext';
 import Navbar from '../components/Navbar';
 import TemplateSelector from '../components/TemplateSelector';
 import ContractForm from '../components/ContractForm';
@@ -325,14 +324,12 @@ const ContractContent = () => {
 // Index page component
 const Index = () => {
   return (
-    <ContractProvider>
-      <div className="min-h-screen bg-white flex flex-col print:bg-white">
-        <div className="print:hidden">
-          <Navbar />
-        </div>
-        <ContractContent />
+    <div className="min-h-screen bg-white flex flex-col print:bg-white">
+      <div className="print:hidden">
+        <Navbar />
       </div>
-    </ContractProvider>
+      <ContractContent />
+    </div>
   );
 };
 
