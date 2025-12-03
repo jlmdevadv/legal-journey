@@ -2663,12 +2663,655 @@ const handleTemplateClick = (templateValue: string) => {
 
 ---
 
-## 15. Referências de Código
+## 16. Sistema de Autenticação (v3.1)
+
+### 16.1. Visão Geral
+
+A partir da versão 3.1, o sistema migrou de autenticação hardcoded (credenciais fixas em localStorage) para **Supabase Auth**, oferecendo:
+
+- Sessões seguras gerenciadas pelo servidor
+- Controle de acesso baseado em roles (admin/user)
+- Suporte a múltiplos usuários simultâneos
+- Tokens JWT com refresh automático
+
+### 16.2. Arquitetura
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      AuthContext.tsx                         │
+│  ┌─────────────┐  ┌─────────────┐  ┌──────────────────────┐ │
+│  │    user     │  │   session   │  │       isAdmin        │ │
+│  │ (User|null) │  │(Session|null│  │ (boolean via roles)  │ │
+│  └─────────────┘  └─────────────┘  └──────────────────────┘ │
+│                                                              │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ Métodos: signUp(), signIn(), signOut()                  ││
+│  └─────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Supabase Auth                             │
+│  ┌──────────────┐  ┌─────────────┐  ┌────────────────────┐  │
+│  │  auth.users  │  │ user_roles  │  │  profiles (opt)    │  │
+│  └──────────────┘  └─────────────┘  └────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 16.3. Tabelas de Banco de Dados
+
+#### 16.3.1. `user_roles`
+
+```sql
+CREATE TABLE public.user_roles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  role app_role NOT NULL DEFAULT 'user',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  UNIQUE (user_id, role)
+);
+
+CREATE TYPE public.app_role AS ENUM ('admin', 'user');
+```
+
+**RLS Policies:**
+- `SELECT`: Usuário pode ver apenas suas próprias roles
+- `INSERT/UPDATE/DELETE`: Não permitido via cliente (apenas server-side)
+
+#### 16.3.2. `profiles` (opcional)
+
+```sql
+CREATE TABLE public.profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id),
+  full_name TEXT,
+  avatar_url TEXT,
+  phone TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+```
+
+### 16.4. Funções de Verificação de Role
+
+```sql
+-- Verifica se usuário tem role específica
+CREATE OR REPLACE FUNCTION public.has_role(_user_id UUID, _role app_role)
+RETURNS BOOLEAN
+LANGUAGE SQL STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.user_roles
+    WHERE user_id = _user_id AND role = _role
+  );
+$$;
+
+-- Retorna role do usuário atual
+CREATE OR REPLACE FUNCTION public.get_user_role()
+RETURNS app_role
+LANGUAGE SQL STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT role FROM public.user_roles
+  WHERE user_id = auth.uid()
+  LIMIT 1;
+$$;
+
+-- Promover usuário a admin (via SQL Editor)
+SELECT promote_user_to_admin('email@example.com');
+```
+
+### 16.5. AuthContext Implementation
+
+```typescript
+// src/contexts/AuthContext.tsx
+interface AuthContextType {
+  user: User | null;
+  session: Session | null;
+  isLoading: boolean;
+  isAdmin: boolean;
+  signUp: (email: string, password: string, fullName?: string) => Promise<{ error: AuthError | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+  signOut: () => Promise<void>;
+}
+```
+
+**Fluxo de Inicialização:**
+
+```typescript
+useEffect(() => {
+  // 1. Configurar listener PRIMEIRO
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    (event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      // Verificar role após autenticação (com setTimeout para evitar deadlock)
+      if (session?.user) {
+        setTimeout(() => checkAdminRole(session.user.id), 0);
+      }
+    }
+  );
+
+  // 2. DEPOIS verificar sessão existente
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    setSession(session);
+    setUser(session?.user ?? null);
+    if (session?.user) {
+      checkAdminRole(session.user.id);
+    }
+  });
+
+  return () => subscription.unsubscribe();
+}, []);
+```
+
+### 16.6. ProtectedRoute Component
+
+```typescript
+// src/components/auth/ProtectedRoute.tsx
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  requireAdmin?: boolean;
+}
+
+const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps) => {
+  const { user, isAdmin, isLoading } = useAuth();
+
+  if (isLoading) return <LoadingSpinner />;
+  if (!user) return <Navigate to="/auth" replace />;
+  if (requireAdmin && !isAdmin) return <Navigate to="/" replace />;
+
+  return <>{children}</>;
+};
+```
+
+**Uso nas Rotas:**
+
+```tsx
+// src/App.tsx
+<Route 
+  path="/meus-contratos" 
+  element={
+    <ProtectedRoute>
+      <MeusContratos />
+    </ProtectedRoute>
+  } 
+/>
+
+<Route 
+  path="/admin" 
+  element={
+    <ProtectedRoute requireAdmin>
+      <AdminPage />
+    </ProtectedRoute>
+  } 
+/>
+```
+
+### 16.7. Página de Autenticação
+
+**Rota:** `/auth`
+
+**Funcionalidades:**
+- Login com email/senha
+- Cadastro (signup) com nome completo
+- Validação Zod para formulários
+- Toggle para mostrar/ocultar senha
+- Redirect automático para `/` após login
+- Toast notifications para erros e sucesso
+
+**Configuração Recomendada:**
+- Auto-confirm email habilitado para desenvolvimento
+- Email redirect URL configurado via `window.location.origin`
+
+---
+
+## 17. Persistência de Contratos (v3.1)
+
+### 17.1. Visão Geral
+
+O sistema de persistência permite que usuários salvem contratos em progresso e retomem o preenchimento posteriormente de qualquer dispositivo.
+
+### 17.2. Tabela `saved_contracts`
+
+```sql
+CREATE TABLE public.saved_contracts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  template_id TEXT REFERENCES contract_templates(id),
+  name TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'draft',  -- draft | completed | archived
+  
+  -- Estado do formulário (JSONB)
+  form_values JSONB NOT NULL DEFAULT '{}'::jsonb,
+  parties_data JSONB NOT NULL DEFAULT '[]'::jsonb,
+  other_parties_data JSONB NOT NULL DEFAULT '[]'::jsonb,
+  number_of_parties INTEGER NOT NULL DEFAULT 0,
+  number_of_other_parties INTEGER NOT NULL DEFAULT 0,
+  has_other_parties BOOLEAN NOT NULL DEFAULT false,
+  location_data JSONB NOT NULL DEFAULT '{"city": "", "date": "", "state": ""}'::jsonb,
+  repeatable_fields_data JSONB NOT NULL DEFAULT '[]'::jsonb,
+  
+  -- Estado de navegação
+  current_question_index INTEGER NOT NULL DEFAULT -1,
+  current_party_loop_index INTEGER NOT NULL DEFAULT 0,
+  
+  -- Cache do documento gerado
+  generated_document TEXT,
+  
+  -- Timestamps
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  last_accessed_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+```
+
+**RLS Policies:**
+```sql
+-- Usuário só acessa seus próprios contratos
+CREATE POLICY "Users can view own contracts" ON saved_contracts
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own contracts" ON saved_contracts
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own contracts" ON saved_contracts
+  FOR UPDATE USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own contracts" ON saved_contracts
+  FOR DELETE USING (auth.uid() = user_id);
+```
+
+### 17.3. Funções de Persistência no ContractContext
+
+#### 17.3.1. `saveContract()`
+
+```typescript
+const saveContract = async (
+  contractName?: string,
+  status: 'draft' | 'completed' = 'draft'
+): Promise<string | null> => {
+  if (!user || !selectedTemplate) return null;
+
+  const contractData = {
+    // NÃO incluir 'id' para novos contratos (gen_random_uuid() gera automaticamente)
+    ...(currentSavedContractId && { id: currentSavedContractId }),
+    user_id: user.id,
+    template_id: selectedTemplate.id,
+    name: contractName || `${selectedTemplate.name} - ${new Date().toLocaleDateString('pt-BR')}`,
+    status,
+    form_values: formValues,
+    parties_data: partiesData,
+    other_parties_data: otherPartiesData,
+    number_of_parties: numberOfParties,
+    number_of_other_parties: numberOfOtherParties,
+    has_other_parties: hasOtherParties,
+    location_data: locationData,
+    repeatable_fields_data: repeatableFieldsData,
+    current_question_index: currentQuestionIndex,
+    current_party_loop_index: currentPartyLoopIndex,
+    generated_document: status === 'completed' ? generateFinalDocument() : null,
+    updated_at: new Date().toISOString(),
+    last_accessed_at: new Date().toISOString()
+  };
+
+  const { data, error } = await supabase
+    .from('saved_contracts')
+    .upsert(contractData)
+    .select('id')
+    .single();
+
+  if (data) {
+    setCurrentSavedContractId(data.id);
+  }
+
+  return data?.id || null;
+};
+```
+
+**Bug Fix Importante (id: null):**
+Para novos contratos, o campo `id` NÃO deve ser incluído no objeto `contractData`. Passar `id: null` causa erro de constraint violation. A solução é omitir o campo completamente quando não há `currentSavedContractId`.
+
+#### 17.3.2. `loadContract()`
+
+```typescript
+const loadContract = async (contractId: string): Promise<boolean> => {
+  const { data, error } = await supabase
+    .from('saved_contracts')
+    .select('*, contract_templates(*)')
+    .eq('id', contractId)
+    .single();
+
+  if (error || !data) return false;
+
+  // Restaurar template
+  setSelectedTemplate(data.contract_templates);
+  
+  // Restaurar estado do formulário
+  setFormValues(data.form_values || {});
+  setPartiesData(data.parties_data || []);
+  setOtherPartiesData(data.other_parties_data || []);
+  setNumberOfParties(data.number_of_parties || 0);
+  setNumberOfOtherParties(data.number_of_other_parties || 0);
+  setHasOtherParties(data.has_other_parties || false);
+  setLocationData(data.location_data || { city: '', state: '', date: '' });
+  setRepeatableFieldsData(data.repeatable_fields_data || []);
+  
+  // Restaurar navegação
+  setCurrentQuestionIndex(data.current_question_index ?? -1);
+  setCurrentPartyLoopIndex(data.current_party_loop_index ?? 0);
+  
+  // Marcar como contrato carregado
+  setCurrentSavedContractId(contractId);
+
+  // Atualizar last_accessed_at
+  await supabase
+    .from('saved_contracts')
+    .update({ last_accessed_at: new Date().toISOString() })
+    .eq('id', contractId);
+
+  return true;
+};
+```
+
+### 17.4. Fluxo de Dados da Persistência
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    ContractContext                        │
+│  ┌──────────────────────────────────────────────────┐    │
+│  │ Estado em memória (formValues, partiesData, etc) │    │
+│  └───────────────────────┬──────────────────────────┘    │
+│                          │                                │
+│    ┌─────────────────────┼─────────────────────┐         │
+│    │ saveContract()      │     loadContract()  │         │
+│    │ (serializa p/       │     (deserializa    │         │
+│    │  JSONB)             │      de JSONB)      │         │
+│    └─────────────────────┼─────────────────────┘         │
+└──────────────────────────┼───────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────┐
+│              Supabase - saved_contracts                   │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │ form_values JSONB, parties_data JSONB, etc.        │  │
+│  └────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 18. Sistema de Auto-Save (v3.1)
+
+### 18.1. Visão Geral
+
+O hook `useAutoSave` garante que o progresso do usuário nunca seja perdido, com salvamento automático em múltiplos pontos.
+
+### 18.2. Hook `useAutoSave`
+
+```typescript
+// src/hooks/useAutoSave.ts
+interface UseAutoSaveOptions {
+  onSave: () => Promise<void>;
+  interval?: number;      // Default: 30000ms (30 segundos)
+  enabled?: boolean;      // Default: true
+}
+
+export const useAutoSave = ({ onSave, interval = 30000, enabled = true }) => {
+  // Estado
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Referências para evitar stale closures
+  const onSaveRef = useRef(onSave);
+  const prevEnabledRef = useRef(enabled);
+
+  // ... implementação dos efeitos
+
+  return { isSaving, lastSaved, error, saveNow };
+};
+```
+
+### 18.3. Pontos de Trigger do Auto-Save
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    4 TRIGGERS DE AUTO-SAVE                   │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  1. INTERVALO RECORRENTE (30s)                              │
+│     └─> setInterval(onSave, 30000)                          │
+│     └─> Toast: silencioso (sem notificação)                 │
+│                                                              │
+│  2. MUDANÇA DE CARD/PERGUNTA                                │
+│     └─> useEffect([currentQuestionIndex])                   │
+│     └─> Salva ao mudar de pergunta                          │
+│     └─> Toast: silencioso                                   │
+│                                                              │
+│  3. SAÍDA DO QUESTIONÁRIO (enabled: true → false)           │
+│     └─> useEffect detecta transição                         │
+│     └─> Salva imediatamente antes de desabilitar            │
+│     └─> Toast: silencioso                                   │
+│                                                              │
+│  4. BOTÃO MANUAL (Sumário)                                  │
+│     └─> Usuário clica "Salvar Contrato"                     │
+│     └─> Toast: "Contrato salvo com sucesso!"                │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 18.4. Condição `shouldAutoSave`
+
+```typescript
+// No componente QuestionnaireForm ou similar
+const shouldAutoSave = user && currentQuestionIndex >= -2;
+
+// Ativado quando:
+// - Usuário está logado (user !== null)
+// - Está no questionário (currentQuestionIndex >= -2 inclui resumo 9999)
+
+// Desativado quando:
+// - Usuário não está logado
+// - Está na tela de seleção de template (currentQuestionIndex < -2)
+```
+
+### 18.5. Uso no QuestionnaireForm
+
+```typescript
+const { isSaving, lastSaved, saveNow } = useAutoSave({
+  onSave: async () => {
+    if (user && selectedTemplate && currentSavedContractId) {
+      await saveContract();
+    }
+  },
+  interval: 30000,
+  enabled: shouldAutoSave
+});
+
+// Indicador visual de salvamento
+{isSaving && <span className="text-sm text-muted-foreground">Salvando...</span>}
+{lastSaved && (
+  <span className="text-xs text-muted-foreground">
+    Último save: {lastSaved.toLocaleTimeString()}
+  </span>
+)}
+```
+
+### 18.6. Fluxo de Save ao Desabilitar
+
+```typescript
+// useAutoSave.ts - useEffect para transição enabled
+useEffect(() => {
+  const wasEnabled = prevEnabledRef.current;
+  const isNowDisabled = !enabled;
+  
+  if (wasEnabled && isNowDisabled) {
+    console.log('[AUTO-SAVE] Salvando ao desabilitar...');
+    performSaveOnDisable();
+  }
+  
+  prevEnabledRef.current = enabled;
+}, [enabled]);
+```
+
+---
+
+## 19. Página Meus Contratos (v3.1)
+
+### 19.1. Visão Geral
+
+**Rota:** `/meus-contratos`  
+**Proteção:** `ProtectedRoute` (requer autenticação)
+
+### 19.2. Funcionalidades
+
+| Funcionalidade | Descrição |
+|---------------|-----------|
+| **Listagem** | Exibe todos os contratos do usuário em cards |
+| **Filtros** | Abas: Todos / Rascunhos / Finalizados |
+| **Continuar** | Restaura estado completo e retoma preenchimento |
+| **Visualizar** | Abre modal de preview para contratos finalizados |
+| **Download** | Opções: TXT, DOCX (PDF temporariamente desabilitado) |
+| **Excluir** | Confirmação antes de deletar |
+
+### 19.3. Interface do Card
+
+```typescript
+interface SavedContract {
+  id: string;
+  name: string;
+  status: 'draft' | 'completed' | 'archived';
+  template_id: string;
+  updated_at: string;
+  contract_templates?: {
+    name: string;
+  };
+}
+```
+
+**Elementos do Card:**
+- Nome do contrato (editável)
+- Nome do template original
+- Badge de status (Rascunho/Finalizado)
+- Última atualização (dd/MM/yyyy HH:mm)
+- Botão primário: "Continuar Preenchimento" ou "Visualizar/Baixar"
+- Botão de exclusão com confirmação
+
+### 19.4. Fluxo de Carregamento
+
+```
+/meus-contratos
+       │
+       ▼
+┌──────────────────┐
+│  Clique em       │
+│  "Continuar"     │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ loadContract(id) │
+│ ← Restaura:      │
+│   • template     │
+│   • formValues   │
+│   • partiesData  │
+│   • navigation   │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ navigate('/')    │
+│ ← Redireciona    │
+│   para Index     │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ QuestionnaireForm│
+│ ← Renderiza no   │
+│   índice salvo   │
+└──────────────────┘
+```
+
+### 19.5. Empty States
+
+| Cenário | Mensagem |
+|---------|----------|
+| Sem contratos | "Você ainda não possui contratos salvos. Comece criando um novo contrato!" |
+| Filtro sem resultados | "Nenhum contrato encontrado com o filtro selecionado." |
+| Carregando | Spinner com mensagem "Carregando seus contratos..." |
+
+---
+
+## 20. Status de Funcionalidades (v3.1)
+
+### 20.1. Funcionalidades Ativas
+
+| Funcionalidade | Status | Descrição |
+|---------------|--------|-----------|
+| Visualizar Contrato | ✅ Ativo | Modal de preview com formatação |
+| Download TXT | ✅ Ativo | Texto puro sem formatação |
+| Download DOCX | ✅ Ativo | Documento Word formatado |
+| Auto-save | ✅ Ativo | Salvamento automático a cada 30s |
+| Persistência | ✅ Ativo | Contratos salvos no banco |
+| Autenticação | ✅ Ativo | Login/signup via Supabase |
+
+### 20.2. Funcionalidades Temporariamente Desabilitadas
+
+| Funcionalidade | Status | Motivo | Arquivos Afetados |
+|---------------|--------|--------|-------------------|
+| Download PDF | ⏸️ Desabilitado | Problemas de conversão | `DocumentDownloader.tsx` |
+| Imprimir | ⏸️ Desabilitado | Dependente do PDF | `QuestionnaireSummary.tsx`, `ContractPreviewModal.tsx` |
+
+### 20.3. Código Preservado
+
+O código de geração de PDF e impressão foi **comentado** (não deletado) para permitir reativação futura:
+
+```tsx
+// QuestionnaireSummary.tsx (linhas ~384-391)
+{/* TEMPORARIAMENTE DESABILITADO - Impressão/PDF em desenvolvimento
+<Button onClick={handlePrint} disabled={!validationResult.isValid} variant="outline">
+  <Printer className="w-4 h-4" />
+  Imprimir
+</Button>
+*/}
+
+// ContractPreviewModal.tsx (linhas ~145-152)
+{/* TEMPORARIAMENTE DESABILITADO - Impressão/PDF em desenvolvimento
+<Button onClick={handlePrint} variant="outline">
+  <Printer className="w-4 h-4" />
+  Imprimir
+</Button>
+*/}
+
+// DocumentDownloader.tsx (linhas ~130-141)
+{/* TEMPORARIAMENTE DESABILITADO - Geração de PDF em desenvolvimento
+<DropdownMenuItem onClick={() => handleDownload('pdf')} disabled={isDownloading}>
+  ...
+</DropdownMenuItem>
+*/}
+```
+
+### 20.4. Arquivos de Lógica Preservados
+
+| Arquivo | Conteúdo | Status |
+|---------|----------|--------|
+| `src/utils/documentGenerators.ts` | `generatePDF()` function | ✅ Intacto |
+| `jspdf` dependency | Biblioteca de PDF | ✅ Instalada |
+| `html2canvas` dependency | Captura para PDF | ✅ Instalada |
+
+---
+
+## 21. Referências de Código
 
 ### 15.1. Arquivos Principais
 
 **Context e Lógica:**
 - `src/contexts/ContractContext.tsx` - Gerenciamento de estado global
+- `src/contexts/AuthContext.tsx` - ✅ **NOVO v3.1** - Contexto de autenticação
 - `src/utils/conditionalLogic.ts` - Avaliação de lógica condicional
 - `src/utils/dateUtils.ts` - ✅ **NOVO v2.3** - Formatação de datas
 
@@ -2689,9 +3332,17 @@ const handleTemplateClick = (templateValue: string) => {
 - `src/components/admin/FieldConfigModal.tsx` - ✅ **ATUALIZADO v2.3** - Configuração de campos
 - `src/components/admin/RenameTemplateModal.tsx` - ✅ **NOVO v2.3** - Renomear templates
 
+**Páginas:**
+- `src/pages/Auth.tsx` - ✅ **NOVO v3.1** - Página de login/cadastro
+- `src/pages/MeusContratos.tsx` - ✅ **NOVO v3.1** - Página de contratos salvos
+
+**Componentes de Autenticação:**
+- `src/components/auth/ProtectedRoute.tsx` - ✅ **NOVO v3.1** - Proteção de rotas
+
 **Utilitários:**
 - `src/utils/templateExporter.ts` - ✅ **ATUALIZADO v2.3** - Exportação de templates
 - `src/utils/documentGenerators.ts` - Geração de documentos
+- `src/hooks/useAutoSave.ts` - ✅ **NOVO v3.1** - Hook de auto-save
 
 | Arquivo | Responsabilidade |
 |---------|-----------------|
@@ -2704,13 +3355,15 @@ const handleTemplateClick = (templateValue: string) => {
 | `src/components/admin/SortableFieldList.tsx` | Drag & drop para reordenar campos |
 | `src/utils/validation.ts` | Validação de campos obrigatórios |
 
-### 15.2. Hooks Personalizados
+### 21.2. Hooks Personalizados
 
 | Hook | Arquivo | Propósito |
 |------|---------|-----------|
 | `useContract` | `ContractContext.tsx` | Acesso ao contexto global |
 | `useContractPreviewScroll` | `useContractPreviewScroll.ts` | Auto-scroll do preview |
 | `useKeyboardSelection` | `useKeyboardSelection.ts` | Navegação por teclado (setas) |
+| `useAutoSave` | `useAutoSave.ts` | ✅ **NOVO v3.1** - Auto-save com múltiplos triggers |
+| `useAuth` | `AuthContext.tsx` | ✅ **NOVO v3.1** - Acesso ao contexto de autenticação |
 
 ### 15.3. Componentes de UI (shadcn/ui)
 
@@ -2723,7 +3376,7 @@ const handleTemplateClick = (templateValue: string) => {
 
 ---
 
-## 16. Glossário
+## 22. Glossário
 
 | Termo | Definição |
 |-------|-----------|
@@ -2745,7 +3398,7 @@ const handleTemplateClick = (templateValue: string) => {
 
 ---
 
-## 17. Changelog da Documentação
+## 23. Changelog da Documentação
 
 | Versão | Data | Mudanças |
 |--------|------|----------|
@@ -2753,10 +3406,11 @@ const handleTemplateClick = (templateValue: string) => {
 | 2.3 | 2025-XX | Novos recursos: `includeValueInContract`, `answerTemplateMode`, cards info |
 | 3.0 | 2025-XX | **Arquitetura de Navegação Unificada**: `currentPartyLoopIndex`, `getAllVisibleFieldsSorted()` |
 | 3.1 | 2025-XX | **Correções Críticas**: Transição Bloco 2→3, limpeza de estado dependente (`hasOtherParties`, `updateHasOtherParties`) |
+| 3.2 | 2025-12 | **Autenticação & Persistência**: Sistema de login Supabase Auth, persistência de contratos em `saved_contracts`, hook `useAutoSave` com 4 triggers, página `/meus-contratos`, PDF/print temporariamente desabilitado |
 
 ---
 
-## 18. Contribuindo
+## 24. Contribuindo
 
 Para adicionar novas funcionalidades ao sistema:
 
@@ -2770,11 +3424,11 @@ Para adicionar novas funcionalidades ao sistema:
 
 ---
 
-Este documento técnico fornece uma visão completa do fluxo de dados do sistema de geração de contratos, incluindo todas as funcionalidades implementadas até a **versão 3.1** com a arquitetura de navegação unificada.
+Este documento técnico fornece uma visão completa do fluxo de dados do sistema de geração de contratos, incluindo todas as funcionalidades implementadas até a **versão 3.2** com autenticação, persistência e auto-save.
 
 **Fim da Documentação Técnica**
 
-### 16. Glossário (Atualizado v2.3)
+### Glossário Estendido (v3.2)
 
 **Termos existentes:**
 - **Template**: Modelo de contrato com placeholders e campos
@@ -2802,10 +3456,28 @@ Este documento técnico fornece uma visão completa do fluxo de dados do sistema
 
 - **formatDateToBrazilian**: Função utilitária que converte datas de formato ISO (YYYY-MM-DD) para formato brasileiro (dd/mm/yyyy)
 
+**Novos termos v3.1/v3.2:**
+
+- **AuthContext**: Contexto React que gerencia estado de autenticação (user, session, isAdmin)
+
+- **ProtectedRoute**: Componente HOC que protege rotas requerendo autenticação ou role específica
+
+- **saved_contracts**: Tabela Supabase que armazena contratos em progresso com estado completo serializado em JSONB
+
+- **useAutoSave**: Hook customizado que gerencia salvamento automático com múltiplos triggers
+
+- **RLS (Row Level Security)**: Políticas de segurança do Supabase que isolam dados por usuário
+
+- **user_roles**: Tabela que armazena roles de usuário (admin/user) separada de profiles por segurança
+
+- **has_role()**: Função SQL SECURITY DEFINER que verifica se usuário possui determinada role
+
+- **currentSavedContractId**: Estado que rastreia o ID do contrato salvo atual para updates via upsert
+
 ---
 
 ## Conclusão
 
-Este documento técnico fornece uma visão completa do fluxo de dados do sistema de geração de contratos, incluindo todas as funcionalidades implementadas até a versão 2.3.0.
+Este documento técnico fornece uma visão completa do fluxo de dados do sistema de geração de contratos, incluindo todas as funcionalidades implementadas até a versão 3.2 com sistema completo de autenticação, persistência de contratos, auto-save, e gerenciamento via página Meus Contratos.
 
 Para dúvidas ou sugestões, consulte o código-fonte diretamente ou entre em contato com a equipe de desenvolvimento.
