@@ -1473,6 +1473,11 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       state: "",
       partyType: "Contratante",
       category: "main" as const,
+      personType: "PF" as const,      // ✅ v3.2: Padrão PF
+      hasRepresentative: false,
+      representativeName: "",
+      representativeRole: "",
+      representativeCpf: "",
     }));
     setPartiesData(initialParties);
     setCurrentPartyIndex(0);
@@ -1494,6 +1499,11 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       state: "",
       partyType: "Testemunha",
       category: "other" as const,
+      personType: "PF" as const,      // ✅ v3.2: Padrão PF
+      hasRepresentative: false,
+      representativeName: "",
+      representativeRole: "",
+      representativeCpf: "",
     }));
     setOtherPartiesData(initialOtherParties);
   };
@@ -1542,7 +1552,28 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // ✅ v3.2: Formatação de qualificação com suporte a PF/PJ
   const formatPartyQualification = (party: PartyData): string => {
+    const personType = party.personType || 'PF'; // Retrocompatibilidade
+    
+    if (personType === 'PJ') {
+      // ========== PESSOA JURÍDICA ==========
+      let qualification = `**${party.fullName.toUpperCase()}**, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº ${party.cpf}, com sede em ${party.address}, ${party.city}, ${party.state}`;
+      
+      if (party.email) {
+        qualification += `, e-mail ${party.email}`;
+      }
+      
+      // Representante Legal
+      if (party.hasRepresentative && party.representativeName) {
+        qualification += `, neste ato representada por **${party.representativeName.toUpperCase()}**, ${party.representativeRole || 'representante legal'}, inscrito(a) no CPF sob o nº ${party.representativeCpf}`;
+      }
+      
+      qualification += `, na qualidade de **${party.partyType.toUpperCase()}**.`;
+      return qualification;
+    }
+    
+    // ========== PESSOA FÍSICA (comportamento original) ==========
     let qualification = `**${party.fullName.toUpperCase()}**, ${party.nationality}, ${party.maritalStatus}`;
 
     if (party.profession) {
@@ -1574,7 +1605,20 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     return "\n\nE AINDA:\n\n" + qualifications.join("\n\n");
   };
 
+  // ✅ v3.2: Formatação de bloco de assinatura com suporte a PF/PJ
   const formatSignatureBlock = (party: PartyData): string => {
+    const personType = party.personType || 'PF'; // Retrocompatibilidade
+    
+    if (personType === 'PJ') {
+      if (party.hasRepresentative && party.representativeName) {
+        // PJ com representante
+        return `_________________________\n${party.fullName}\nCNPJ: ${party.cpf}\nNeste ato por: ${party.representativeName}\nCPF: ${party.representativeCpf}\n${party.partyType}`;
+      }
+      // PJ sem representante
+      return `_________________________\n${party.fullName}\nCNPJ: ${party.cpf}\n${party.partyType}`;
+    }
+    
+    // PF (comportamento original)
     return `_________________________\n${party.fullName}\nCPF: ${party.cpf}\n${party.partyType}`;
   };
 
