@@ -6,10 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, ArrowRight, User, HelpCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, User, HelpCircle, Building2, UserCheck } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { PartyData } from '../../types/template';
+import { formatCPF, formatCNPJ, getDocumentMaxLength, getDocumentPlaceholder } from '@/utils/formatters';
 
 interface PartyDataCardProps {
   partyIndex: number;
@@ -26,6 +29,9 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty, category = 'main', 
   const [showAddTypeModal, setShowAddTypeModal] = useState(false);
   const [newTypeName, setNewTypeName] = useState('');
   const [newTypeDescription, setNewTypeDescription] = useState('');
+
+  // Garantir retrocompatibilidade - se personType não existir, assume PF
+  const personType = partyData.personType || 'PF';
 
   useEffect(() => {
     if (inputRef.current) {
@@ -53,34 +59,72 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty, category = 'main', 
     }
   };
 
-  const updateField = (field: keyof PartyData, value: string) => {
+  const updateField = (field: keyof PartyData, value: string | boolean) => {
     const updatedParty = { ...partyData, [field]: value };
     updatePartyData(partyIndex, updatedParty, category === 'other');
   };
 
+  const handlePersonTypeChange = (newType: 'PF' | 'PJ') => {
+    // Ao mudar o tipo de pessoa, limpar campos específicos
+    const updatedParty = { 
+      ...partyData, 
+      personType: newType,
+      // Limpar documento ao trocar tipo
+      cpf: '',
+      // Limpar campos PF se mudar para PJ
+      ...(newType === 'PJ' && {
+        nationality: '',
+        maritalStatus: '',
+        profession: '',
+      }),
+      // Limpar campos de representante se mudar para PF
+      ...(newType === 'PF' && {
+        hasRepresentative: false,
+        representativeName: '',
+        representativeRole: '',
+        representativeCpf: '',
+      }),
+    };
+    updatePartyData(partyIndex, updatedParty, category === 'other');
+  };
+
   const canProceed = () => {
-    return partyData.fullName.trim() !== '' && 
-           partyData.nationality.trim() !== '' &&
-           partyData.maritalStatus.trim() !== '' &&
-           partyData.cpf.trim() !== '' &&
-           partyData.address.trim() !== '' &&
-           partyData.city.trim() !== '' &&
-           partyData.state.trim() !== '' &&
-           partyData.partyType.trim() !== '';
-  };
-
-  const formatCPF = (value: string) => {
-    const cleaned = value.replace(/\D/g, '');
-    const match = cleaned.match(/^(\d{3})(\d{3})(\d{3})(\d{2})$/);
-    if (match) {
-      return `${match[1]}.${match[2]}.${match[3]}-${match[4]}`;
+    // Campos base obrigatórios para PF e PJ
+    const baseFields = 
+      partyData.fullName.trim() !== '' &&
+      partyData.cpf.trim() !== '' &&
+      partyData.address.trim() !== '' &&
+      partyData.city.trim() !== '' &&
+      partyData.state.trim() !== '' &&
+      partyData.partyType.trim() !== '';
+    
+    if (personType === 'PJ') {
+      // PJ não precisa de nationality/maritalStatus
+      if (partyData.hasRepresentative) {
+        // Se tem representante, precisa preencher os dados dele
+        return baseFields && 
+          (partyData.representativeName?.trim() || '') !== '' &&
+          (partyData.representativeRole?.trim() || '') !== '' &&
+          (partyData.representativeCpf?.trim() || '') !== '';
+      }
+      return baseFields;
     }
-    return cleaned;
+    
+    // PF precisa de nationality/maritalStatus
+    return baseFields && 
+      partyData.nationality.trim() !== '' &&
+      partyData.maritalStatus.trim() !== '';
   };
 
-  const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatCPF(e.target.value);
+  const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const formatted = personType === 'PJ' ? formatCNPJ(value) : formatCPF(value);
     updateField('cpf', formatted);
+  };
+
+  const handleRepresentativeCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCPF(e.target.value);
+    updateField('representativeCpf', formatted);
   };
 
   const handleAddNewType = async () => {
@@ -103,15 +147,29 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty, category = 'main', 
   const getHelpText = () => {
     if (category === 'main') {
       return {
-        fullName: "Nome completo conforme documento de identidade da parte principal",
-        cpf: "CPF necessário para identificação legal da parte contratante",
-        partyType: "Tipo de participação principal no contrato"
+        fullName: personType === 'PJ' 
+          ? "Razão Social conforme contrato social ou CNPJ" 
+          : "Nome completo conforme documento de identidade da parte principal",
+        document: personType === 'PJ'
+          ? "CNPJ necessário para identificação legal da empresa"
+          : "CPF necessário para identificação legal da parte contratante",
+        partyType: "Tipo de participação principal no contrato",
+        address: personType === 'PJ'
+          ? "Endereço da sede da empresa"
+          : "Endereço residencial completo"
       };
     } else {
       return {
-        fullName: "Nome completo da testemunha/fiador/avalista conforme documento",
-        cpf: "CPF necessário para validação legal do documento",
-        partyType: "Função desta parte no contrato (testemunha, fiador, etc.)"
+        fullName: personType === 'PJ'
+          ? "Razão Social da empresa testemunha/fiadora"
+          : "Nome completo da testemunha/fiador/avalista conforme documento",
+        document: personType === 'PJ'
+          ? "CNPJ necessário para validação legal do documento"
+          : "CPF necessário para validação legal do documento",
+        partyType: "Função desta parte no contrato (testemunha, fiador, etc.)",
+        address: personType === 'PJ'
+          ? "Endereço da sede da empresa"
+          : "Endereço residencial completo"
       };
     }
   };
@@ -124,7 +182,11 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty, category = 'main', 
         <CardHeader className="text-center pb-4">
           <div className="flex justify-center mb-4">
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-              <User className="w-8 h-8 text-primary" />
+              {personType === 'PJ' ? (
+                <Building2 className="w-8 h-8 text-primary" />
+              ) : (
+                <User className="w-8 h-8 text-primary" />
+              )}
             </div>
           </div>
           <div className="flex items-center justify-center gap-2 mb-2">
@@ -143,10 +205,33 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty, category = 'main', 
         </CardHeader>
         
         <CardContent className="space-y-4">
+          {/* ✅ Seletor de Tipo de Pessoa (PF/PJ) */}
+          <div className="flex justify-center gap-4 p-4 bg-muted/30 rounded-lg">
+            <Button
+              type="button"
+              variant={personType === 'PF' ? 'default' : 'outline'}
+              className="flex items-center gap-2 flex-1 max-w-[200px]"
+              onClick={() => handlePersonTypeChange('PF')}
+            >
+              <User className="w-4 h-4" />
+              Pessoa Física
+            </Button>
+            <Button
+              type="button"
+              variant={personType === 'PJ' ? 'default' : 'outline'}
+              className="flex items-center gap-2 flex-1 max-w-[200px]"
+              onClick={() => handlePersonTypeChange('PJ')}
+            >
+              <Building2 className="w-4 h-4" />
+              Pessoa Jurídica
+            </Button>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Nome Completo / Razão Social */}
             <div className="md:col-span-2 space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
-                Nome Completo *
+                {personType === 'PJ' ? 'Razão Social' : 'Nome Completo'} *
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
@@ -163,69 +248,75 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty, category = 'main', 
                 value={partyData.fullName}
                 onChange={(e) => updateField('fullName', e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Ex: João Silva Santos"
+                placeholder={personType === 'PJ' ? 'Ex: Empresa ABC Ltda' : 'Ex: João Silva Santos'}
                 className="text-base font-bold"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Nacionalidade *</label>
-              <Input
-                value={partyData.nationality}
-                onChange={(e) => updateField('nationality', e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Ex: Brasileira"
-                className="text-base"
-              />
-            </div>
+            {/* Campos apenas para Pessoa Física */}
+            {personType === 'PF' && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Nacionalidade *</label>
+                  <Input
+                    value={partyData.nationality}
+                    onChange={(e) => updateField('nationality', e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Ex: Brasileira"
+                    className="text-base"
+                  />
+                </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Estado Civil *</label>
-              <Select value={partyData.maritalStatus} onValueChange={(value) => updateField('maritalStatus', value)}>
-                <SelectTrigger className="text-base">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Solteiro(a)">Solteiro(a)</SelectItem>
-                  <SelectItem value="Casado(a)">Casado(a)</SelectItem>
-                  <SelectItem value="Divorciado(a)">Divorciado(a)</SelectItem>
-                  <SelectItem value="Viúvo(a)">Viúvo(a)</SelectItem>
-                  <SelectItem value="União Estável">União Estável</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Estado Civil *</label>
+                  <Select value={partyData.maritalStatus} onValueChange={(value) => updateField('maritalStatus', value)}>
+                    <SelectTrigger className="text-base">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Solteiro(a)">Solteiro(a)</SelectItem>
+                      <SelectItem value="Casado(a)">Casado(a)</SelectItem>
+                      <SelectItem value="Divorciado(a)">Divorciado(a)</SelectItem>
+                      <SelectItem value="Viúvo(a)">Viúvo(a)</SelectItem>
+                      <SelectItem value="União Estável">União Estável</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Profissão</label>
-              <Input
-                value={partyData.profession || ''}
-                onChange={(e) => updateField('profession', e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Ex: Engenheiro Civil"
-                className="text-base"
-              />
-            </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Profissão</label>
+                  <Input
+                    value={partyData.profession || ''}
+                    onChange={(e) => updateField('profession', e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Ex: Engenheiro Civil"
+                    className="text-base"
+                  />
+                </div>
+              </>
+            )}
 
+            {/* CPF ou CNPJ */}
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
-                CPF *
+                {personType === 'PJ' ? 'CNPJ' : 'CPF'} *
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
                       <HelpCircle className="w-4 h-4 text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{helpTexts.cpf}</p>
+                      <p>{helpTexts.document}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </label>
               <Input
                 value={partyData.cpf}
-                onChange={handleCPFChange}
+                onChange={handleDocumentChange}
                 onKeyPress={handleKeyPress}
-                placeholder="000.000.000-00"
-                maxLength={14}
+                placeholder={getDocumentPlaceholder(personType)}
+                maxLength={getDocumentMaxLength(personType)}
                 className="text-base"
               />
             </div>
@@ -237,7 +328,7 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty, category = 'main', 
                 value={partyData.email || ''}
                 onChange={(e) => updateField('email', e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Ex: joao@exemplo.com"
+                placeholder={personType === 'PJ' ? 'Ex: contato@empresa.com' : 'Ex: joao@exemplo.com'}
                 className="text-base"
               />
             </div>
@@ -285,12 +376,24 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty, category = 'main', 
             </div>
 
             <div className="md:col-span-2 space-y-2">
-              <label className="text-sm font-medium">Endereço Completo *</label>
+              <label className="text-sm font-medium flex items-center gap-2">
+                {personType === 'PJ' ? 'Endereço da Sede' : 'Endereço Completo'} *
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="w-4 h-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{helpTexts.address}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </label>
               <Input
                 value={partyData.address}
                 onChange={(e) => updateField('address', e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Ex: Rua das Flores, 123, Apt 45, Centro"
+                placeholder={personType === 'PJ' ? 'Ex: Av. Paulista, 1000, Sala 1501, Bela Vista' : 'Ex: Rua das Flores, 123, Apt 45, Centro'}
                 className="text-base"
               />
             </div>
@@ -318,10 +421,88 @@ const PartyDataCard = ({ partyIndex, partyData, isLastParty, category = 'main', 
             </div>
           </div>
 
+          {/* ✅ Seção de Representante Legal (apenas para PJ) */}
+          {personType === 'PJ' && (
+            <div className="border-t pt-4 mt-4">
+              <div className="flex items-center space-x-2 mb-4">
+                <Checkbox
+                  id={`representative-${partyIndex}`}
+                  checked={partyData.hasRepresentative || false}
+                  onCheckedChange={(checked) => updateField('hasRepresentative', checked === true)}
+                />
+                <Label 
+                  htmlFor={`representative-${partyIndex}`} 
+                  className="text-sm font-medium flex items-center gap-2 cursor-pointer"
+                >
+                  <UserCheck className="w-4 h-4 text-primary" />
+                  Adicionar Representante Legal
+                </Label>
+              </div>
+
+              {partyData.hasRepresentative && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-primary/5 rounded-lg border border-primary/20">
+                  <div className="md:col-span-2">
+                    <Badge variant="outline" className="mb-3">
+                      <UserCheck className="w-3 h-3 mr-1" />
+                      Dados do Representante Legal
+                    </Badge>
+                  </div>
+
+                  <div className="md:col-span-2 space-y-2">
+                    <label className="text-sm font-medium">Nome Completo do Representante *</label>
+                    <Input
+                      value={partyData.representativeName || ''}
+                      onChange={(e) => updateField('representativeName', e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Ex: Maria Santos Silva"
+                      className="text-base"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Cargo/Função *</label>
+                    <Select 
+                      value={partyData.representativeRole || ''} 
+                      onValueChange={(value) => updateField('representativeRole', value)}
+                    >
+                      <SelectTrigger className="text-base">
+                        <SelectValue placeholder="Selecione o cargo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Sócio-Administrador">Sócio-Administrador</SelectItem>
+                        <SelectItem value="Sócio">Sócio</SelectItem>
+                        <SelectItem value="Diretor">Diretor</SelectItem>
+                        <SelectItem value="Diretor Executivo">Diretor Executivo</SelectItem>
+                        <SelectItem value="Presidente">Presidente</SelectItem>
+                        <SelectItem value="Procurador">Procurador</SelectItem>
+                        <SelectItem value="Representante Legal">Representante Legal</SelectItem>
+                        <SelectItem value="Gerente">Gerente</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">CPF do Representante *</label>
+                    <Input
+                      value={partyData.representativeCpf || ''}
+                      onChange={handleRepresentativeCpfChange}
+                      onKeyPress={handleKeyPress}
+                      placeholder="000.000.000-00"
+                      maxLength={14}
+                      className="text-base"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {!canProceed() && (
             <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
               <p className="text-sm text-destructive">
-                Todos os campos são obrigatórios para continuar.
+                {personType === 'PJ' && partyData.hasRepresentative
+                  ? 'Preencha todos os campos obrigatórios, incluindo os dados do representante legal.'
+                  : 'Todos os campos marcados com * são obrigatórios para continuar.'}
               </p>
             </div>
           )}

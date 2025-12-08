@@ -70,17 +70,26 @@ export interface RepeatableFieldResponse {
 
 export interface PartyData {
   id: string;
-  fullName: string;
-  nationality: string;
-  maritalStatus: string;
-  profession?: string;  // Novo campo opcional
-  cpf: string;
-  email?: string;       // Novo campo opcional
-  address: string;
+  fullName: string;           // PF: Nome Completo | PJ: Razão Social
+  nationality: string;        // PF only
+  maritalStatus: string;      // PF only
+  profession?: string;        // PF only (opcional)
+  cpf: string;                // PF: CPF | PJ: CNPJ
+  email?: string;             // Opcional
+  address: string;            // PF: endereço residencial | PJ: sede
   city: string;
   state: string;
   partyType: string;
   category: 'main' | 'other';
+  
+  // ✅ Suporte a Pessoa Jurídica (v3.2)
+  personType: 'PF' | 'PJ';    // Padrão: 'PF' (retrocompatibilidade)
+  
+  // Representante Legal (apenas quando personType === 'PJ')
+  hasRepresentative?: boolean;    // Toggle para habilitar representante
+  representativeName?: string;    // Nome completo do representante
+  representativeRole?: string;    // Cargo: "Sócio-Administrador", "Diretor", etc.
+  representativeCpf?: string;     // CPF do representante
 }
 
 export interface ContractTemplate {
