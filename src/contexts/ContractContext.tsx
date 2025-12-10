@@ -17,7 +17,7 @@ interface SavedContract {
   user_id: string;
   template_id: string | null;
   name: string;
-  status: 'draft' | 'completed' | 'archived';
+  status: "draft" | "completed" | "archived";
   form_values: Record<string, string>;
   parties_data: PartyData[];
   number_of_parties: number;
@@ -382,8 +382,8 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const resetForm = () => {
-    console.log('[RESET] Resetting form and clearing all state');
-    
+    console.log("[RESET] Resetting form and clearing all state");
+
     setFormValues({});
     setSelectedTemplate(null);
     setCurrentQuestionIndex(-1);
@@ -397,8 +397,8 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     setHasOtherParties(false); // ✅ Resetar decisão sobre outras partes
     setLocationData({ city: "", state: "", date: "" });
     setRepeatableFieldsData([]);
-    
-    console.log('[RESET] ✅ Form reset completed');
+
+    console.log("[RESET] ✅ Form reset completed");
   };
 
   const startQuestionnaire = () => {
@@ -439,8 +439,8 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
    * @param {boolean} value - O novo valor (true=Sim, false=Não) para 'hasOtherParties'.
    */
   const updateHasOtherParties = (value: boolean) => {
-    console.log('[CLEANUP] updateHasOtherParties called:', { value });
-    
+    console.log("[CLEANUP] updateHasOtherParties called:", { value });
+
     // 1. Atualiza o estado de controle principal
     setHasOtherParties(value);
 
@@ -448,15 +448,15 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     if (value === false) {
       // Se o usuário "desistiu" de incluir outras partes,
       // limpamos proativamente os estados dependentes.
-      console.log('[CLEANUP] hasOtherParties set to false. Cleaning up dependent state:', {
+      console.log("[CLEANUP] hasOtherParties set to false. Cleaning up dependent state:", {
         previousNumberOfOtherParties: numberOfOtherParties,
-        previousOtherPartiesDataLength: otherPartiesData.length
+        previousOtherPartiesDataLength: otherPartiesData.length,
       });
-      
+
       setNumberOfOtherPartiesState(0);
       setOtherPartiesData([]);
-      
-      console.log('[CLEANUP] ✅ Dependent state cleaned successfully.');
+
+      console.log("[CLEANUP] ✅ Dependent state cleaned successfully.");
     }
   };
 
@@ -511,11 +511,11 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     // Other Parties Question (-4) → Other Parties Number (-5) ou pular
     if (currentQuestionIndex === -4) {
       if (option === "withOtherParties") {
-        console.log('[NAVIGATION] User chose to include other parties');
+        console.log("[NAVIGATION] User chose to include other parties");
         updateHasOtherParties(true); // ✅ Atualizar estado (sem limpeza)
         setCurrentQuestionIndex(-5);
       } else {
-        console.log('[NAVIGATION] User chose NOT to include other parties');
+        console.log("[NAVIGATION] User chose NOT to include other parties");
         updateHasOtherParties(false); // ✅ Atualizar estado + LIMPAR dados
         // Pular outras partes, ir para repeatable fields ou location
         transitionFromOtherPartiesToNext();
@@ -732,7 +732,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
 
     // Other Parties Number (-5) → Other Parties Question (-4)
     if (currentQuestionIndex === -5) {
-      console.log('[NAVIGATION] Going back from Other Parties Number to Other Parties Question');
+      console.log("[NAVIGATION] Going back from Other Parties Number to Other Parties Question");
       // Nota: NÃO limpamos dados aqui, pois o usuário pode estar apenas revisando
       setCurrentQuestionIndex(-4);
       return;
@@ -1140,14 +1140,16 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   // Contract Persistence Functions
   const saveContract = async (name?: string, showToast: boolean = false): Promise<string | null> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user || !selectedTemplate) return null;
 
       const contractData: any = {
         user_id: user.id,
         template_id: selectedTemplate.id,
-        name: name || `${selectedTemplate.name} - ${new Date().toLocaleDateString('pt-BR')}`,
-        status: currentQuestionIndex === 9999 ? 'completed' : 'draft',
+        name: name || `${selectedTemplate.name} - ${new Date().toLocaleDateString("pt-BR")}`,
+        status: currentQuestionIndex === 9999 ? "completed" : "draft",
         form_values: formValues,
         parties_data: partiesData,
         number_of_parties: numberOfParties,
@@ -1167,29 +1169,25 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         contractData.id = currentSavedContractId;
       }
 
-      const { data, error } = await supabase
-        .from('saved_contracts')
-        .upsert([contractData])
-        .select()
-        .single();
+      const { data, error } = await supabase.from("saved_contracts").upsert([contractData]).select().single();
 
       if (error) throw error;
 
       if (data) {
         setCurrentSavedContractId(data.id);
-        
+
         // Show toast only if explicitly requested (for manual saves)
         if (showToast) {
-          toast.success('Contrato salvo com sucesso!');
+          toast.success("Contrato salvo com sucesso!");
         }
-        
+
         return data.id;
       }
 
       return null;
     } catch (error) {
-      console.error('Erro ao salvar contrato:', error);
-      toast.error('Erro ao salvar contrato');
+      console.error("Erro ao salvar contrato:", error);
+      toast.error("Erro ao salvar contrato");
       return null;
     }
   };
@@ -1197,13 +1195,13 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   const loadContract = async (contractId: string): Promise<boolean> => {
     try {
       const { data, error } = await supabase
-        .from('saved_contracts')
-        .select('*, contract_templates(*)')
-        .eq('id', contractId)
+        .from("saved_contracts")
+        .select("*, contract_templates(*)")
+        .eq("id", contractId)
         .single();
 
       if (error || !data) {
-        toast.error('Erro ao carregar contrato');
+        toast.error("Erro ao carregar contrato");
         return false;
       }
 
@@ -1215,56 +1213,57 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       setOtherPartiesData((data.other_parties_data || []) as any);
       setNumberOfOtherPartiesState(data.number_of_other_parties || 0);
       setHasOtherParties(data.has_other_parties || false);
-      setLocationData((data.location_data || { city: '', state: '', date: new Date().toISOString().split('T')[0] }) as any);
+      setLocationData(
+        (data.location_data || { city: "", state: "", date: new Date().toISOString().split("T")[0] }) as any,
+      );
       setRepeatableFieldsData((data.repeatable_fields_data || []) as any);
       setCurrentQuestionIndex(data.current_question_index || -1);
       setCurrentPartyLoopIndex(data.current_party_loop_index || 0);
       setCurrentSavedContractId(contractId);
       setIsQuestionnaireMode(true);
 
-      toast.success('Contrato carregado com sucesso!');
+      toast.success("Contrato carregado com sucesso!");
       return true;
     } catch (error) {
-      console.error('Erro ao carregar contrato:', error);
-      toast.error('Erro ao carregar contrato');
+      console.error("Erro ao carregar contrato:", error);
+      toast.error("Erro ao carregar contrato");
       return false;
     }
   };
 
   const listUserContracts = async (): Promise<SavedContract[]> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return [];
 
       const { data, error } = await supabase
-        .from('saved_contracts')
-        .select('id, name, status, template_id, updated_at, contract_templates(name)')
-        .eq('user_id', user.id)
-        .order('updated_at', { ascending: false });
+        .from("saved_contracts")
+        .select("id, name, status, template_id, updated_at, contract_templates(name)")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false });
 
       if (error) throw error;
 
-      return data as SavedContract[] || [];
+      return (data as SavedContract[]) || [];
     } catch (error) {
-      console.error('Erro ao listar contratos:', error);
+      console.error("Erro ao listar contratos:", error);
       return [];
     }
   };
 
   const deleteContract = async (contractId: string): Promise<boolean> => {
     try {
-      const { error } = await supabase
-        .from('saved_contracts')
-        .delete()
-        .eq('id', contractId);
+      const { error } = await supabase.from("saved_contracts").delete().eq("id", contractId);
 
       if (error) throw error;
 
-      toast.success('Contrato excluído com sucesso!');
+      toast.success("Contrato excluído com sucesso!");
       return true;
     } catch (error) {
-      console.error('Erro ao excluir contrato:', error);
-      toast.error('Erro ao excluir contrato');
+      console.error("Erro ao excluir contrato:", error);
+      toast.error("Erro ao excluir contrato");
       return false;
     }
   };
@@ -1473,7 +1472,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       state: "",
       partyType: "Contratante",
       category: "main" as const,
-      personType: "PF" as const,      // ✅ v3.2: Padrão PF
+      personType: "PF" as const, // ✅ v3.2: Padrão PF
       hasRepresentative: false,
       representativeName: "",
       representativeRole: "",
@@ -1499,7 +1498,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       state: "",
       partyType: "Testemunha",
       category: "other" as const,
-      personType: "PF" as const,      // ✅ v3.2: Padrão PF
+      personType: "PF" as const, // ✅ v3.2: Padrão PF
       hasRepresentative: false,
       representativeName: "",
       representativeRole: "",
@@ -1554,25 +1553,25 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
 
   // ✅ v3.2: Formatação de qualificação com suporte a PF/PJ
   const formatPartyQualification = (party: PartyData): string => {
-    const personType = party.personType || 'PF'; // Retrocompatibilidade
-    
-    if (personType === 'PJ') {
+    const personType = party.personType || "PF"; // Retrocompatibilidade
+
+    if (personType === "PJ") {
       // ========== PESSOA JURÍDICA ==========
       let qualification = `**${party.fullName.toUpperCase()}**, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº ${party.cpf}, com sede em ${party.address}, ${party.city}, ${party.state}`;
-      
+
       if (party.email) {
         qualification += `, e-mail ${party.email}`;
       }
-      
+
       // Representante Legal
       if (party.hasRepresentative && party.representativeName) {
-        qualification += `, neste ato representada por **${party.representativeName.toUpperCase()}**, ${party.representativeRole || 'representante legal'}, inscrito(a) no CPF sob o nº ${party.representativeCpf}`;
+        qualification += `, neste ato representada por **${party.representativeName.toUpperCase()}**, ${party.representativeRole || "representante legal"}, inscrito(a) no CPF sob o nº ${party.representativeCpf}`;
       }
-      
+
       qualification += `, na qualidade de **${party.partyType.toUpperCase()}**.`;
       return qualification;
     }
-    
+
     // ========== PESSOA FÍSICA (comportamento original) ==========
     let qualification = `**${party.fullName.toUpperCase()}**, ${party.nationality}, ${party.maritalStatus}`;
 
@@ -1607,17 +1606,17 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
 
   // ✅ v3.2: Formatação de bloco de assinatura com suporte a PF/PJ
   const formatSignatureBlock = (party: PartyData): string => {
-    const personType = party.personType || 'PF'; // Retrocompatibilidade
-    
-    if (personType === 'PJ') {
+    const personType = party.personType || "PF"; // Retrocompatibilidade
+
+    if (personType === "PJ") {
       if (party.hasRepresentative && party.representativeName) {
         // PJ com representante
-        return `_________________________\n${party.fullName}\nCNPJ: ${party.cpf}\nNeste ato por: ${party.representativeName}\nCPF: ${party.representativeCpf}\n${party.partyType}`;
+        return `_________________________\n${party.fullName}\nCNPJ: ${party.cpf}\nNeste ato representada por: ${party.representativeName}\nCPF: ${party.representativeCpf}\n${party.partyType}`;
       }
       // PJ sem representante
       return `_________________________\n${party.fullName}\nCNPJ: ${party.cpf}\n${party.partyType}`;
     }
-    
+
     // PF (comportamento original)
     return `_________________________\n${party.fullName}\nCPF: ${party.cpf}\n${party.partyType}`;
   };
