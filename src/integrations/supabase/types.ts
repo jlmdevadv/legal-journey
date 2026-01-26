@@ -24,6 +24,7 @@ export type Database = {
           is_default: boolean | null
           last_modified_by: string | null
           name: string
+          organization_id: string | null
           template: string
           updated_at: string | null
           use_party_system: boolean | null
@@ -38,6 +39,7 @@ export type Database = {
           is_default?: boolean | null
           last_modified_by?: string | null
           name: string
+          organization_id?: string | null
           template: string
           updated_at?: string | null
           use_party_system?: boolean | null
@@ -52,10 +54,46 @@ export type Database = {
           is_default?: boolean | null
           last_modified_by?: string | null
           name?: string
+          organization_id?: string | null
           template?: string
           updated_at?: string | null
           use_party_system?: boolean | null
           version?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          owner_user_id: string
+          templates_limit: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          owner_user_id: string
+          templates_limit?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          owner_user_id?: string
+          templates_limit?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -219,6 +257,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_master_account: {
+        Args: { _organization_name: string; _user_email: string }
+        Returns: string
+      }
+      get_user_organization: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          name: string
+          templates_limit: number
+        }[]
+      }
       get_user_role: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
@@ -230,10 +281,11 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_master: { Args: { _user_id?: string }; Returns: boolean }
       promote_user_to_admin: { Args: { user_email: string }; Returns: string }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "master"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -361,7 +413,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "master"],
     },
   },
 } as const
