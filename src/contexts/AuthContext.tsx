@@ -3,11 +3,20 @@ import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+interface Organization {
+  id: string;
+  name: string;
+  templates_limit: number;
+  created_at: string;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
   isAdmin: boolean;
+  isMaster: boolean;
+  organization: Organization | null;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: AuthError | null }>;
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
@@ -20,6 +29,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isMaster, setIsMaster] = useState(false);
+  const [organization, setOrganization] = useState<Organization | null>(null);
   const { toast } = useToast();
 
   // Check if user is admin
@@ -38,6 +49,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Check if user is master and fetch organization
+  const checkMasterRole = async (userId: string) => {
+    try {
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'master')
+        .maybeSingle();
+
+      if (rolesError || !roles) {
+        setIsMaster(false);
+        setOrganization(null);
+        return;
+      }
+
+      setIsMaster(true);
+
+      const { data: orgData, error: orgError } = await supabase
+        .rpc('get_user_organization');
+
+      if (!orgError && orgData && orgData.length > 0) {
+        setOrganization(orgData[0] as Organization);
+      } else {
+        setOrganization(null);
+      }
+    } catch (error) {
+      setIsMaster(false);
+      setOrganization(null);
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -45,13 +88,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
-        // Defer admin check
+        // Defer role checks
         if (currentSession?.user) {
           setTimeout(() => {
             checkAdminStatus(currentSession.user.id);
+            checkMasterRole(currentSession.user.id);
           }, 0);
         } else {
           setIsAdmin(false);
+          setIsMaster(false);
+          setOrganization(null);
         }
         
         setIsLoading(false);
@@ -65,6 +111,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (currentSession?.user) {
         checkAdminStatus(currentSession.user.id);
+        checkMasterRole(currentSession.user.id);
       }
       
       setIsLoading(false);
@@ -142,6 +189,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await supabase.auth.signOut();
       setIsAdmin(false);
+      setIsMaster(false);
+      setOrganization(null);
       toast({
         title: "Logout realizado",
         description: "Você saiu da sua conta."
@@ -162,6 +211,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         session,
         isLoading,
         isAdmin,
+        isMaster,
+        organization,
         signUp,
         signIn,
         signOut
