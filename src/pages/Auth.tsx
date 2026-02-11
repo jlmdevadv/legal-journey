@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,17 +26,32 @@ const signupSchema = z.object({
 
 const Auth = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, signIn, signUp, isLoading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const params = new URLSearchParams(location.search);
+  const isTemplateRedirect = params.get('redirect') === 'template';
+
   // Redirect if already logged in
   useEffect(() => {
     if (user && !isLoading) {
-      navigate('/');
+      if (isTemplateRedirect) {
+        const pendingTemplateId = sessionStorage.getItem('pendingTemplateId');
+        if (pendingTemplateId) {
+          sessionStorage.removeItem('pendingTemplateId');
+          navigate('/', { 
+            state: { autoSelectTemplateId: pendingTemplateId },
+            replace: true 
+          });
+          return;
+        }
+      }
+      navigate('/', { replace: true });
     }
-  }, [user, isLoading, navigate]);
+  }, [user, isLoading, navigate, isTemplateRedirect]);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -137,6 +152,13 @@ const Auth = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {isTemplateRedirect && (
+            <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+              <p className="text-sm text-foreground text-center">
+                Faça login ou cadastre-se para continuar com seu documento.
+              </p>
+            </div>
+          )}
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="login">Entrar</TabsTrigger>

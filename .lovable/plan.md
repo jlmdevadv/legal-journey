@@ -22,3 +22,14 @@ Implementado: `isMaster`, `organization`, `checkMasterRole()` no AuthContext. Re
 - Contagem real de documentos pendentes/finalizados - placeholders zerados
 - Enforcement de limites no backend - apenas exibicao visual
 - Sistema de notificacoes
+
+## Fase 1.0.4 - Auth Obrigatório para Preenchimento ✅
+
+### Implementado
+
+- Gate de autenticação no `TemplateSelector`: usuários não logados são redirecionados para `/auth?redirect=template`
+- Template ID salvo em `sessionStorage` para recuperação pós-login
+- Mensagem contextual na tela de auth quando vindo de seleção de template
+- Auto-seleção de template no retorno após login/cadastro via `location.state`
+- Toast de confirmação ao auto-selecionar template
+- Limpeza do state da URL após auto-seleção
