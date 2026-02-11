@@ -105,4 +105,5 @@ export interface ContractTemplate {
   is_default?: boolean;
   created_by?: string;
   last_modified_by?: string;
+  organization_id?: string | null;
 }

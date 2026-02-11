@@ -6,9 +6,12 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ContractProvider } from "@/contexts/ContractContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import MasterProtectedRoute from "@/components/auth/MasterProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import MeusContratos from "./pages/MeusContratos";
+import MasterDashboard from "./pages/MasterDashboard";
+import MasterTemplateEditor from "./pages/MasterTemplateEditor";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +34,22 @@ const App = () => (
                     <MeusContratos />
                   </ProtectedRoute>
                 } 
+              />
+              <Route
+                path="/master"
+                element={
+                  <MasterProtectedRoute>
+                    <MasterDashboard />
+                  </MasterProtectedRoute>
+                }
+              />
+              <Route
+                path="/master/template/:templateId"
+                element={
+                  <MasterProtectedRoute>
+                    <MasterTemplateEditor />
+                  </MasterProtectedRoute>
+                }
               />
               <Route path="*" element={<NotFound />} />
             </Routes>
