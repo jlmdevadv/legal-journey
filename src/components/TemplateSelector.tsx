@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useContract } from '../contexts/ContractContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,8 +17,8 @@ const TemplateSelector = () => {
     renameTemplate
   } = useContract();
   
-  const { isAdmin } = useAuth();
-
+  const { isAdmin, user } = useAuth();
+  const navigate = useNavigate();
   const [renameModalOpen, setRenameModalOpen] = useState(false);
   const [templateToRename, setTemplateToRename] = useState<any>(null);
 
@@ -71,7 +72,14 @@ const TemplateSelector = () => {
           <Card 
             key={template.id} 
             className="cursor-pointer hover:shadow-md transition-all border border-gray-100 hover:border-blue-200 group overflow-hidden"
-            onClick={() => selectTemplate(template)}
+            onClick={() => {
+              if (!user) {
+                sessionStorage.setItem('pendingTemplateId', template.id);
+                navigate('/auth?redirect=template');
+                return;
+              }
+              selectTemplate(template);
+            }}
           >
             <CardHeader className="bg-white border-b relative pb-3">
               <CardTitle className="flex items-center gap-2 text-contractPrimary">

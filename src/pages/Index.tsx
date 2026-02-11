@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import TemplateSelector from '../components/TemplateSelector';
 import ContractForm from '../components/ContractForm';
@@ -10,6 +11,7 @@ import { useContract } from '../contexts/ContractContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { HelpCircle, Info, PlayCircle, Bot, ChevronDown, ChevronUp, BookOpen, GraduationCap, Users, Save } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -128,9 +130,32 @@ const ContractContent = () => {
     finishEditingTemplate, 
     saveEditingTemplate,
     saveContract,
-    currentQuestionIndex
+    currentQuestionIndex,
+    selectTemplate,
+    customTemplates,
+    isLoadingTemplates
   } = useContract();
+  const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [openFaqItems, setOpenFaqItems] = useState<Set<number>>(new Set());
+
+  // Auto-select template after login redirect
+  useEffect(() => {
+    const locationState = location.state as { autoSelectTemplateId?: string } | null;
+    
+    if (locationState?.autoSelectTemplateId && user && !isLoadingTemplates && customTemplates.length > 0) {
+      const templateToSelect = customTemplates.find(
+        t => t.id === locationState.autoSelectTemplateId
+      );
+      
+      if (templateToSelect) {
+        navigate('/', { replace: true, state: {} });
+        toast.success(`Continuando com: ${templateToSelect.name}`);
+        selectTemplate(templateToSelect);
+      }
+    }
+  }, [location.state, user, customTemplates, isLoadingTemplates]);
 
   const toggleFaqItem = (index: number) => {
     const newOpenItems = new Set(openFaqItems);
