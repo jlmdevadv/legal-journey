@@ -4,12 +4,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Shield, User, LogOut } from 'lucide-react';
+import { Shield, User, LogOut, Briefcase } from 'lucide-react';
 import AddTemplateModal from './admin/AddTemplateModal';
 import TemplateImporter from './admin/TemplateImporter';
 
 const Navbar = () => {
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, isAdmin, isMaster, signOut } = useAuth();
   const [showAddTemplate, setShowAddTemplate] = useState(false);
   const [showImporter, setShowImporter] = useState(false);
 
@@ -43,6 +43,15 @@ const Navbar = () => {
                   </Button>
                 </Link>
                 
+                {isMaster && (
+                  <Link to="/master">
+                    <Button variant="ghost">
+                      <Briefcase className="mr-2 h-4 w-4" />
+                      Painel do Escritório
+                    </Button>
+                  </Link>
+                )}
+
                 {isAdmin && (
                   <>
                     <Button 

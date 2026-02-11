@@ -22,10 +22,11 @@ import { downloadTemplateJSON } from '../../utils/templateExporter';
 interface TemplateEditorProps {
   template: ContractTemplate;
   onSave: (template: ContractTemplate) => void;
-  onCancel: () => void;
+  onCancel?: () => void;
+  isMasterContext?: boolean;
 }
 
-const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => {
+const TemplateEditor = ({ template, onSave, onCancel, isMasterContext }: TemplateEditorProps) => {
   const { renameTemplate } = useContract();
   const [editingTemplate, setEditingTemplate] = useState<ContractTemplate>(template);
   const [editMode, setEditMode] = useState<'edit' | 'preview'>('edit');
@@ -343,10 +344,12 @@ const TemplateEditor = ({ template, onSave, onCancel }: TemplateEditorProps) => 
     <div className="container mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={onCancel}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar
-          </Button>
+          {onCancel && (
+            <Button variant="outline" onClick={onCancel}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar
+            </Button>
+          )}
           <h1 className="text-2xl font-bold text-contractPrimary">
             Editando: {editingTemplate.name}
           </h1>
