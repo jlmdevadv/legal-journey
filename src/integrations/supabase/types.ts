@@ -171,10 +171,16 @@ export type Database = {
           name: string
           number_of_other_parties: number
           number_of_parties: number
+          organization_id: string | null
           other_parties_data: Json
           parties_data: Json
           repeatable_fields_data: Json
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by_user_id: string | null
+          share_link_id: string | null
           status: string
+          submitted_for_review_at: string | null
           template_id: string | null
           updated_at: string | null
           user_id: string
@@ -192,10 +198,16 @@ export type Database = {
           name: string
           number_of_other_parties?: number
           number_of_parties?: number
+          organization_id?: string | null
           other_parties_data?: Json
           parties_data?: Json
           repeatable_fields_data?: Json
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          share_link_id?: string | null
           status?: string
+          submitted_for_review_at?: string | null
           template_id?: string | null
           updated_at?: string | null
           user_id: string
@@ -213,17 +225,88 @@ export type Database = {
           name?: string
           number_of_other_parties?: number
           number_of_parties?: number
+          organization_id?: string | null
           other_parties_data?: Json
           parties_data?: Json
           repeatable_fields_data?: Json
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          share_link_id?: string | null
           status?: string
+          submitted_for_review_at?: string | null
           template_id?: string | null
           updated_at?: string | null
           user_id?: string
         }
         Relationships: [
           {
+            foreignKeyName: "saved_contracts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_contracts_share_link_id_fkey"
+            columns: ["share_link_id"]
+            isOneToOne: false
+            referencedRelation: "share_links"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "saved_contracts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "contract_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      share_links: {
+        Row: {
+          created_at: string
+          created_by_user_id: string
+          expires_at: string
+          id: string
+          is_revoked: boolean
+          organization_id: string
+          revoked_at: string | null
+          template_id: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_user_id: string
+          expires_at?: string
+          id?: string
+          is_revoked?: boolean
+          organization_id: string
+          revoked_at?: string | null
+          template_id: string
+          token?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_user_id?: string
+          expires_at?: string
+          id?: string
+          is_revoked?: boolean
+          organization_id?: string
+          revoked_at?: string | null
+          template_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "share_links_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "share_links_template_id_fkey"
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "contract_templates"
@@ -283,6 +366,7 @@ export type Database = {
       }
       is_master: { Args: { _user_id?: string }; Returns: boolean }
       promote_user_to_admin: { Args: { user_email: string }; Returns: string }
+      validate_share_link: { Args: { link_token: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "user" | "master"
