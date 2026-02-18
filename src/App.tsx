@@ -12,6 +12,8 @@ import Auth from "./pages/Auth";
 import MeusContratos from "./pages/MeusContratos";
 import MasterDashboard from "./pages/MasterDashboard";
 import MasterTemplateEditor from "./pages/MasterTemplateEditor";
+import MasterReview from "./pages/MasterReview";
+import SharedTemplate from "./pages/SharedTemplate";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +53,15 @@ const App = () => (
                   </MasterProtectedRoute>
                 }
               />
+              <Route
+                path="/master/review/:documentId"
+                element={
+                  <MasterProtectedRoute>
+                    <MasterReview />
+                  </MasterProtectedRoute>
+                }
+              />
+              <Route path="/s/:token" element={<SharedTemplate />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

@@ -34,10 +34,19 @@ const Auth = () => {
 
   const params = new URLSearchParams(location.search);
   const isTemplateRedirect = params.get('redirect') === 'template';
+  const isSharedRedirect = params.get('redirect') === 'shared';
 
   // Redirect if already logged in
   useEffect(() => {
     if (user && !isLoading) {
+      if (isSharedRedirect) {
+        const pendingToken = sessionStorage.getItem('pendingShareToken');
+        if (pendingToken) {
+          sessionStorage.removeItem('pendingShareToken');
+          navigate(`/s/${pendingToken}`, { replace: true });
+          return;
+        }
+      }
       if (isTemplateRedirect) {
         const pendingTemplateId = sessionStorage.getItem('pendingTemplateId');
         if (pendingTemplateId) {
@@ -51,7 +60,7 @@ const Auth = () => {
       }
       navigate('/', { replace: true });
     }
-  }, [user, isLoading, navigate, isTemplateRedirect]);
+  }, [user, isLoading, navigate, isTemplateRedirect, isSharedRedirect]);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -152,10 +161,12 @@ const Auth = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isTemplateRedirect && (
+          {(isTemplateRedirect || isSharedRedirect) && (
             <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-lg">
               <p className="text-sm text-foreground text-center">
-                Faça login ou cadastre-se para continuar com seu documento.
+                {isSharedRedirect
+                  ? 'Faça login ou cadastre-se para preencher o documento compartilhado.'
+                  : 'Faça login ou cadastre-se para continuar com seu documento.'}
               </p>
             </div>
           )}

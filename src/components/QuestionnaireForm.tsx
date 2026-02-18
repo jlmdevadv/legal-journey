@@ -14,7 +14,12 @@ import QuestionnaireInfoCard from './questionnaire/QuestionnaireInfoCard';
 import { getVisibleFields } from '@/utils/conditionalLogic';
 import { useContractPreviewScroll } from '@/hooks/useContractPreviewScroll';
 
-const QuestionnaireForm = () => {
+interface QuestionnaireFormProps {
+  isSharedContext?: boolean;
+  onSubmitForReview?: () => Promise<void>;
+}
+
+const QuestionnaireForm = ({ isSharedContext, onSubmitForReview }: QuestionnaireFormProps) => {
   const { 
     selectedTemplate, 
     currentQuestionIndex,
@@ -177,7 +182,12 @@ const QuestionnaireForm = () => {
   // ============ BLOCO 4: SUMÁRIO (9999) ============
   if (currentQuestionIndex === 9999) {
     console.log('[DEBUG] BLOCO 4 - Showing QuestionnaireSummary');
-    return <QuestionnaireSummary />;
+    return (
+      <QuestionnaireSummary
+        isSharedContext={isSharedContext}
+        onSubmitForReview={onSubmitForReview}
+      />
+    );
   }
 
   // ============ ERRO: Índice não reconhecido ============

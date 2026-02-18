@@ -11,7 +11,12 @@ import ContractPreviewModal from '../ContractPreviewModal';
 import { getRepeatableVisibleFields, getNonRepeatableVisibleFields, getVisibleFields } from '@/utils/conditionalLogic';
 import { validateAllVisibleRequiredFields, ValidationResult } from '@/utils/validation';
 
-const QuestionnaireSummary = () => {
+interface QuestionnaireSummaryProps {
+  isSharedContext?: boolean;
+  onSubmitForReview?: () => Promise<void>;
+}
+
+const QuestionnaireSummary = ({ isSharedContext, onSubmitForReview }: QuestionnaireSummaryProps = {}) => {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [isSavingManually, setIsSavingManually] = useState(false);
   const [validationResult, setValidationResult] = useState<ValidationResult>({
@@ -369,7 +374,7 @@ const QuestionnaireSummary = () => {
             <h3 className="font-semibold text-blue-800 mb-2">Próximos passos</h3>
             <p className="text-sm text-blue-700 mb-3">
               {validationResult.isValid 
-                ? 'Seu contrato está pronto! Você pode visualizá-lo, imprimi-lo ou baixá-lo.'
+                ? (isSharedContext ? 'Seu documento está pronto para enviar para revisão!' : 'Seu contrato está pronto! Você pode visualizá-lo, imprimi-lo ou baixá-lo.')
                 : 'Complete os campos obrigatórios destacados acima para prosseguir.'}
             </p>
             <div className="flex flex-wrap gap-3">
@@ -381,34 +386,37 @@ const QuestionnaireSummary = () => {
               >
                 Visualizar Contrato
               </Button>
-              {/* TEMPORARIAMENTE DESABILITADO - Impressão/PDF em desenvolvimento
-              <Button 
-                onClick={handlePrint}
-                disabled={!validationResult.isValid}
-                className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Printer className="w-4 h-4" />
-                Imprimir
-              </Button>
-              */}
-              <DocumentDownloader
-                documentData={getDocumentData()}
-                filename={selectedTemplate.name}
-                elementId="contract-preview"
-                variant="outline"
-                disabled={!validationResult.isValid}
-                className="border-blue-200 text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-              {user && (
+              {isSharedContext && onSubmitForReview ? (
                 <Button
-                  onClick={handleManualSave}
-                  disabled={isSavingManually}
-                  variant="outline"
-                  className="border-green-200 text-green-600 hover:bg-green-50 flex items-center gap-2"
+                  onClick={onSubmitForReview}
+                  disabled={!validationResult.isValid}
+                  className="bg-primary hover:bg-primary/90 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Save className="w-4 h-4" />
-                  {isSavingManually ? 'Salvando...' : 'Salvar Contrato'}
+                  <CheckCircle className="w-4 h-4" />
+                  Enviar para Revisão
                 </Button>
+              ) : (
+                <>
+                  <DocumentDownloader
+                    documentData={getDocumentData()}
+                    filename={selectedTemplate.name}
+                    elementId="contract-preview"
+                    variant="outline"
+                    disabled={!validationResult.isValid}
+                    className="border-blue-200 text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  {user && (
+                    <Button
+                      onClick={handleManualSave}
+                      disabled={isSavingManually}
+                      variant="outline"
+                      className="border-green-200 text-green-600 hover:bg-green-50 flex items-center gap-2"
+                    >
+                      <Save className="w-4 h-4" />
+                      {isSavingManually ? 'Salvando...' : 'Salvar Contrato'}
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           </div>
