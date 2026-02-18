@@ -82,39 +82,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        
-        // Defer role checks
-        if (currentSession?.user) {
-          setTimeout(() => {
-            checkAdminStatus(currentSession.user.id);
-            checkMasterRole(currentSession.user.id);
-          }, 0);
-        } else {
-          setIsAdmin(false);
-          setIsMaster(false);
-          setOrganization(null);
-        }
-        
-        setIsLoading(false);
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+    const initializeAuth = async (currentSession: Session | null) => {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       
       if (currentSession?.user) {
-        checkAdminStatus(currentSession.user.id);
-        checkMasterRole(currentSession.user.id);
+        await Promise.all([
+          checkAdminStatus(currentSession.user.id),
+          checkMasterRole(currentSession.user.id),
+        ]);
+      } else {
+        setIsAdmin(false);
+        setIsMaster(false);
+        setOrganization(null);
       }
       
       setIsLoading(false);
+    };
+
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, currentSession) => {
+        // Use setTimeout to avoid blocking the Supabase callback
+        setTimeout(() => initializeAuth(currentSession), 0);
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      initializeAuth(currentSession);
     });
 
     return () => subscription.unsubscribe();
