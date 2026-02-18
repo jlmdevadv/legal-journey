@@ -167,6 +167,19 @@ const MasterReview = () => {
             </Card>
           )}
 
+          {/* Draft info */}
+          {document.status === 'draft' && (
+            <Card className="border-orange-300/50 bg-orange-50/50">
+              <CardContent className="py-4 flex items-center gap-3">
+                <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Preenchimento em andamento</p>
+                  <p className="text-xs text-muted-foreground">Este documento ainda está sendo preenchido pelo usuário. Os botões de revisão aparecerão após o envio.</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Review Actions */}
           {document.status === 'pending_review' && (
             <Card>
