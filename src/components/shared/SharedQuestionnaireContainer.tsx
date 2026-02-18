@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useContract } from '@/contexts/ContractContext';
+
 import { supabase } from '@/integrations/supabase/client';
 import Navbar from '@/components/Navbar';
 import QuestionnaireForm from '@/components/QuestionnaireForm';
@@ -27,7 +28,7 @@ const SharedQuestionnaireContainer = ({
   shareLinkId,
 }: SharedQuestionnaireContainerProps) => {
   const { user } = useAuth();
-  const { selectTemplate, selectedTemplate } = useContract();
+  const { selectTemplate, selectedTemplate, generateFinalDocument, getContractingParties, getOtherInvolved, getSignatures, getLocationDate } = useContract();
   const [loading, setLoading] = useState(true);
   const [savedContractId, setSavedContractId] = useState<string | null>(null);
 
@@ -101,11 +102,27 @@ const SharedQuestionnaireContainer = ({
     if (!savedContractId || !user) return;
 
     try {
+      // Build the full document text for the master to review
+      const finalDoc = generateFinalDocument();
+      const parties = getContractingParties();
+      const otherInvolved = getOtherInvolved();
+      const signatures = getSignatures();
+      const locationDate = getLocationDate();
+
+      const fullDocument = [
+        parties ? `PARTES PRINCIPAIS\n\n${parties}` : '',
+        otherInvolved ? `OUTROS ENVOLVIDOS\n\n${otherInvolved}` : '',
+        finalDoc,
+        locationDate ? `\n${locationDate}` : '',
+        signatures ? `ASSINATURAS\n\n${signatures}` : '',
+      ].filter(Boolean).join('\n\n');
+
       const { error } = await supabase
         .from('saved_contracts')
         .update({
           status: 'pending_review',
           submitted_for_review_at: new Date().toISOString(),
+          generated_document: fullDocument,
         })
         .eq('id', savedContractId);
 
