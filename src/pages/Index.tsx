@@ -184,36 +184,36 @@ const ContractContent = () => {
         <div className="max-w-5xl mx-auto">
           {/* Hero Section */}
           <div className="mb-12 text-center">
-            <h1 className="text-4xl font-bold text-contractPrimary mb-4">Gerador de Contratos Inteligente</h1>
-            <p className="text-gray-600 text-xl max-w-3xl mx-auto">
+            <h1 className="font-serif text-4xl text-foreground font-normal mb-4">Gerador de Contratos Inteligente</h1>
+            <p className="text-muted-foreground text-lg max-w-3xl mx-auto">
               Crie contratos personalizados em minutos. Escolha um modelo, preencha os campos e receba seu documento pronto para uso.
             </p>
           </div>
 
           {/* Educational Differential Section */}
-          <div className="mb-12 py-12 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl">
+          <div className="mb-12 py-12 bg-surface-secondary rounded border border-border">
             <div className="max-w-4xl mx-auto px-6">
               <div className="text-center mb-10">
                 <div className="flex justify-center mb-4">
-                  <div className="bg-contractPrimary/10 p-3 rounded-full">
-                    <GraduationCap className="w-8 h-8 text-contractPrimary" />
+                  <div className="bg-primary/10 p-3 rounded-full">
+                    <GraduationCap className="w-8 h-8 text-primary" />
                   </div>
                 </div>
-                <h2 className="text-3xl font-bold text-contractPrimary mb-4">
+                <h2 className="font-serif text-3xl text-foreground font-normal mb-4">
                   Por que Legal Journey?
                 </h2>
-                <p className="text-gray-600 text-lg">
+                <p className="text-muted-foreground text-lg">
                   Uma jornada educacional completa no mundo jurídico
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <Card className="border-blue-200 hover:shadow-lg transition-shadow">
+                <Card className="hover:bg-surface-secondary transition-colors">
                   <CardHeader className="text-center">
-                    <div className="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <HelpCircle className="w-6 h-6 text-blue-600" />
+                    <div className="bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <HelpCircle className="w-6 h-6 text-primary" />
                     </div>
-                    <CardTitle className="text-lg text-contractPrimary">Orientação Inteligente</CardTitle>
+                    <CardTitle className="text-base">Orientação Inteligente</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <CardDescription className="text-center">
@@ -222,12 +222,12 @@ const ContractContent = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="border-green-200 hover:shadow-lg transition-shadow">
+                <Card className="hover:bg-surface-secondary transition-colors">
                   <CardHeader className="text-center">
-                    <div className="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <PlayCircle className="w-6 h-6 text-green-600" />
+                    <div className="bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <PlayCircle className="w-6 h-6 text-primary" />
                     </div>
-                    <CardTitle className="text-lg text-contractPrimary">Vídeos Explicativos</CardTitle>
+                    <CardTitle className="text-base">Vídeos Explicativos</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <CardDescription className="text-center">
@@ -236,12 +236,12 @@ const ContractContent = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="border-purple-200 hover:shadow-lg transition-shadow">
+                <Card className="hover:bg-surface-secondary transition-colors">
                   <CardHeader className="text-center">
-                    <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <Bot className="w-6 h-6 text-purple-600" />
+                    <div className="bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Bot className="w-6 h-6 text-primary" />
                     </div>
-                    <CardTitle className="text-lg text-contractPrimary">GPTs Personalizados</CardTitle>
+                    <CardTitle className="text-base">GPTs Personalizados</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <CardDescription className="text-center">
@@ -252,7 +252,7 @@ const ContractContent = () => {
               </div>
 
               <div className="text-center mt-8">
-                <p className="text-gray-600 italic">
+                <p className="text-muted-foreground italic">
                   "Não apenas geramos contratos, mas educamos você sobre cada etapa do processo"
                 </p>
               </div>
@@ -260,7 +260,7 @@ const ContractContent = () => {
           </div>
           
           {/* Template Selector */}
-          <div className="bg-gray-50 py-12 rounded-lg mb-12">
+          <div className="bg-surface-secondary py-12 rounded border border-border mb-12">
             <TemplateSelector />
           </div>
 
@@ -268,42 +268,42 @@ const ContractContent = () => {
           <div className="py-12 mb-12">
             <div className="text-center mb-10">
               <div className="flex justify-center mb-4">
-                <div className="bg-contractPrimary/10 p-3 rounded-full">
-                  <HelpCircle className="w-8 h-8 text-contractPrimary" />
+                <div className="bg-primary/10 p-3 rounded-full">
+                  <HelpCircle className="w-8 h-8 text-primary" />
                 </div>
               </div>
-              <h2 className="text-3xl font-bold text-contractPrimary mb-4">
+              <h2 className="font-serif text-3xl text-foreground font-normal mb-4">
                 Perguntas Frequentes
               </h2>
-              <p className="text-gray-600 text-lg">
+              <p className="text-muted-foreground text-lg">
                 Tire suas dúvidas sobre nossa plataforma
               </p>
             </div>
 
             <div className="max-w-3xl mx-auto space-y-4">
               {faqData.map((faq, index) => (
-                <Card key={index} className="border-gray-200">
-                  <Collapsible 
-                    open={openFaqItems.has(index)} 
+                <Card key={index}>
+                  <Collapsible
+                    open={openFaqItems.has(index)}
                     onOpenChange={() => toggleFaqItem(index)}
                   >
                     <CollapsibleTrigger asChild>
-                      <CardHeader className="hover:bg-gray-50 cursor-pointer transition-colors">
+                      <CardHeader className="hover:bg-surface-secondary cursor-pointer transition-colors">
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg text-left text-contractPrimary">
+                          <CardTitle className="text-base text-left">
                             {faq.question}
                           </CardTitle>
                           {openFaqItems.has(index) ? (
-                            <ChevronUp className="w-5 h-5 text-gray-500" />
+                            <ChevronUp className="w-5 h-5 text-muted-foreground" />
                           ) : (
-                            <ChevronDown className="w-5 h-5 text-gray-500" />
+                            <ChevronDown className="w-5 h-5 text-muted-foreground" />
                           )}
                         </div>
                       </CardHeader>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <CardContent className="pt-0">
-                        <p className="text-gray-600">{faq.answer}</p>
+                        <p className="text-muted-foreground">{faq.answer}</p>
                       </CardContent>
                     </CollapsibleContent>
                   </Collapsible>
@@ -313,24 +313,24 @@ const ContractContent = () => {
           </div>
           
           {/* About Section */}
-          <div id="about" className="py-12 border-t border-gray-100">
-            <h2 className="text-3xl font-bold mb-6 text-contractPrimary">Sobre o Legal Journey</h2>
+          <div id="about" className="py-12 border-t border-border">
+            <h2 className="font-serif text-3xl text-foreground font-normal mb-6">Sobre o Legal Journey</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
-                <p className="text-gray-600 mb-4 text-lg">
+                <p className="text-muted-foreground mb-4">
                   O Legal Journey é uma ferramenta online que permite a criação de contratos profissionais de forma rápida e segura.
                   Nossos modelos são desenvolvidos por especialistas e são atualizados regularmente para atender às mudanças na legislação.
                 </p>
-                <p className="text-gray-600 text-lg">
+                <p className="text-muted-foreground">
                   Utilizamos tecnologia avançada para garantir que seus documentos estejam sempre em conformidade com as leis vigentes.
                 </p>
               </div>
               <div>
-                <p className="text-gray-600 mb-4 text-lg">
+                <p className="text-muted-foreground mb-4">
                   Importante: Os contratos gerados por esta ferramenta são modelos genéricos que podem necessitar de adaptação
                   para sua situação específica. Recomendamos a revisão por um profissional antes da assinatura.
                 </p>
-                <p className="text-gray-600 text-lg">
+                <p className="text-muted-foreground">
                   Para mais informações sobre nossos serviços ou para solicitar assistência personalizada, entre em contato conosco.
                 </p>
               </div>
@@ -364,7 +364,7 @@ const ContractContent = () => {
 // Index page component
 const Index = () => {
   return (
-    <div className="min-h-screen bg-white flex flex-col print:bg-white">
+    <div className="min-h-screen bg-background flex flex-col print:bg-white">
       <div className="print:hidden">
         <Navbar />
       </div>
