@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, FileText, Clock, CheckCircle, Edit, Link2, Trash2, AlertTriangle, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -119,12 +118,12 @@ const MasterDashboard = () => {
     return d.status === docFilter;
   });
 
-  const statusMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-    draft: { label: 'Rascunho', variant: 'outline' },
-    pending_review: { label: 'Pendente', variant: 'secondary' },
-    approved: { label: 'Aprovado', variant: 'default' },
-    rejected: { label: 'Reprovado', variant: 'destructive' },
-    completed: { label: 'Finalizado', variant: 'default' },
+  const statusMap: Record<string, { label: string; variant: any }> = {
+    draft:          { label: 'Rascunho',   variant: 'draft'     },
+    pending_review: { label: 'Pendente',   variant: 'pending'   },
+    approved:       { label: 'Aprovado',   variant: 'approved'  },
+    rejected:       { label: 'Reprovado',  variant: 'rejected'  },
+    completed:      { label: 'Finalizado', variant: 'approved'  },
   };
 
   if (!organization) {
@@ -141,43 +140,43 @@ const MasterDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">{organization.name}</h1>
-          <p className="text-muted-foreground mt-1">Painel de gerenciamento de modelos</p>
+      <main className="container mx-auto px-4 sm:px-6 py-8 sm:py-10">
+        <div className="mb-10 pt-2">
+          <h1 className="font-serif text-3xl text-foreground">{organization.name}</h1>
+          <p className="text-sm text-muted-foreground mt-1">Painel de gerenciamento</p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Templates</CardTitle>
+              <p className="text-xs font-sans uppercase tracking-wider text-muted-foreground">Templates</p>
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{templates.length}/{organization.templates_limit}</div>
+              <div className="text-3xl font-serif text-foreground mt-2">{templates.length}/{organization.templates_limit}</div>
               <p className="text-xs text-muted-foreground">Modelos criados</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Pendentes</CardTitle>
+              <p className="text-xs font-sans uppercase tracking-wider text-muted-foreground">Pendentes</p>
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{pendingCount}</div>
+              <div className="text-3xl font-serif text-foreground mt-2">{pendingCount}</div>
               <p className="text-xs text-muted-foreground">Aguardando revisão</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Finalizados</CardTitle>
+              <p className="text-xs font-sans uppercase tracking-wider text-muted-foreground">Finalizados</p>
               <CheckCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{approvedCount}</div>
+              <div className="text-3xl font-serif text-foreground mt-2">{approvedCount}</div>
               <p className="text-xs text-muted-foreground">Documentos aprovados</p>
             </CardContent>
           </Card>
@@ -195,8 +194,11 @@ const MasterDashboard = () => {
         )}
 
         {/* Templates Section */}
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-foreground">Seus Modelos</h2>
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="font-serif text-xl text-foreground">Modelos</h2>
+            <div className="mt-1 h-px w-full bg-border" />
+          </div>
           <Button onClick={() => navigate('/master/template/new')} disabled={limitReached}>
             <Plus className="w-4 h-4 mr-2" />
             Novo Modelo
@@ -220,64 +222,91 @@ const MasterDashboard = () => {
             </CardContent>
           </Card>
         ) : (
-          <Card className="mb-8">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Campos</TableHead>
-                  <TableHead>Versão</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {templates.map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell className="font-medium">{t.name}</TableCell>
-                    <TableCell>{t.fields.length}</TableCell>
-                    <TableCell>{t.version?.version || '1.0'}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" onClick={() => navigate(`/master/template/${t.id}`)}>
-                          <Edit className="w-4 h-4 mr-1" />
-                          Editar
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setLinkModal({ open: true, templateId: t.id, templateName: t.name })}
-                        >
-                          <Link2 className="w-4 h-4 mr-1" />
-                          Gerar Link
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => handleDelete(t.id, t.name)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+          <>
+            {/* Mobile template list */}
+            <div className="sm:hidden flex flex-col gap-3 mb-8">
+              {templates.map((t) => (
+                <div key={t.id} className="rounded border border-border bg-surface p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-sans text-sm font-medium text-foreground">{t.name}</p>
+                    <span className="text-xs text-muted-foreground shrink-0">{t.fields.length} campos</span>
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <Button variant="outline" size="sm" onClick={() => navigate(`/master/template/${t.id}`)}>
+                      <Edit className="w-3 h-3 mr-1" />Editar
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setLinkModal({ open: true, templateId: t.id, templateName: t.name })}>
+                      <Link2 className="w-3 h-3 mr-1" />Link
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop template table */}
+            <Card className="mb-8 hidden sm:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Campos</TableHead>
+                    <TableHead>Versão</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
+                </TableHeader>
+                <TableBody>
+                  {templates.map((t) => (
+                    <TableRow key={t.id}>
+                      <TableCell className="font-medium">{t.name}</TableCell>
+                      <TableCell>{t.fields.length}</TableCell>
+                      <TableCell>{t.version?.version || '1.0'}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="outline" size="sm" onClick={() => navigate(`/master/template/${t.id}`)}>
+                            <Edit className="w-4 h-4 mr-1" />
+                            Editar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setLinkModal({ open: true, templateId: t.id, templateName: t.name })}
+                          >
+                            <Link2 className="w-4 h-4 mr-1" />
+                            Gerar Link
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => handleDelete(t.id, t.name)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          </>
         )}
 
         {/* Documents Section */}
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold text-foreground mb-4">Documentos Recebidos</h2>
-          <Tabs value={docFilter} onValueChange={setDocFilter}>
-            <TabsList>
-              <TabsTrigger value="all">Todos ({documents.length})</TabsTrigger>
-              <TabsTrigger value="pending_review">Pendentes ({pendingCount})</TabsTrigger>
-              <TabsTrigger value="approved">Aprovados ({approvedCount})</TabsTrigger>
-              <TabsTrigger value="rejected">Reprovados ({rejectedCount})</TabsTrigger>
-            </TabsList>
-          </Tabs>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="font-serif text-xl text-foreground">Documentos Recebidos</h2>
+          <div className="flex items-center gap-3">
+            <select
+              value={docFilter}
+              onChange={(e) => setDocFilter(e.target.value)}
+              className="h-9 rounded border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="all">Todos ({documents.length})</option>
+              <option value="pending_review">Pendentes ({pendingCount})</option>
+              <option value="approved">Aprovados ({approvedCount})</option>
+              <option value="rejected">Reprovados ({rejectedCount})</option>
+            </select>
+          </div>
         </div>
 
         {filteredDocs.length === 0 ? (
@@ -287,42 +316,68 @@ const MasterDashboard = () => {
             </CardContent>
           </Card>
         ) : (
-          <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Enviado em</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredDocs.map((doc) => {
-                  const info = statusMap[doc.status] || { label: doc.status, variant: 'outline' as const };
-                  return (
-                    <TableRow key={doc.id}>
-                      <TableCell className="font-medium">{doc.name}</TableCell>
-                      <TableCell>
-                        <Badge variant={info.variant}>{info.label}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        {doc.submitted_for_review_at
-                          ? format(new Date(doc.submitted_for_review_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })
-                          : format(new Date(doc.updated_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => navigate(`/master/review/${doc.id}`)}>
-                          <Eye className="w-4 h-4 mr-1" />
-                          Revisar
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </Card>
+          <>
+            {/* Mobile document cards */}
+            <div className="sm:hidden flex flex-col gap-3">
+              {filteredDocs.map((doc) => {
+                const s = statusMap[doc.status] || { label: doc.status, variant: 'outline' as const };
+                return (
+                  <div key={doc.id} className="rounded border border-border bg-surface p-4">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <p className="text-sm font-medium text-foreground">{doc.name}</p>
+                      <Badge variant={s.variant}>{s.label}</Badge>
+                    </div>
+                    {doc.submitted_for_review_at && (
+                      <p className="text-xs text-muted-foreground mb-3">
+                        {format(new Date(doc.submitted_for_review_at), "dd/MM/yyyy", { locale: ptBR })}
+                      </p>
+                    )}
+                    <Button variant="outline" size="sm" onClick={() => navigate(`/master/review/${doc.id}`)}>
+                      <Eye className="w-3 h-3 mr-1" />Ver
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop document table */}
+            <Card className="hidden sm:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Enviado em</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredDocs.map((doc) => {
+                    const info = statusMap[doc.status] || { label: doc.status, variant: 'outline' as const };
+                    return (
+                      <TableRow key={doc.id}>
+                        <TableCell className="font-medium">{doc.name}</TableCell>
+                        <TableCell>
+                          <Badge variant={info.variant}>{info.label}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {doc.submitted_for_review_at
+                            ? format(new Date(doc.submitted_for_review_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })
+                            : format(new Date(doc.updated_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="outline" size="sm" onClick={() => navigate(`/master/review/${doc.id}`)}>
+                            <Eye className="w-4 h-4 mr-1" />
+                            Revisar
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </Card>
+          </>
         )}
       </main>
 
