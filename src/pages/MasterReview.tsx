@@ -106,11 +106,11 @@ const MasterReview = () => {
     );
   }
 
-  const statusMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-    pending_review: { label: 'Pendente', variant: 'secondary' },
-    approved: { label: 'Aprovado', variant: 'default' },
-    rejected: { label: 'Reprovado', variant: 'destructive' },
-    draft: { label: 'Rascunho', variant: 'outline' },
+  const statusMap: Record<string, { label: string; variant: any }> = {
+    pending_review: { label: 'Pendente',  variant: 'pending'   },
+    approved:       { label: 'Aprovado',  variant: 'approved'  },
+    rejected:       { label: 'Reprovado', variant: 'rejected'  },
+    draft:          { label: 'Rascunho',  variant: 'draft'     },
   };
 
   const statusInfo = statusMap[document.status] || { label: document.status, variant: 'outline' as const };
@@ -118,7 +118,7 @@ const MasterReview = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
+      <main className="container mx-auto px-4 sm:px-6 py-8 max-w-3xl">
         <Button variant="ghost" onClick={() => navigate('/master')} className="mb-6">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Voltar ao Painel
@@ -128,11 +128,8 @@ const MasterReview = () => {
           {/* Document Info */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  {document.name}
-                </CardTitle>
+              <div className="flex items-center justify-between gap-3">
+                <h1 className="font-serif text-xl text-foreground">{document.name}</h1>
                 <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
               </div>
             </CardHeader>
@@ -159,8 +156,8 @@ const MasterReview = () => {
                 <CardTitle className="text-lg">Prévia do Documento</CardTitle>
               </CardHeader>
               <CardContent>
-                <div 
-                  className="prose prose-sm max-w-none bg-white p-6 rounded border whitespace-pre-wrap"
+                <div
+                  className="contract-paper rounded border border-border max-h-[60vh] sm:max-h-[500px] overflow-y-auto whitespace-pre-wrap text-sm"
                   dangerouslySetInnerHTML={{ __html: document.generated_document }}
                 />
               </CardContent>
@@ -200,7 +197,7 @@ const MasterReview = () => {
                   <Button
                     onClick={() => handleReview('approved')}
                     disabled={isSubmitting}
-                    className="flex-1 bg-green-600 hover:bg-green-700"
+                    className="flex-1"
                   >
                     {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
                     Aprovar

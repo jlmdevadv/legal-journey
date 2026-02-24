@@ -5,74 +5,73 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Surfaces */
+    --background:         36 25% 95%;    /* #F7F5F0 pergaminho */
+    --surface:            40 33% 99%;    /* #FDFCF9 cards */
+    --surface-secondary:  34 22% 91%;    /* #EDE8DF hover sutil */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* Text */
+    --foreground:         0 0% 10%;      /* #1A1A1A tinta */
+    --muted-foreground:   12 5% 40%;     /* #6B6260 */
+    --subtle-foreground:  20 4% 61%;     /* #9E9894 */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    /* Card / Popover (alias surface) */
+    --card:               40 33% 99%;
+    --card-foreground:    0 0% 10%;
+    --popover:            40 33% 99%;
+    --popover-foreground: 0 0% 10%;
 
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary — Azul Marinho */
+    --primary:            210 55% 23%;   /* #1B3A5C */
+    --primary-foreground: 36 25% 95%;    /* parchment on navy */
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary */
+    --secondary:          34 22% 91%;    /* #EDE8DF */
+    --secondary-foreground: 0 0% 10%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted */
+    --muted:              34 22% 91%;
+    --muted-foreground:   12 5% 40%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent — Dourado */
+    --accent:             38 51% 60%;    /* #C8A96E */
+    --accent-foreground:  0 0% 10%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Destructive — Vinho */
+    --destructive:        350 63% 37%;   /* #9B2335 */
+    --destructive-foreground: 40 33% 99%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    /* Borders */
+    --border:             30 15% 81%;    /* #D5CEC4 */
+    --input:              30 15% 81%;
+    --ring:               210 55% 23%;   /* primary */
 
-    --radius: 0.5rem;
+    /* Radius */
+    --radius: 0.25rem;                   /* 4px */
 
-    --sidebar-background: 222.2 47.4% 11.2%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 217.2 91.2% 59.8%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 217.2 32.6% 17.5%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217.2 32.6% 17.5%;
-    --sidebar-ring: 224.3 76.3% 48%;
-  }
+    /* Status tokens (raw hex, used in inline styles + custom classes) */
+    --status-approved:    #2D6A4F;
+    --status-approved-bg: rgba(45,106,79,0.10);
+    --status-pending:     #7D5A1E;
+    --status-pending-bg:  rgba(125,90,30,0.10);
+    --status-draft:       #5A5A5A;
+    --status-draft-bg:    rgba(90,90,90,0.08);
+    --status-rejected:    #9B2335;
+    --status-rejected-bg: rgba(155,35,53,0.10);
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(26,26,26,0.08);
+    --shadow-md: 0 4px 12px rgba(26,26,26,0.10);
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    /* Sidebar (keep existing structure, update colors) */
+    --sidebar-background: 210 55% 23%;
+    --sidebar-foreground: 36 25% 95%;
+    --sidebar-primary:    38 51% 60%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent:     210 45% 30%;
+    --sidebar-accent-foreground: 36 25% 95%;
+    --sidebar-border:     210 45% 30%;
+    --sidebar-ring:       38 51% 60%;
   }
 }
 
@@ -83,38 +82,42 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3 {
+    font-family: 'DM Serif Display', serif;
+    font-weight: 400;
   }
 }
 
+/* Contract paper styles (used inside ContractPreview) */
 .contract-paper {
-  background-color: white;
-  background-image: linear-gradient(#f0f0f0 1px, transparent 1px);
-  background-size: 100% 28px;
-  line-height: 28px;
-  padding: 27px 34px;
-  font-family: 'Times New Roman', Times, serif;
+  background-color: #FDFCF9;
+  font-family: 'DM Serif Display', serif;
+  font-size: 14px;
+  line-height: 1.8;
+  padding: 40px 48px;
+  color: #1A1A1A;
 }
 
 .contract-field {
-  color: #1e40af;
+  color: #1B3A5C;
   font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
 }
 
+/* Status badge helper classes */
+.badge-approved  { color: var(--status-approved);  background: var(--status-approved-bg);  border: 1px solid rgba(45,106,79,0.20); }
+.badge-pending   { color: var(--status-pending);   background: var(--status-pending-bg);   border: 1px solid rgba(125,90,30,0.20); }
+.badge-draft     { color: var(--status-draft);     background: var(--status-draft-bg);     border: 1px solid rgba(90,90,90,0.15);  }
+.badge-rejected  { color: var(--status-rejected);  background: var(--status-rejected-bg);  border: 1px solid rgba(155,35,53,0.20); }
+
 @media print {
-  body {
-    font-family: 'Times New Roman', serif;
-    font-size: 12pt;
-    line-height: 1.5;
-  }
-  
-  .contract-paper {
-    text-align: justify;
-  }
-  
-  h1 {
-    text-align: center;
-    font-size: 14pt;
-    font-weight: bold;
-    text-transform: uppercase;
-  }
+  body { font-family: 'DM Serif Display', serif; font-size: 12pt; line-height: 1.6; }
+  .contract-paper { text-align: justify; }
+  h1 { text-align: center; font-size: 14pt; font-weight: 400; text-transform: uppercase; }
 }

@@ -35,7 +35,7 @@ const ContractPreview = () => {
     return parts.map((part, i) => {
       // Check if it's a conditional tag
       if (part.includes('{{#if') || part.includes('{{/if}}')) {
-        return <span key={i} className="bg-purple-100 px-1 rounded border border-purple-300 text-purple-800 font-mono text-xs">{part}</span>;
+        return <span key={i} className="bg-muted px-1 rounded-sm border border-border text-muted-foreground font-mono text-[11px]">{part}</span>;
       }
       // Check if it's a bold marker
       else if (part.startsWith('**') && part.endsWith('**')) {
@@ -45,7 +45,7 @@ const ContractPreview = () => {
       // Check if it's a placeholder
       else if (part.startsWith('[') && part.endsWith(']')) {
         const fieldName = part.slice(1, -1);
-        return <span key={i} className="bg-yellow-50 px-1 rounded border border-yellow-200 text-yellow-800">[{fieldName}]</span>;
+        return <span key={i} className="bg-surface-secondary px-1 rounded-sm border border-border text-primary font-sans text-[13px]">[{fieldName}]</span>;
       }
       // Regular text
       else {
@@ -60,7 +60,7 @@ const ContractPreview = () => {
     return (
       <div className="mb-8">
         {title && (
-          <h2 className="font-bold text-center text-blue-800 text-lg mb-4 uppercase">
+          <h2 className="font-serif text-base text-primary font-normal text-center mb-4 uppercase tracking-wide">
             {title}
           </h2>
         )}
@@ -74,19 +74,14 @@ const ContractPreview = () => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-1 print:shadow-none print:p-0 border border-gray-100" style={{ minHeight: '29.7cm' }}>
-      <div 
+    <div className="rounded border border-border print:shadow-none print:border-0 print:p-0" style={{ minHeight: '29.7cm' }}>
+      <div
         id="contract-preview"
-        className="contract-paper p-8 text-gray-800"
-        style={{
-          fontFamily: 'Times New Roman, serif',
-          fontSize: '12pt',
-          lineHeight: '1.5'
-        }}
+        className="contract-paper"
       >
         {/* 1. Título */}
         <div id="preview-section-title" className="mb-8 text-center">
-          <h1 className="font-bold text-xl text-blue-800 uppercase">
+          <h1 className="font-serif text-xl text-primary font-normal uppercase">
             {selectedTemplate.name}
           </h1>
         </div>
@@ -110,7 +105,7 @@ const ContractPreview = () => {
         <div id="preview-section-location">
           {locationDate && (
             <div className="mb-8 text-right">
-              <p className="text-gray-800">{locationDate}</p>
+              <p className="text-foreground">{locationDate}</p>
             </div>
           )}
         </div>

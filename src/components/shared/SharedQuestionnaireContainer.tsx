@@ -31,6 +31,7 @@ const SharedQuestionnaireContainer = ({
   const { selectTemplate, selectedTemplate, generateFinalDocument, getContractingParties, getOtherInvolved, getSignatures, getLocationDate } = useContract();
   const [loading, setLoading] = useState(true);
   const [savedContractId, setSavedContractId] = useState<string | null>(null);
+  const [showMobilePreview, setShowMobilePreview] = useState(false);
 
   useEffect(() => {
     loadTemplateAndDocument();
@@ -160,13 +161,36 @@ const SharedQuestionnaireContainer = ({
       {selectedTemplate && (
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row gap-6">
-            <div className="md:w-1/2 print:hidden">
+            {/* Desktop: both panels. Mobile: form only (preview via button) */}
+            <div className={`${showMobilePreview ? 'hidden' : 'block'} md:block md:w-1/2 print:hidden`}>
               <QuestionnaireForm
                 isSharedContext={true}
                 onSubmitForReview={handleSubmitForReview}
               />
+              {/* Mobile preview toggle */}
+              <button
+                className="md:hidden mt-4 w-full flex items-center justify-center gap-2 h-11 rounded border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-surface-secondary transition-colors"
+                onClick={() => setShowMobilePreview(true)}
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5z" stroke="currentColor" strokeWidth="1.2"/>
+                  <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.2"/>
+                </svg>
+                Ver prévia do contrato
+              </button>
             </div>
-            <div className="md:w-1/2 print:w-full">
+            <div className={`${showMobilePreview ? 'block' : 'hidden'} md:block md:w-1/2 print:w-full`}>
+              {showMobilePreview && (
+                <button
+                  className="md:hidden mb-3 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowMobilePreview(false)}
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Voltar ao formulário
+                </button>
+              )}
               <div className="sticky top-6">
                 <ScrollArea className="h-[calc(100vh-8rem)]" data-contract-preview-scroll>
                   <ContractPreview />

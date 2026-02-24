@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useContract } from '@/contexts/ContractContext';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import ContractCard from '@/components/contracts/ContractCard';
 import { FileText, Plus, Building2 } from 'lucide-react';
@@ -74,7 +73,7 @@ const MeusContratos = () => {
   const EmptyState = ({ message }: { message: string }) => (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
       <FileText className="w-16 h-16 text-muted-foreground mb-4" />
-      <h3 className="text-xl font-semibold mb-2">Nenhum contrato encontrado</h3>
+      <h3 className="font-serif text-xl text-foreground mb-2">Nenhum contrato encontrado</h3>
       <p className="text-muted-foreground mb-6 max-w-sm">{message}</p>
       <Button onClick={() => navigate('/')}>
         <Plus className="w-4 h-4 mr-2" />
@@ -87,30 +86,28 @@ const MeusContratos = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto py-8 px-4 sm:px-6">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Meus Contratos</h1>
-          <p className="text-muted-foreground">
+          <h1 className="font-serif text-3xl text-foreground mb-2">Meus Contratos</h1>
+          <p className="text-sm text-muted-foreground">
             Gerencie todos os seus contratos em um só lugar
           </p>
         </div>
 
         {/* Meus Contratos (B2C) */}
         <div className="mb-10">
-          <h2 className="text-xl font-semibold mb-4">Contratos Próprios</h2>
-          <Tabs value={filter} onValueChange={setFilter} className="mb-6">
-            <TabsList>
-              <TabsTrigger value="all">
-                Todos ({myContracts.length})
-              </TabsTrigger>
-              <TabsTrigger value="draft">
-                Rascunhos ({myContracts.filter(c => c.status === 'draft').length})
-              </TabsTrigger>
-              <TabsTrigger value="completed">
-                Finalizados ({myContracts.filter(c => c.status === 'completed').length})
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-serif text-xl text-foreground">Contratos Próprios</h2>
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="h-9 rounded border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="all">Todos ({myContracts.length})</option>
+              <option value="draft">Rascunhos ({myContracts.filter(c => c.status === 'draft').length})</option>
+              <option value="completed">Finalizados ({myContracts.filter(c => c.status === 'completed').length})</option>
+            </select>
+          </div>
 
           {isLoading ? (
             <div className="flex justify-center py-16">
@@ -137,17 +134,17 @@ const MeusContratos = () => {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Building2 className="w-5 h-5 text-primary" />
-              <h2 className="text-xl font-semibold">Documentos Compartilhados</h2>
+              <h2 className="font-serif text-xl text-foreground">Documentos Compartilhados</h2>
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {sharedContracts.map((contract) => (
-                <div key={contract.id} className="border rounded-lg p-4 space-y-2">
+                <div key={contract.id} className="rounded border border-border bg-surface p-4 space-y-2">
                   <div className="flex justify-between items-start">
-                    <h3 className="font-medium truncate">{contract.name}</h3>
+                    <h3 className="font-sans text-sm font-medium text-foreground truncate">{contract.name}</h3>
                     <Badge variant={
-                      contract.status === 'approved' ? 'default' :
-                      contract.status === 'rejected' ? 'destructive' :
-                      contract.status === 'pending_review' ? 'secondary' : 'outline'
+                      contract.status === 'approved' ? 'approved' :
+                      contract.status === 'rejected' ? 'rejected' :
+                      contract.status === 'pending_review' ? 'pending' : 'draft'
                     }>
                       {statusLabels[contract.status] || contract.status}
                     </Badge>
