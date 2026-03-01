@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, CheckCircle, Edit, Printer, AlertCircle, Save } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Edit, Printer, AlertCircle, Save, Loader2 } from 'lucide-react';
 import DocumentDownloader from '../DocumentDownloader';
 import ContractPreviewModal from '../ContractPreviewModal';
 import { getRepeatableVisibleFields, getNonRepeatableVisibleFields, getVisibleFields } from '@/utils/conditionalLogic';
@@ -19,6 +19,7 @@ interface QuestionnaireSummaryProps {
 const QuestionnaireSummary = ({ isSharedContext, onSubmitForReview }: QuestionnaireSummaryProps = {}) => {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [isSavingManually, setIsSavingManually] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationResult, setValidationResult] = useState<ValidationResult>({
     isValid: false,
     invalidFieldIds: new Set(),
@@ -115,12 +116,22 @@ const QuestionnaireSummary = ({ isSharedContext, onSubmitForReview }: Questionna
 
   const handleManualSave = async () => {
     if (!user) return;
-    
+
     setIsSavingManually(true);
     try {
       await saveContract(undefined, true); // showToast = true
     } finally {
       setIsSavingManually(false);
+    }
+  };
+
+  const handleSubmitForReview = async () => {
+    if (!onSubmitForReview) return;
+    setIsSubmitting(true);
+    try {
+      await onSubmitForReview();
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -389,12 +400,20 @@ const QuestionnaireSummary = ({ isSharedContext, onSubmitForReview }: Questionna
               </Button>
               {isSharedContext && onSubmitForReview ? (
                 <Button
-                  onClick={onSubmitForReview}
-                  disabled={!validationResult.isValid}
+                  onClick={handleSubmitForReview}
+                  disabled={!validationResult.isValid || isSubmitting}
                   className="bg-primary hover:bg-primary/90 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <CheckCircle className="w-4 h-4" />
-                  {currentContractStatus === 'rejected' ? 'Reenviar para Revisão' : 'Enviar para Revisão'}
+                  {isSubmitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <CheckCircle className="w-4 h-4" />
+                  )}
+                  {isSubmitting
+                    ? 'Enviando...'
+                    : currentContractStatus === 'rejected'
+                    ? 'Reenviar para Revisão'
+                    : 'Enviar para Revisão'}
                 </Button>
               ) : (
                 <>
