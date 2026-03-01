@@ -74,7 +74,7 @@ const ContractPreview = () => {
   };
 
   return (
-    <div className="rounded border border-border print:shadow-none print:border-0 print:p-0" style={{ minHeight: '29.7cm' }}>
+    <div className="rounded border border-border print:shadow-none print:border-0 print:p-0 break-words whitespace-pre-wrap w-full" style={{ minHeight: '29.7cm' }}>
       <div
         id="contract-preview"
         className="contract-paper"

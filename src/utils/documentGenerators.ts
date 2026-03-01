@@ -399,6 +399,7 @@ export const generatePdfDocument = async (data: DocumentData, filename: string) 
   tempDiv.style.fontSize = '12pt';
   tempDiv.style.lineHeight = '1.5';
   tempDiv.style.color = '#000000';
+  tempDiv.style.overflowWrap = 'break-word';
   
   // Build structured HTML
   let htmlContent = '';
@@ -481,19 +482,21 @@ export const generatePdfDocument = async (data: DocumentData, filename: string) 
   
   tempDiv.innerHTML = htmlContent;
   document.body.appendChild(tempDiv);
-  
-  // Generate canvas and PDF
-  const canvas = await html2canvas(tempDiv, {
-    scale: 2,
-    useCORS: true,
-    allowTaint: true,
-    backgroundColor: '#ffffff',
-    width: tempDiv.scrollWidth,
-    height: tempDiv.scrollHeight
-  });
-  
-  document.body.removeChild(tempDiv);
-  
+
+  let canvas: HTMLCanvasElement;
+  try {
+    canvas = await html2canvas(tempDiv, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      width: tempDiv.offsetWidth,
+      height: tempDiv.scrollHeight
+    });
+  } finally {
+    document.body.removeChild(tempDiv);
+  }
+
   const imgData = canvas.toDataURL('image/png');
   const pdf = new jsPDF('p', 'mm', 'a4');
   

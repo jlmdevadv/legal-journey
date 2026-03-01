@@ -86,11 +86,20 @@
     font-size: 14px;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+    overflow-wrap: break-word; /* global: prevents any unbreakable string from overflowing */
   }
 
   h1, h2, h3 {
     font-family: 'DM Serif Display', serif;
     font-weight: 400;
+  }
+}
+
+/* Flex child that safely contains user-supplied text of any length.
+   min-w-0 is required: flex items default to min-width:auto which prevents shrinking. */
+@layer components {
+  .user-content {
+    @apply flex-1 min-w-0;
   }
 }
 
