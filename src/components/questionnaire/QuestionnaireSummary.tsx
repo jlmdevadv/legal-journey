@@ -42,7 +42,8 @@ const QuestionnaireSummary = ({ isSharedContext, onSubmitForReview }: Questionna
     otherPartiesData,
     repeatableFieldsData,
     numberOfParties,
-    saveContract
+    saveContract,
+    currentContractStatus,
   } = useContract();
 
   if (!selectedTemplate) return null;
@@ -393,7 +394,7 @@ const QuestionnaireSummary = ({ isSharedContext, onSubmitForReview }: Questionna
                   className="bg-primary hover:bg-primary/90 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <CheckCircle className="w-4 h-4" />
-                  Enviar para Revisão
+                  {currentContractStatus === 'rejected' ? 'Reenviar para Revisão' : 'Enviar para Revisão'}
                 </Button>
               ) : (
                 <>
