@@ -16,19 +16,25 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import ReviewFeedbackPanel from '@/components/shared/ReviewFeedbackPanel';
 
 // Questionnaire with auto-save
 const QuestionnaireWithAutoSave = () => {
   const { user } = useAuth();
-  const { 
-    saveContract, 
-    currentQuestionIndex, 
+  const {
+    saveContract,
+    currentQuestionIndex,
     selectedTemplate,
     formValues,
     partiesData,
     otherPartiesData,
     locationData,
-    repeatableFieldsData
+    repeatableFieldsData,
+    currentContractStatus,
+    currentContractReviewNotes,
+    currentContractReviewedAt,
+    currentSavedContractId,
+    resubmitForReview,
   } = useContract();
 
   // Enable auto-save when user is logged in (including summary screen)
@@ -58,11 +64,20 @@ const QuestionnaireWithAutoSave = () => {
     prevIndexRef.current = currentIndex;
   }, [currentQuestionIndex, shouldAutoSave, saveContract]);
 
+  const isRejected = currentContractStatus === 'rejected';
+
+  const handleResubmit = async () => {
+    await resubmitForReview();
+  };
+
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="flex flex-col md:flex-row gap-6">
         <div className="md:w-1/2 print:hidden">
-          <QuestionnaireForm />
+          <QuestionnaireForm
+            isSharedContext={isRejected}
+            onSubmitForReview={isRejected ? handleResubmit : undefined}
+          />
           
           {/* Auto-save indicator */}
           {user && (
@@ -89,6 +104,13 @@ const QuestionnaireWithAutoSave = () => {
           </div>
         </div>
       </div>
+      {isRejected && currentContractReviewNotes && currentSavedContractId && (
+        <ReviewFeedbackPanel
+          reviewNotes={currentContractReviewNotes}
+          reviewedAt={currentContractReviewedAt}
+          contractId={currentSavedContractId}
+        />
+      )}
     </div>
   );
 };
