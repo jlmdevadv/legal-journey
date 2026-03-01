@@ -4,6 +4,7 @@ import { useContract } from '@/contexts/ContractContext';
 
 import { supabase } from '@/integrations/supabase/client';
 import Navbar from '@/components/Navbar';
+import ReviewFeedbackPanel from './ReviewFeedbackPanel';
 import QuestionnaireForm from '@/components/QuestionnaireForm';
 import ContractPreview from '@/components/ContractPreview';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +33,9 @@ const SharedQuestionnaireContainer = ({
   const [loading, setLoading] = useState(true);
   const [savedContractId, setSavedContractId] = useState<string | null>(null);
   const [showMobilePreview, setShowMobilePreview] = useState(false);
+  const [contractReviewNotes, setContractReviewNotes] = useState<string | null>(null);
+  const [contractReviewedAt, setContractReviewedAt] = useState<string | null>(null);
+  const [contractStatus, setContractStatus] = useState<string>('draft');
 
   useEffect(() => {
     loadTemplateAndDocument();
@@ -66,7 +70,7 @@ const SharedQuestionnaireContainer = ({
       // Check for existing document for this user + share_link
       const { data: existing } = await supabase
         .from('saved_contracts')
-        .select('id')
+        .select('id, review_notes, reviewed_at, status')
         .eq('user_id', user.id)
         .eq('share_link_id', shareLinkId)
         .limit(1)
@@ -74,6 +78,9 @@ const SharedQuestionnaireContainer = ({
 
       if (existing) {
         setSavedContractId(existing.id);
+        setContractReviewNotes((existing as any).review_notes || null);
+        setContractReviewedAt((existing as any).reviewed_at || null);
+        setContractStatus((existing as any).status || 'draft');
       } else {
         // Create new document linked to org
         const { data: newDoc, error: insertError } = await supabase
@@ -130,6 +137,7 @@ const SharedQuestionnaireContainer = ({
       if (error) throw error;
 
       toast.success('Documento enviado para revisão!');
+      setContractStatus('pending_review');
     } catch (error: any) {
       toast.error('Erro ao enviar para revisão: ' + error.message);
     }
@@ -199,6 +207,13 @@ const SharedQuestionnaireContainer = ({
             </div>
           </div>
         </div>
+      )}
+      {contractStatus === 'rejected' && contractReviewNotes && savedContractId && (
+        <ReviewFeedbackPanel
+          reviewNotes={contractReviewNotes}
+          reviewedAt={contractReviewedAt}
+          contractId={savedContractId}
+        />
       )}
     </div>
   );
