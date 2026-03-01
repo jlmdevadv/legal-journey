@@ -15,6 +15,8 @@ interface SavedContract {
   template_id: string | null;
   updated_at: string;
   organization_id?: string | null;
+  review_notes?: string | null;
+  reviewed_at?: string | null;
   contract_templates?: {
     name: string;
   } | null;
@@ -36,6 +38,15 @@ const MeusContratos = () => {
   const [contracts, setContracts] = useState<SavedContract[]>([]);
   const [filter, setFilter] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [expandedFeedback, setExpandedFeedback] = useState<Set<string>>(new Set());
+
+  const toggleFeedback = (id: string) => {
+    setExpandedFeedback(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
 
   useEffect(() => {
     loadContracts();
@@ -158,7 +169,27 @@ const MeusContratos = () => {
                     </Button>
                   )}
                   {contract.status === 'rejected' && (
-                    <p className="text-sm text-destructive">Documento reprovado. Edite e reenvie.</p>
+                    <div className="space-y-2">
+                      {contract.review_notes && (
+                        <div className="rounded border border-destructive/30 bg-destructive/5 p-3 space-y-1">
+                          <p className="text-xs font-medium text-destructive">Feedback do Revisor</p>
+                          <p className={`text-xs text-foreground whitespace-pre-wrap ${expandedFeedback.has(contract.id) ? '' : 'line-clamp-3'}`}>
+                            {contract.review_notes}
+                          </p>
+                          {contract.review_notes.length > 120 && (
+                            <button
+                              onClick={() => toggleFeedback(contract.id)}
+                              className="text-xs text-muted-foreground underline hover:text-foreground"
+                            >
+                              {expandedFeedback.has(contract.id) ? 'ver menos' : 'ver mais'}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      <Button size="sm" onClick={() => handleOpenContract(contract.id)} variant="destructive" className="w-full">
+                        Editar e Reenviar
+                      </Button>
+                    </div>
                   )}
                 </div>
               ))}
