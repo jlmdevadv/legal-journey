@@ -164,7 +164,7 @@ const QuestionnaireSummary = ({ isSharedContext, onSubmitForReview }: Questionna
                 {partiesData.map((party, index) => (
                   <div key={party.id} className="bg-background p-3 rounded border text-sm">
                     <div className="flex justify-between items-start">
-                      <div className="flex-1">
+                      <div className="flex-1 break-words">
                         <p className="font-bold">{party.fullName}</p>
                         <p className="text-muted-foreground">
                           <span className="font-medium">{party.partyType}</span> • {party.cpf}
@@ -199,7 +199,7 @@ const QuestionnaireSummary = ({ isSharedContext, onSubmitForReview }: Questionna
                 {otherPartiesData.map((party, index) => (
                   <div key={party.id} className="bg-background p-3 rounded border text-sm">
                     <div className="flex justify-between items-start">
-                      <div className="flex-1">
+                      <div className="flex-1 break-words">
                         <p className="font-bold">{party.fullName}</p>
                         <p className="text-muted-foreground">
                           <span className="font-medium">{party.partyType}</span> • {party.cpf}
@@ -272,17 +272,17 @@ const QuestionnaireSummary = ({ isSharedContext, onSubmitForReview }: Questionna
                               {fieldData.responses.map((response, idx) => (
                                 <div 
                                   key={response.partyId} 
-                                  className={`text-sm p-2 rounded flex justify-between items-center ${
+                                  className={`text-sm p-2 rounded flex justify-between items-start ${
                                     isFieldInvalid(field.id, response.partyId) 
                                       ? 'bg-red-50 border-2 border-red-400' 
                                       : 'bg-purple-50'
                                   }`}
                                 >
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-start gap-2 flex-1 min-w-0">
                                     {isFieldInvalid(field.id, response.partyId) && (
-                                      <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                                      <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
                                     )}
-                                    <div>
+                                    <div className="break-words whitespace-pre-wrap">
                                       <span className="font-medium text-purple-800">{response.partyName}:</span>{' '}
                                       <span className={isFieldInvalid(field.id, response.partyId) ? 'text-red-600 font-medium' : 'text-gray-700'}>
                                         {response.value || <span className="text-red-500 italic font-medium">⚠️ Campo obrigatório não preenchido</span>}
@@ -293,7 +293,7 @@ const QuestionnaireSummary = ({ isSharedContext, onSubmitForReview }: Questionna
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => navigateToRepeatableField(field.id, response.partyId)}
-                                    className={isFieldInvalid(field.id, response.partyId) ? 'text-red-600 hover:text-red-700 p-1' : 'text-purple-600 hover:text-purple-700 p-1'}
+                                    className={`ml-2 flex-shrink-0 ${isFieldInvalid(field.id, response.partyId) ? 'text-red-600 hover:text-red-700 p-1' : 'text-purple-600 hover:text-purple-700 p-1'}`}
                                   >
                                     <Edit className="w-4 h-4" />
                                   </Button>
@@ -360,7 +360,7 @@ const QuestionnaireSummary = ({ isSharedContext, onSubmitForReview }: Questionna
                           <Edit className="w-4 h-4" />
                         </Button>
                       </div>
-                      <p className={`p-2 rounded ${isFieldInvalid(field.id) ? 'bg-white text-red-600 font-medium' : 'bg-gray-50 text-gray-700'}`}>
+                      <p className={`p-2 rounded break-words whitespace-pre-wrap ${isFieldInvalid(field.id) ? 'bg-white text-red-600 font-medium' : 'bg-gray-50 text-gray-700'}`}>
                         {formValues[field.id] || <span className="text-red-500 italic">⚠️ Campo obrigatório não preenchido</span>}
                       </p>
                     </div>

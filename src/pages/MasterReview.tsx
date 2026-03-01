@@ -157,7 +157,7 @@ const MasterReview = () => {
               </CardHeader>
               <CardContent>
                 <div
-                  className="contract-paper rounded border border-border max-h-[60vh] sm:max-h-[500px] overflow-y-auto whitespace-pre-wrap text-sm"
+                  className="contract-paper rounded border border-border max-h-[60vh] sm:max-h-[500px] overflow-y-auto whitespace-pre-wrap break-words text-sm"
                   dangerouslySetInnerHTML={{ __html: document.generated_document }}
                 />
               </CardContent>
