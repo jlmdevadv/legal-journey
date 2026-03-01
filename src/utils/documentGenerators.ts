@@ -399,6 +399,9 @@ export const generatePdfDocument = async (data: DocumentData, filename: string) 
   tempDiv.style.fontSize = '12pt';
   tempDiv.style.lineHeight = '1.5';
   tempDiv.style.color = '#000000';
+  tempDiv.style.wordBreak = 'break-all';
+  tempDiv.style.overflowWrap = 'break-word';
+  tempDiv.style.overflow = 'hidden';
   
   // Build structured HTML
   let htmlContent = '';
@@ -488,7 +491,7 @@ export const generatePdfDocument = async (data: DocumentData, filename: string) 
     useCORS: true,
     allowTaint: true,
     backgroundColor: '#ffffff',
-    width: tempDiv.scrollWidth,
+    width: tempDiv.offsetWidth,
     height: tempDiv.scrollHeight
   });
   

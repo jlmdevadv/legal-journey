@@ -164,7 +164,7 @@ const QuestionnaireSummary = ({ isSharedContext, onSubmitForReview }: Questionna
                 {partiesData.map((party, index) => (
                   <div key={party.id} className="bg-background p-3 rounded border text-sm">
                     <div className="flex justify-between items-start">
-                      <div className="flex-1 break-words">
+                      <div className="flex-1 min-w-0 break-all overflow-hidden">
                         <p className="font-bold">{party.fullName}</p>
                         <p className="text-muted-foreground">
                           <span className="font-medium">{party.partyType}</span> • {party.cpf}
@@ -199,7 +199,7 @@ const QuestionnaireSummary = ({ isSharedContext, onSubmitForReview }: Questionna
                 {otherPartiesData.map((party, index) => (
                   <div key={party.id} className="bg-background p-3 rounded border text-sm">
                     <div className="flex justify-between items-start">
-                      <div className="flex-1 break-words">
+                      <div className="flex-1 min-w-0 break-all overflow-hidden">
                         <p className="font-bold">{party.fullName}</p>
                         <p className="text-muted-foreground">
                           <span className="font-medium">{party.partyType}</span> • {party.cpf}
@@ -278,11 +278,11 @@ const QuestionnaireSummary = ({ isSharedContext, onSubmitForReview }: Questionna
                                       : 'bg-purple-50'
                                   }`}
                                 >
-                                  <div className="flex items-start gap-2 flex-1 min-w-0">
+                                  <div className="flex items-start gap-2 flex-1 min-w-0 overflow-hidden">
                                     {isFieldInvalid(field.id, response.partyId) && (
                                       <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
                                     )}
-                                    <div className="break-words whitespace-pre-wrap">
+                                    <div className="break-all whitespace-pre-wrap min-w-0 overflow-hidden">
                                       <span className="font-medium text-purple-800">{response.partyName}:</span>{' '}
                                       <span className={isFieldInvalid(field.id, response.partyId) ? 'text-red-600 font-medium' : 'text-gray-700'}>
                                         {response.value || <span className="text-red-500 italic font-medium">⚠️ Campo obrigatório não preenchido</span>}
@@ -360,7 +360,7 @@ const QuestionnaireSummary = ({ isSharedContext, onSubmitForReview }: Questionna
                           <Edit className="w-4 h-4" />
                         </Button>
                       </div>
-                      <p className={`p-2 rounded break-words whitespace-pre-wrap ${isFieldInvalid(field.id) ? 'bg-white text-red-600 font-medium' : 'bg-gray-50 text-gray-700'}`}>
+                      <p className={`p-2 rounded break-all whitespace-pre-wrap overflow-hidden ${isFieldInvalid(field.id) ? 'bg-white text-red-600 font-medium' : 'bg-gray-50 text-gray-700'}`}>
                         {formValues[field.id] || <span className="text-red-500 italic">⚠️ Campo obrigatório não preenchido</span>}
                       </p>
                     </div>
