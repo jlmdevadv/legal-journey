@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useContract } from '@/contexts/ContractContext';
 
 import { supabase } from '@/integrations/supabase/client';
 import Navbar from '@/components/Navbar';
+import ReviewFeedbackPanel from './ReviewFeedbackPanel';
 import QuestionnaireForm from '@/components/QuestionnaireForm';
 import ContractPreview from '@/components/ContractPreview';
 import { Badge } from '@/components/ui/badge';
@@ -28,14 +29,50 @@ const SharedQuestionnaireContainer = ({
   shareLinkId,
 }: SharedQuestionnaireContainerProps) => {
   const { user } = useAuth();
-  const { selectTemplate, selectedTemplate, generateFinalDocument, getContractingParties, getOtherInvolved, getSignatures, getLocationDate } = useContract();
+  const {
+    selectTemplate, selectedTemplate, generateFinalDocument,
+    getContractingParties, getOtherInvolved, getSignatures, getLocationDate,
+    formValues, partiesData, numberOfParties, otherPartiesData, numberOfOtherParties,
+    hasOtherParties, locationData, repeatableFieldsData,
+    currentQuestionIndex, currentPartyLoopIndex,
+    loadContract,
+  } = useContract();
   const [loading, setLoading] = useState(true);
   const [savedContractId, setSavedContractId] = useState<string | null>(null);
   const [showMobilePreview, setShowMobilePreview] = useState(false);
+  const [contractReviewNotes, setContractReviewNotes] = useState<string | null>(null);
+  const [contractReviewedAt, setContractReviewedAt] = useState<string | null>(null);
+  const [contractStatus, setContractStatus] = useState<string>('draft');
+  const prevQuestionIndexRef = useRef(currentQuestionIndex);
 
   useEffect(() => {
     loadTemplateAndDocument();
   }, [templateId]);
+
+  useEffect(() => {
+    if (!savedContractId || prevQuestionIndexRef.current === currentQuestionIndex) return;
+    prevQuestionIndexRef.current = currentQuestionIndex;
+    saveFormState(savedContractId);
+  }, [currentQuestionIndex, savedContractId]);
+
+  const saveFormState = async (contractId: string) => {
+    await supabase
+      .from('saved_contracts')
+      .update({
+        form_values: formValues,
+        parties_data: partiesData,
+        number_of_parties: numberOfParties,
+        other_parties_data: otherPartiesData,
+        number_of_other_parties: numberOfOtherParties,
+        has_other_parties: hasOtherParties,
+        location_data: locationData,
+        repeatable_fields_data: repeatableFieldsData,
+        current_question_index: currentQuestionIndex,
+        current_party_loop_index: currentPartyLoopIndex,
+        last_accessed_at: new Date().toISOString(),
+      })
+      .eq('id', contractId);
+  };
 
   const loadTemplateAndDocument = async () => {
     if (!user) return;
@@ -66,7 +103,7 @@ const SharedQuestionnaireContainer = ({
       // Check for existing document for this user + share_link
       const { data: existing } = await supabase
         .from('saved_contracts')
-        .select('id')
+        .select('id, review_notes, reviewed_at, status')
         .eq('user_id', user.id)
         .eq('share_link_id', shareLinkId)
         .limit(1)
@@ -74,6 +111,11 @@ const SharedQuestionnaireContainer = ({
 
       if (existing) {
         setSavedContractId(existing.id);
+        setContractReviewNotes((existing as any).review_notes || null);
+        setContractReviewedAt((existing as any).reviewed_at || null);
+        setContractStatus((existing as any).status || 'draft');
+        // Hydrate context with saved form data so the questionnaire is pre-filled
+        await loadContract(existing.id);
       } else {
         // Create new document linked to org
         const { data: newDoc, error: insertError } = await supabase
@@ -124,12 +166,23 @@ const SharedQuestionnaireContainer = ({
           status: 'pending_review',
           submitted_for_review_at: new Date().toISOString(),
           generated_document: fullDocument,
+          form_values: formValues,
+          parties_data: partiesData,
+          number_of_parties: numberOfParties,
+          other_parties_data: otherPartiesData,
+          number_of_other_parties: numberOfOtherParties,
+          has_other_parties: hasOtherParties,
+          location_data: locationData,
+          repeatable_fields_data: repeatableFieldsData,
+          current_question_index: currentQuestionIndex,
+          current_party_loop_index: currentPartyLoopIndex,
         })
         .eq('id', savedContractId);
 
       if (error) throw error;
 
       toast.success('Documento enviado para revisão!');
+      setContractStatus('pending_review');
     } catch (error: any) {
       toast.error('Erro ao enviar para revisão: ' + error.message);
     }
@@ -199,6 +252,13 @@ const SharedQuestionnaireContainer = ({
             </div>
           </div>
         </div>
+      )}
+      {contractStatus === 'rejected' && contractReviewNotes && savedContractId && (
+        <ReviewFeedbackPanel
+          reviewNotes={contractReviewNotes}
+          reviewedAt={contractReviewedAt}
+          contractId={savedContractId}
+        />
       )}
     </div>
   );

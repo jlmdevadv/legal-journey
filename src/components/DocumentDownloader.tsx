@@ -11,6 +11,7 @@ import { Download, FileText, FileType, File, ChevronDown } from 'lucide-react';
 import { downloadDocument } from '../utils/documentGenerators';
 import { DocumentData, DocumentFormat } from '../types/document';
 import { useToast } from '@/hooks/use-toast';
+import { generatePDF } from '../utils/pdfGenerator';
 
 interface DocumentDownloaderProps {
   documentData: DocumentData;
@@ -42,7 +43,41 @@ const DocumentDownloader = ({
     try {
       // PDF no longer needs elementId, uses optimized HTML generation
       if (format === 'pdf') {
-        await downloadDocument(format, documentData, filename);
+        let contentToPrint = '';
+
+        if (typeof documentData === 'string') {
+          contentToPrint = documentData;
+        } else if (typeof documentData === 'object' && documentData !== null) {
+          const data = documentData as any;
+          const parts: string[] = [];
+
+          if (data.parties) {
+            parts.push('**PARTES PRINCIPAIS**');
+            parts.push(data.parties);
+          }
+
+          if (data.otherInvolved) {
+            parts.push('**OUTROS ENVOLVIDOS**');
+            parts.push(data.otherInvolved);
+          }
+
+          if (data.content) {
+            parts.push(data.content);
+          }
+
+          if (data.locationDate) {
+            parts.push(`\n${data.locationDate}`);
+          }
+
+          if (data.signatures) {
+            parts.push('**ASSINATURAS**');
+            parts.push(data.signatures);
+          }
+
+          contentToPrint = parts.join('\n\n');
+        }
+
+        await generatePDF(filename, contentToPrint);
       } else {
         await downloadDocument(format, documentData, filename, elementId);
       }
@@ -129,7 +164,6 @@ const DocumentDownloader = ({
           </div>
         </DropdownMenuItem>
         
-        {/* TEMPORARIAMENTE DESABILITADO - Geração de PDF em desenvolvimento
         <DropdownMenuItem
           onClick={() => handleDownload('pdf')}
           disabled={isDownloading}
@@ -141,7 +175,6 @@ const DocumentDownloader = ({
             <span className="text-xs text-gray-500">{getFormatDescription('pdf')}</span>
           </div>
         </DropdownMenuItem>
-        */}
       </DropdownMenuContent>
     </DropdownMenu>
   );
