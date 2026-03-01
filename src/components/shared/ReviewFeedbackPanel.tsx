@@ -27,7 +27,7 @@ const ReviewFeedbackPanel = ({ reviewNotes, reviewedAt, contractId }: ReviewFeed
     return (
       <button
         onClick={() => setIsExpanded(true)}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-destructive/10 border border-destructive/30 rounded-full px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/20 transition-colors shadow-md"
+        className="fixed bottom-20 right-6 z-50 flex items-center gap-2 bg-destructive/10 border border-destructive/30 rounded-full px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/20 transition-colors shadow-md"
       >
         <MessageSquare className="w-4 h-4" />
         Feedback do Revisor
@@ -37,7 +37,7 @@ const ReviewFeedbackPanel = ({ reviewNotes, reviewedAt, contractId }: ReviewFeed
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-80 shadow-lg">
+    <div className="fixed bottom-20 right-6 z-50 w-80 shadow-lg">
       <div className="bg-background border border-destructive/30 rounded-lg p-4">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2 text-sm font-medium text-foreground">
