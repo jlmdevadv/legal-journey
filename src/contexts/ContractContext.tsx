@@ -96,6 +96,11 @@ interface ContractContextType {
   listUserContracts: () => Promise<SavedContract[]>;
   deleteContract: (contractId: string) => Promise<boolean>;
   downloadPDF: () => Promise<void>;
+  currentContractStatus: string | null;
+  currentContractReviewNotes: string | null;
+  currentContractReviewedAt: string | null;
+  currentContractOrganizationId: string | null;
+  resubmitForReview: () => Promise<boolean>;
 }
 
 const ContractContext = createContext<ContractContextType | undefined>(undefined);
@@ -107,6 +112,10 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
   const [isQuestionnaireMode, setIsQuestionnaireMode] = useState(false);
   const [customTemplates, setCustomTemplates] = useState<ContractTemplate[]>([]);
   const [currentSavedContractId, setCurrentSavedContractId] = useState<string | null>(null);
+  const [currentContractStatus, setCurrentContractStatus] = useState<string | null>(null);
+  const [currentContractReviewNotes, setCurrentContractReviewNotes] = useState<string | null>(null);
+  const [currentContractReviewedAt, setCurrentContractReviewedAt] = useState<string | null>(null);
+  const [currentContractOrganizationId, setCurrentContractOrganizationId] = useState<string | null>(null);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
   const [editingTemplate, setEditingTemplate] = useState<ContractTemplate | null>(null);
   const [numberOfParties, setNumberOfParties] = useState<number>(0);
@@ -1242,6 +1251,10 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       setCurrentQuestionIndex(data.current_question_index || -1);
       setCurrentPartyLoopIndex(data.current_party_loop_index || 0);
       setCurrentSavedContractId(contractId);
+      setCurrentContractStatus((data as any).status || null);
+      setCurrentContractReviewNotes((data as any).review_notes || null);
+      setCurrentContractReviewedAt((data as any).reviewed_at || null);
+      setCurrentContractOrganizationId((data as any).organization_id || null);
       setIsQuestionnaireMode(true);
 
       toast.success("Contrato carregado com sucesso!");
@@ -1249,6 +1262,41 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Erro ao carregar contrato:", error);
       toast.error("Erro ao carregar contrato");
+      return false;
+    }
+  };
+
+  const resubmitForReview = async (): Promise<boolean> => {
+    if (!currentSavedContractId) return false;
+    try {
+      const finalDoc = generateFinalDocument();
+      const parties = getContractingParties();
+      const otherInvolved = getOtherInvolved();
+      const signatures = getSignatures();
+      const locationDate = getLocationDate();
+      const fullDocument = [
+        parties ? `PARTES PRINCIPAIS\n\n${parties}` : '',
+        otherInvolved ? `OUTROS ENVOLVIDOS\n\n${otherInvolved}` : '',
+        finalDoc,
+        locationDate ? `\n${locationDate}` : '',
+        signatures ? `ASSINATURAS\n\n${signatures}` : '',
+      ].filter(Boolean).join('\n\n');
+
+      const { error } = await supabase
+        .from('saved_contracts')
+        .update({
+          status: 'pending_review',
+          submitted_for_review_at: new Date().toISOString(),
+          generated_document: fullDocument,
+        })
+        .eq('id', currentSavedContractId);
+
+      if (error) throw error;
+      setCurrentContractStatus('pending_review');
+      toast.success('Documento reenviado para revisão!');
+      return true;
+    } catch (error: any) {
+      toast.error('Erro ao reenviar para revisão: ' + error.message);
       return false;
     }
   };
@@ -1742,6 +1790,11 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         listUserContracts,
         deleteContract,
         downloadPDF,
+        currentContractStatus,
+        currentContractReviewNotes,
+        currentContractReviewedAt,
+        currentContractOrganizationId,
+        resubmitForReview,
       }}
     >
       {children}
