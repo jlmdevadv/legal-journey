@@ -1251,7 +1251,11 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         (data.location_data || { city: "", state: "", date: new Date().toISOString().split("T")[0] }) as any,
       );
       setRepeatableFieldsData((data.repeatable_fields_data || []) as any);
-      setCurrentQuestionIndex(data.current_question_index || -1);
+      // Contracts that have been reviewed should always open at the summary
+      const restoredIndex = (
+        (data as any).status === 'rejected' || (data as any).status === 'pending_review'
+      ) ? 9999 : (data.current_question_index || -1);
+      setCurrentQuestionIndex(restoredIndex);
       setCurrentPartyLoopIndex(data.current_party_loop_index || 0);
       setCurrentSavedContractId(contractId);
       setCurrentContractStatus((data as any).status || null);
