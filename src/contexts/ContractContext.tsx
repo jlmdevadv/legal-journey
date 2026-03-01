@@ -1163,7 +1163,9 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         user_id: user.id,
         template_id: selectedTemplate.id,
         name: name || `${selectedTemplate.name} - ${new Date().toLocaleDateString("pt-BR")}`,
-        status: currentQuestionIndex === 9999 ? "completed" : "draft",
+        status: (currentContractStatus === 'rejected' || currentContractStatus === 'pending_review')
+          ? currentContractStatus
+          : currentQuestionIndex === 9999 ? "completed" : "draft",
         form_values: formValues,
         parties_data: partiesData,
         number_of_parties: numberOfParties,
