@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getVisibleFields, getRepeatableVisibleFields, getNonRepeatableVisibleFields } from "@/utils/conditionalLogic";
 import { formatDateToBrazilian } from "@/utils/dateUtils";
+import { generatePDF } from "@/utils/pdfGenerator";
 
 interface LocationData {
   city: string;
@@ -94,6 +95,7 @@ interface ContractContextType {
   loadContract: (contractId: string) => Promise<boolean>;
   listUserContracts: () => Promise<SavedContract[]>;
   deleteContract: (contractId: string) => Promise<boolean>;
+  downloadPDF: () => Promise<void>;
 }
 
 const ContractContext = createContext<ContractContextType | undefined>(undefined);
@@ -1205,8 +1207,28 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         return false;
       }
 
+      if (!data.contract_templates) {
+        console.error("Template não encontrado para o contrato:", contractId);
+        toast.error("Erro: O modelo original deste contrato não foi encontrado.");
+        return false;
+      }
+
+      const templateData = data.contract_templates as any;
+
+      // Garantir que os campos tenham display_order e estejam ordenados
+      const fields = (templateData.fields as ContractField[] || []).map((field, index) => ({
+        ...field,
+        display_order: field.display_order ?? index,
+      }));
+
+      const processedTemplate: ContractTemplate = {
+        ...templateData,
+        fields: sortFieldsByDisplayOrder(fields),
+        usePartySystem: templateData.use_party_system
+      };
+
       // Restaurar estado completo
-      setSelectedTemplate(data.contract_templates as any);
+      setSelectedTemplate(processedTemplate);
       setFormValues((data.form_values || {}) as any);
       setPartiesData((data.parties_data || []) as any);
       setNumberOfParties(data.number_of_parties || 0);
@@ -1643,6 +1665,22 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     return `${locationData.city}, ${locationData.state}, ${formattedDate}`;
   };
 
+  const downloadPDF = async () => {
+    if (!selectedTemplate) {
+      toast.error("Nenhum modelo selecionado");
+      return;
+    }
+    
+    const contractText = generateFinalDocument();
+    const fileName = selectedTemplate.name || "Contrato";
+    
+    toast.promise(generatePDF(fileName, contractText), {
+      loading: 'Gerando PDF...',
+      success: 'PDF baixado com sucesso!',
+      error: 'Erro ao gerar PDF'
+    });
+  };
+
   return (
     <ContractContext.Provider
       value={{
@@ -1703,6 +1741,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         loadContract,
         listUserContracts,
         deleteContract,
+        downloadPDF,
       }}
     >
       {children}
