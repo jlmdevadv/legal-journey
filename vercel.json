@@ -1,0 +1,11 @@
+--- /dev/null
++++ c:\Users\Nitro\repos\contrato-completo-facil-02\vercel.json
+@@ -0,0 +1,6 @@
++{
++  "rewrites": [
++    {
++      "source": "/(.*)",
++      "destination": "/index.html"
++    }
++  ]
++}
