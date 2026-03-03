@@ -97,6 +97,7 @@ O servidor ficará disponível em `http://localhost:8080`.
 ```
 src/
 ├── App.tsx                  # Definição de rotas e providers globais
+├── App.css                  # Estilos específicos da aplicação
 ├── main.tsx                 # Ponto de entrada da aplicação
 ├── index.css                # Estilos globais e variáveis CSS
 ├── components/
@@ -105,14 +106,10 @@ src/
 │   ├── contracts/           # Listagem e gerenciamento de contratos do usuário
 │   ├── master/              # Componentes exclusivos do painel Master
 │   ├── questionnaire/       # Questionário passo a passo de preenchimento
-│   ├── shared/              # Componentes para templates compartilhados via link
+│   ├── shared/              # Componentes para templates compartilhados via link e painel de feedback de revisão
 │   ├── ui/                  # Componentes base do shadcn-ui
 │   ├── ContractForm.tsx     # Formulário principal de criação de contrato
-│   ├── ContractPreview.tsx  # Prévia do documento preenchido
 │   ├── ContractPreviewModal.tsx # Modal de prévia
-│   ├── DocumentDownloader.tsx   # Lógica de download PDF/DOCX
-│   ├── Navbar.tsx           # Barra de navegação global
-│   ├── QuestionnaireForm.tsx # Formulário do questionário
 │   └── TemplateSelector.tsx  # Seleção de modelo de contrato
 ├── contexts/
 │   ├── AuthContext.tsx      # Estado de autenticação e roles do usuário
@@ -169,9 +166,9 @@ Consulte [`docs/deployment.md`](docs/deployment.md) para o passo a passo complet
 
 ---
 
-## Documentacao
+## Documentação
 
-| Documento | Descricao |
+| Documento | Descrição |
 |---|---|
 | [`docs/technical-data-flow.md`](docs/technical-data-flow.md) | Arquitetura e fluxo de dados da aplicação |
 | [`docs/template-json-schema.md`](docs/template-json-schema.md) | Esquema e estrutura dos modelos de contrato em JSON |
