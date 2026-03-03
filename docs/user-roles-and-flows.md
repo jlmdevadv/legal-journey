@@ -29,7 +29,7 @@ O sistema possui quatro perfis de usuário, com diferentes níveis de acesso:
 | `/master` | ❌ Redirecionado para `/auth` | ❌ Redirecionado para `/` | ❌ Redirecionado para `/` | ✅ Painel de gerenciamento da organização | `MasterProtectedRoute` |
 | `/master/template/:templateId` | ❌ | ❌ | ❌ | ✅ Editor de template | `MasterProtectedRoute` |
 | `/master/review/:documentId` | ❌ | ❌ | ❌ | ✅ Tela de revisão de documento | `MasterProtectedRoute` |
-| `/s/:token` | ❌ Redirecionado para `/auth` após validação do link | ✅ Acessa formulário de preenchimento compartilhado | ✅ | ✅ | Pública, mas exige login para preencher |
+| `/s/:token` | ❌ Redirecionado para `/auth` pelo componente `SharedTemplate` (sem guarda de rota) | ✅ Acessa formulário de preenchimento compartilhado | ✅ | ✅ | Pública (sem guarda de rota); controle de acesso tratado internamente pelo componente `SharedTemplate` |
 | `*` (404) | ✅ Página Not Found | ✅ | ✅ | ✅ | Pública |
 
 ---
