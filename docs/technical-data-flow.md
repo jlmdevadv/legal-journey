@@ -25,6 +25,11 @@ Template (DB) → Context → Questionnaire → Preview → Final Document
 | `otherPartiesData` | `PartyData[]` | Dados de outras partes envolvidas |
 | `locationData` | `LocationData \| null` | Local e data de assinatura |
 | `currentQuestionIndex` | `number` | Índice da questão atual no questionário |
+| `currentContractStatus` | `string \| null` | Status do contrato atual ('draft', 'pending_review', 'approved', 'rejected') |
+| `currentContractReviewNotes` | `string \| null` | Feedback de rejeição do master |
+| `currentContractReviewedAt` | `string \| null` | Timestamp ISO da última revisão |
+| `currentContractOrganizationId` | `string \| null` | ID da organização (contratos B2B) |
+| `currentSavedContractId` | `string \| null` | ID do contrato salvo no banco |
 
 ### 1.3. Componentes Principais
 
@@ -3473,6 +3478,49 @@ Este documento técnico fornece uma visão completa do fluxo de dados do sistema
 - **has_role()**: Função SQL SECURITY DEFINER que verifica se usuário possui determinada role
 
 - **currentSavedContractId**: Estado que rastreia o ID do contrato salvo atual para updates via upsert
+
+---
+
+## 25. Ciclo de Revisão e Rejeição (v4.0)
+
+### 25.1. Visão Geral
+
+A partir da versão 4.0, contratos organizacionais (com `organization_id`) podem ser submetidos para revisão por um usuário Master. O Master pode aprovar ou rejeitar o contrato com feedback textual.
+
+### 25.2. Estados Relacionados à Revisão
+
+Ver tabela na seção 1.2 para os campos: `currentContractStatus`, `currentContractReviewNotes`, `currentContractReviewedAt`, `currentContractOrganizationId`, `currentSavedContractId`.
+
+### 25.3. Transições de Status
+
+```
+draft → pending_review   (usuário: botão "Enviar para Revisão" em QuestionnaireSummary)
+pending_review → approved  (master: botão "Aprovar" em MasterReview)
+pending_review → rejected  (master: botão "Rejeitar" com mensagem em MasterReview)
+rejected → pending_review  (usuário: botão "Reenviar" em QuestionnaireSummary via resubmitForReview())
+```
+
+### 25.4. Comportamento ao Restaurar Contrato Rejeitado
+
+Quando um contrato com status `rejected` é carregado no ContractContext, o índice de navegação é forçado para `9999` (sumário), independentemente do `current_question_index` salvo no banco:
+
+```typescript
+const restoredIndex = (
+  (data as any).status === 'rejected' || (data as any).status === 'pending_review'
+) ? 9999 : (data.current_question_index || -1);
+setCurrentQuestionIndex(restoredIndex);
+```
+
+### 25.5. Componentes Envolvidos
+
+| Componente | Arquivo | Papel no ciclo |
+|---|---|---|
+| `ReviewFeedbackPanel` | `src/components/shared/ReviewFeedbackPanel.tsx` | Exibe feedback de rejeição ao usuário |
+| `QuestionnaireSummary` | `src/components/questionnaire/QuestionnaireSummary.tsx` | Botão "Enviar/Reenviar para Revisão" |
+| `MeusContratos` | `src/pages/MeusContratos.tsx` | Lista contratos com badge de status |
+| `MasterReview` | `src/pages/MasterReview.tsx` | Interface do Master para aprovar/rejeitar |
+
+Para documentação completa do fluxo, veja [`docs/review-workflow.md`](./review-workflow.md).
 
 ---
 
