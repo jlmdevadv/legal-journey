@@ -2,10 +2,12 @@
 
 Este documento explica como promover um usuário a administrador no sistema.
 
+> **Contexto:** Este projeto usa o Supabase como banco de dados. Para executar comandos SQL, acesse o [Supabase Dashboard](https://supabase.com/dashboard) e selecione o projeto.
+
 ## Pré-requisitos
 
 1. O usuário deve estar cadastrado no sistema (ter criado uma conta via página de cadastro)
-2. Você precisa ter acesso ao backend (Cloud > Functions)
+2. Você precisa ter acesso ao [Supabase Dashboard](https://supabase.com/dashboard) do projeto
 
 ## Passo a Passo
 
@@ -23,8 +25,8 @@ Primeiro, faça o cadastro normal pela página `/auth`:
 Após o cadastro, você precisa executar uma função SQL no backend:
 
 1. **Acesse o Backend:**
-   - No Lovable, clique em "Cloud" no menu superior
-   - Vá para "Database" > "SQL Editor"
+   - Acesse o [Supabase Dashboard](https://supabase.com/dashboard)
+   - Selecione o projeto → vá em **SQL Editor** (menu lateral)
 
 2. **Execute o Comando SQL:**
    ```sql
