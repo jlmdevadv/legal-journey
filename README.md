@@ -65,7 +65,7 @@ Crie o arquivo `.env.local` na raiz do projeto com as seguintes variáveis:
 
 ```env
 VITE_SUPABASE_URL=https://<seu-projeto>.supabase.co
-VITE_SUPABASE_ANON_KEY=<sua-anon-key>
+VITE_SUPABASE_PUBLISHABLE_KEY=<sua-publishable-key>
 ```
 
 Os valores estão disponíveis em **Project Settings > API** no dashboard do Supabase.
