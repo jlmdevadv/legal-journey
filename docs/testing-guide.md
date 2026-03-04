@@ -23,6 +23,10 @@ Após criar a conta master via cadastro normal, é necessário promovê-la no ba
 
 ### Passo a Passo
 
+Caso queira, pode usar o usuário de testes já criado:
+- administrador@gmail.com
+- senha: 123456
+
 1. Acesse o [Supabase Dashboard](https://supabase.com/dashboard)
 2. Selecione o projeto → **SQL Editor** (menu lateral)
 3. Execute o comando abaixo substituindo o e-mail:
@@ -35,6 +39,7 @@ SELECT promote_user_to_admin('seu-email-master@exemplo.com');
 5. Acesse `/master` — você verá o painel de administração
 
 > **Problemas?** Veja `docs/admin-setup.md` para troubleshooting detalhado.
+>
 
 ---
 
