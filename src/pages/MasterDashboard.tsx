@@ -113,10 +113,17 @@ const MasterDashboard = () => {
   const approvedCount = documents.filter(d => d.status === 'approved').length;
   const rejectedCount = documents.filter(d => d.status === 'rejected').length;
 
-  const filteredDocs = documents.filter(d => {
-    if (docFilter === 'all') return true;
-    return d.status === docFilter;
-  });
+  const filteredDocs = documents
+    .filter(d => {
+      if (docFilter === 'all') return true;
+      return d.status === docFilter;
+    })
+    .sort((a, b) => {
+      const aPending = a.status === 'pending_review' ? 0 : 1;
+      const bPending = b.status === 'pending_review' ? 0 : 1;
+      if (aPending !== bPending) return aPending - bPending;
+      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+    });
 
   const statusMap: Record<string, { label: string; variant: any }> = {
     draft:          { label: 'Rascunho',   variant: 'draft'     },
@@ -332,8 +339,9 @@ const MasterDashboard = () => {
                         {format(new Date(doc.submitted_for_review_at), "dd/MM/yyyy", { locale: ptBR })}
                       </p>
                     )}
-                    <Button variant="outline" size="sm" onClick={() => navigate(`/master/review/${doc.id}`)}>
-                      <Eye className="w-3 h-3 mr-1" />Ver
+                    <Button variant={doc.status === 'pending_review' ? 'default' : 'outline'} size="sm" onClick={() => navigate(`/master/review/${doc.id}`)}>
+                      <Eye className="w-3 h-3 mr-1" />
+                      {doc.status === 'pending_review' ? 'Revisar' : 'Ver'}
                     </Button>
                   </div>
                 );
@@ -366,9 +374,9 @@ const MasterDashboard = () => {
                             : format(new Date(doc.updated_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="outline" size="sm" onClick={() => navigate(`/master/review/${doc.id}`)}>
+                          <Button variant={doc.status === 'pending_review' ? 'default' : 'outline'} size="sm" onClick={() => navigate(`/master/review/${doc.id}`)}>
                             <Eye className="w-4 h-4 mr-1" />
-                            Revisar
+                            {doc.status === 'pending_review' ? 'Revisar' : 'Ver'}
                           </Button>
                         </TableCell>
                       </TableRow>
