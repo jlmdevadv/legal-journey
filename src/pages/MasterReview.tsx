@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, CheckCircle, XCircle, Loader2, FileText, User, Calendar } from 'lucide-react';
+import DocumentDownloader from '@/components/DocumentDownloader';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -153,7 +154,22 @@ const MasterReview = () => {
           {document.generated_document && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Prévia do Documento</CardTitle>
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle className="text-lg">Prévia do Documento</CardTitle>
+                  <DocumentDownloader
+                    documentData={{
+                      title: document.name,
+                      content: document.generated_document,
+                      parties: '',
+                      otherInvolved: '',
+                      signatures: '',
+                      locationDate: '',
+                    }}
+                    filename={document.name}
+                    variant="outline"
+                    size="sm"
+                  />
+                </div>
               </CardHeader>
               <CardContent>
                 <div
