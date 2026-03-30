@@ -17,6 +17,7 @@ interface SavedContract {
   organization_id?: string | null;
   review_notes?: string | null;
   reviewed_at?: string | null;
+  share_links?: { token: string } | null;
   contract_templates?: {
     name: string;
   } | null;
@@ -186,9 +187,15 @@ const MeusContratos = () => {
                           )}
                         </div>
                       )}
-                      <Button size="sm" onClick={() => handleOpenContract(contract.id)} variant="destructive" className="w-full">
-                        Editar e Reenviar
-                      </Button>
+                      {contract.share_links?.token ? (
+                        <Button size="sm" onClick={() => navigate(`/s/${contract.share_links!.token}`)} variant="destructive" className="w-full">
+                          Editar e Reenviar
+                        </Button>
+                      ) : (
+                        <Button size="sm" onClick={() => handleOpenContract(contract.id)} variant="destructive" className="w-full">
+                          Editar e Reenviar
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>

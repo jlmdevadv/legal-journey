@@ -9,7 +9,9 @@ import QuestionnaireForm from '@/components/QuestionnaireForm';
 import ContractPreview from '@/components/ContractPreview';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Building2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Loader2, Building2, CheckCircle2 } from 'lucide-react';
+import DocumentDownloader from '@/components/DocumentDownloader';
 import { toast } from 'sonner';
 import { ContractTemplate } from '@/types/template';
 
@@ -43,6 +45,8 @@ const SharedQuestionnaireContainer = ({
   const [contractReviewNotes, setContractReviewNotes] = useState<string | null>(null);
   const [contractReviewedAt, setContractReviewedAt] = useState<string | null>(null);
   const [contractStatus, setContractStatus] = useState<string>('draft');
+  const [generatedDocument, setGeneratedDocument] = useState<string | null>(null);
+  const [contractName, setContractName] = useState<string>('');
   const prevQuestionIndexRef = useRef(currentQuestionIndex);
 
   useEffect(() => {
@@ -103,7 +107,7 @@ const SharedQuestionnaireContainer = ({
       // Check for existing document for this user + share_link
       const { data: existing } = await supabase
         .from('saved_contracts')
-        .select('id, review_notes, reviewed_at, status')
+        .select('id, review_notes, reviewed_at, status, generated_document, name')
         .eq('user_id', user.id)
         .eq('share_link_id', shareLinkId)
         .limit(1)
@@ -114,6 +118,8 @@ const SharedQuestionnaireContainer = ({
         setContractReviewNotes((existing as any).review_notes || null);
         setContractReviewedAt((existing as any).reviewed_at || null);
         setContractStatus((existing as any).status || 'draft');
+        setGeneratedDocument((existing as any).generated_document || null);
+        setContractName((existing as any).name || templateName);
         // Hydrate context with saved form data so the questionnaire is pre-filled
         await loadContract(existing.id);
       } else {
@@ -183,6 +189,7 @@ const SharedQuestionnaireContainer = ({
 
       toast.success('Documento enviado para revisão!');
       setContractStatus('pending_review');
+      setGeneratedDocument(fullDocument);
     } catch (error: any) {
       toast.error('Erro ao enviar para revisão: ' + error.message);
     }
@@ -210,6 +217,35 @@ const SharedQuestionnaireContainer = ({
           <Badge variant="outline" className="text-xs">{templateName}</Badge>
         </div>
       </div>
+
+      {contractStatus === 'approved' && generatedDocument && (
+        <div className="container mx-auto px-4 pt-6">
+          <Card className="border-green-300/60 bg-green-50/50 dark:bg-green-950/20 dark:border-green-800/40">
+            <CardContent className="py-4 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Documento aprovado</p>
+                  <p className="text-xs text-muted-foreground">Seu documento foi revisado e aprovado. Faça o download abaixo.</p>
+                </div>
+              </div>
+              <DocumentDownloader
+                documentData={{
+                  title: contractName,
+                  content: generatedDocument,
+                  parties: '',
+                  otherInvolved: '',
+                  signatures: '',
+                  locationDate: '',
+                }}
+                filename={contractName}
+                variant="outline"
+                size="sm"
+              />
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {selectedTemplate && (
         <div className="container mx-auto px-4 py-6">

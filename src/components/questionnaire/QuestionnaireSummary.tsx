@@ -45,6 +45,7 @@ const QuestionnaireSummary = ({ isSharedContext, onSubmitForReview }: Questionna
     numberOfParties,
     saveContract,
     currentContractStatus,
+    currentContractOrganizationId,
   } = useContract();
 
   if (!selectedTemplate) return null;
@@ -398,23 +399,25 @@ const QuestionnaireSummary = ({ isSharedContext, onSubmitForReview }: Questionna
               >
                 Visualizar Contrato
               </Button>
-              {isSharedContext && onSubmitForReview ? (
-                <Button
-                  onClick={handleSubmitForReview}
-                  disabled={!validationResult.isValid || isSubmitting}
-                  className="bg-primary hover:bg-primary/90 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <CheckCircle className="w-4 h-4" />
-                  )}
-                  {isSubmitting
-                    ? 'Enviando...'
-                    : currentContractStatus === 'rejected'
-                    ? 'Reenviar para Revisão'
-                    : 'Enviar para Revisão'}
-                </Button>
+              {(isSharedContext || currentContractOrganizationId) ? (
+                onSubmitForReview && (
+                  <Button
+                    onClick={handleSubmitForReview}
+                    disabled={!validationResult.isValid || isSubmitting}
+                    className="bg-primary hover:bg-primary/90 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <CheckCircle className="w-4 h-4" />
+                    )}
+                    {isSubmitting
+                      ? 'Enviando...'
+                      : currentContractStatus === 'rejected'
+                      ? 'Reenviar para Revisão'
+                      : 'Enviar para Revisão'}
+                  </Button>
+                )
               ) : (
                 <>
                   <DocumentDownloader
