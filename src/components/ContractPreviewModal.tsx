@@ -105,11 +105,10 @@ const ContractPreviewModal = ({ open, onOpenChange, content, contractName, contr
             style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt', lineHeight: '1.5' }}
           >
             {isStandalone ? (
-              // Modo standalone: renderiza HTML gerado diretamente
-              <div
-                className="contract-paper whitespace-pre-wrap break-words"
-                dangerouslySetInnerHTML={{ __html: content! }}
-              />
+              // Modo standalone: renderiza conteúdo como texto puro (seguro contra XSS)
+              <div className="contract-paper whitespace-pre-wrap break-words">
+                {content}
+              </div>
             ) : (
               // Modo context: renderiza a partir do ContractContext
               <>

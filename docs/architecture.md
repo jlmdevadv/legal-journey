@@ -195,6 +195,7 @@ contrato-completo-facil-02/
 | `saved_contracts` | Contratos em andamento ou finalizados pelos usuários |
 | `share_links` | Links temporários gerados pelo Master para acesso externo |
 | `user_roles` | Roles dos usuários: `user`, `admin`, `master` |
+| `contract_events` | Histórico imutável de eventos por contrato (criação, acesso, envio, revisão) |
 
 ### Funções RPC
 
@@ -253,3 +254,4 @@ Index
 | `sonner` | Notificações toast |
 | `tailwindcss` + `shadcn/ui` | UI e design system |
 | `lucide-react` | Ícones |
+| `dompurify` | Sanitização de HTML no editor de templates (prevenção de XSS) |

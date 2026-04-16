@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 import { ContractTemplate, ContractField } from '../../types/template';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -306,8 +307,13 @@ const TemplateEditor = ({ template, onSave, onCancel, isMasterContext }: Templat
   };
 
   const renderPreview = () => {
-    let content = editingTemplate.template;
-    
+    // Sanitizar o template base antes de inserir spans para evitar XSS
+    let content = DOMPurify.sanitize(editingTemplate.template, {
+      ALLOWED_TAGS: [],
+      ALLOWED_ATTR: [],
+      KEEP_CONTENT: true,
+    });
+
     // Highlight {{variable}} placeholders first
     content = content.replace(
       /\{\{([^}]+)\}\}/g,
