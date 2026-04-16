@@ -9,6 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, CheckCircle, XCircle, Loader2, FileText, User, Calendar } from 'lucide-react';
 import DocumentDownloader from '@/components/DocumentDownloader';
+import ContractTimeline from '@/components/contracts/ContractTimeline';
+import { ContractEvent } from '@/types/document';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -22,6 +24,8 @@ const MasterReview = () => {
   const [loading, setLoading] = useState(true);
   const [reviewNotes, setReviewNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [events, setEvents] = useState<ContractEvent[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
 
   useEffect(() => {
     if (documentId && organization) {
@@ -40,6 +44,17 @@ const MasterReview = () => {
       if (error) throw error;
       setDocument(doc);
       setReviewNotes(doc.review_notes || '');
+
+      // Fetch de eventos do contrato
+      setEventsLoading(true);
+      const { data: eventsData } = await supabase
+        .from('contract_events')
+        .select('*')
+        .eq('contract_id', documentId)
+        .order('occurred_at', { ascending: true });
+
+      setEvents((eventsData as ContractEvent[]) ?? []);
+      setEventsLoading(false);
 
       if (doc.template_id) {
         const { data: tmpl } = await supabase
@@ -156,6 +171,15 @@ const MasterReview = () => {
                   Enviado em: {format(new Date(document.submitted_for_review_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                 </div>
               )}
+              {/* Timeline de eventos */}
+              <div className="border-t border-border pt-3 mt-1">
+                <p className="text-xs font-medium text-muted-foreground mb-2">Histórico</p>
+                <ContractTimeline
+                  events={events}
+                  loading={eventsLoading}
+                  collapsible={false}
+                />
+              </div>
             </CardContent>
           </Card>
 
@@ -177,6 +201,8 @@ const MasterReview = () => {
                     filename={document.name}
                     variant="outline"
                     size="sm"
+                    contractId={documentId}
+                    actorRole="master"
                   />
                 </div>
               </CardHeader>
