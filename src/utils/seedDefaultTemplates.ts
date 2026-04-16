@@ -2,22 +2,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { contractTemplates } from '@/data/contractTemplates';
 
 export const seedDefaultTemplates = async () => {
-  console.log('🌱 Iniciando seed de templates padrão...');
-  
   for (const template of contractTemplates) {
-    // Verificar se já existe
     const { data: existing } = await supabase
       .from('contract_templates')
       .select('id')
       .eq('id', template.id)
       .single();
-    
-    if (existing) {
-      console.log(`⏭️  Template ${template.id} já existe, pulando...`);
-      continue;
-    }
-    
-    // Inserir template padrão
+
+    if (existing) continue;
+
     const templateWithMetadata = {
       ...template,
       is_default: true,
@@ -29,17 +22,13 @@ export const seedDefaultTemplates = async () => {
       created_at: new Date().toISOString(),
       fields: template.fields as any
     };
-    
+
     const { error } = await supabase
       .from('contract_templates')
       .insert([templateWithMetadata as any]);
-    
+
     if (error) {
-      console.error(`❌ Erro ao inserir template ${template.id}:`, error);
-    } else {
-      console.log(`✅ Template ${template.id} inserido com sucesso`);
+      console.error(`Failed to seed template ${template.id}:`, error);
     }
   }
-  
-  console.log('🎉 Seed concluído!');
 };
