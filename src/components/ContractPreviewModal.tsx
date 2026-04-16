@@ -7,64 +7,54 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Printer, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import DocumentDownloader from './DocumentDownloader';
 
 interface ContractPreviewModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  // Props opcionais para uso standalone (ex: SharedContractCard)
+  content?: string | null;
+  contractName?: string;
+  contractId?: string | null;
+  actorRole?: 'master' | 'user';
 }
 
-const ContractPreviewModal = ({ open, onOpenChange }: ContractPreviewModalProps) => {
-  const { 
-    selectedTemplate, 
-    fillContractTemplate, 
-    getContractingParties, 
-    getOtherInvolved, 
+const ContractPreviewModal = ({ open, onOpenChange, content, contractName, contractId, actorRole }: ContractPreviewModalProps) => {
+  const {
+    selectedTemplate,
+    fillContractTemplate,
+    getContractingParties,
+    getOtherInvolved,
     getSignatures,
     getLocationDate
   } = useContract();
 
-  if (!selectedTemplate) return null;
+  // Modo standalone: usa props de conteúdo direto (sem contexto)
+  const isStandalone = !!content;
 
-  const filledTemplate = fillContractTemplate();
-  const contractingParties = getContractingParties();
-  const otherInvolved = getOtherInvolved();
-  const signatures = getSignatures();
-  const locationDate = getLocationDate();
+  if (!isStandalone && !selectedTemplate) return null;
 
   const renderContractText = (text: string) => {
-    // First handle bold markers (**text**)
-    const boldRegex = /\*\*(.*?)\*\*/g;
-    const placeholderRegex = /\[([\w-]+)\]/g;
-    
-    // Split by both bold and placeholder patterns
     const combinedRegex = /(\*\*.*?\*\*|\[[\w-]+\])/g;
     const parts = text.split(combinedRegex);
-    
+
     if (parts.length <= 1) return text;
-    
+
     return parts.map((part, i) => {
-      // Check if it's a bold marker
       if (part.startsWith('**') && part.endsWith('**')) {
-        const boldText = part.slice(2, -2);
-        return <strong key={i} className="font-bold">{boldText}</strong>;
+        return <strong key={i} className="font-bold">{part.slice(2, -2)}</strong>;
       }
-      // Check if it's a placeholder
-      else if (part.startsWith('[') && part.endsWith(']')) {
-        const fieldName = part.slice(1, -1);
-        return <span key={i} className="bg-yellow-50 px-1 rounded border border-yellow-200 text-yellow-800">[{fieldName}]</span>;
+      if (part.startsWith('[') && part.endsWith(']')) {
+        return <span key={i} className="bg-yellow-50 px-1 rounded border border-yellow-200 text-yellow-800">[{part.slice(1, -1)}]</span>;
       }
-      // Regular text
-      else {
-        return part;
-      }
+      return part;
     });
   };
 
-  const renderSection = (title: string, content: string, isEmpty: boolean = false) => {
-    if (isEmpty && !content.trim()) return null;
-    
+  const renderSection = (title: string, sectionContent: string, isEmpty: boolean = false) => {
+    if (isEmpty && !sectionContent.trim()) return null;
+
     return (
       <div className="mb-8">
         {title && (
@@ -72,7 +62,7 @@ const ContractPreviewModal = ({ open, onOpenChange }: ContractPreviewModalProps)
             {title}
           </h2>
         )}
-        {content.split('\n').map((line, index) => (
+        {sectionContent.split('\n').map((line, index) => (
           <p key={index} className="mb-2">
             {renderContractText(line)}
           </p>
@@ -81,18 +71,23 @@ const ContractPreviewModal = ({ open, onOpenChange }: ContractPreviewModalProps)
     );
   };
 
+  // Modo context: monta document data a partir do ContractContext
+  const filledTemplate = isStandalone ? '' : fillContractTemplate();
+  const contractingParties = isStandalone ? '' : getContractingParties();
+  const otherInvolved = isStandalone ? '' : getOtherInvolved();
+  const signatures = isStandalone ? '' : getSignatures();
+  const locationDate = isStandalone ? '' : getLocationDate();
+
   const getDocumentData = () => ({
-    title: selectedTemplate.name,
-    content: filledTemplate,
+    title: isStandalone ? (contractName ?? '') : selectedTemplate!.name,
+    content: isStandalone ? (content ?? '') : filledTemplate,
     parties: contractingParties,
     otherInvolved: otherInvolved,
     signatures: signatures,
-    locationDate: locationDate
+    locationDate: locationDate,
   });
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const displayName = isStandalone ? (contractName ?? 'Contrato') : selectedTemplate!.name;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -102,63 +97,51 @@ const ContractPreviewModal = ({ open, onOpenChange }: ContractPreviewModalProps)
             Visualização do Contrato
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="flex-1 overflow-y-auto pr-2">
-          <div 
+          <div
             id="contract-preview-modal"
             className="bg-white p-8 text-gray-800"
-            style={{
-              fontFamily: 'Times New Roman, serif',
-              fontSize: '12pt',
-              lineHeight: '1.5'
-            }}
+            style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt', lineHeight: '1.5' }}
           >
-            {/* Título */}
-            <div className="mb-8 text-center">
-              <h1 className="font-bold text-xl text-blue-800 uppercase">
-                {selectedTemplate.name}
-              </h1>
-            </div>
-
-            {/* Partes Principais */}
-            {contractingParties && renderSection('Partes Principais', contractingParties)}
-
-            {/* Outros Envolvidos */}
-            {otherInvolved && renderSection('Outros Envolvidos', otherInvolved)}
-
-            {/* Corpo do Contrato */}
-            {renderSection('', filledTemplate)}
-
-            {/* Local e Data */}
-            {locationDate && (
-              <div className="mb-8 text-right">
-                <p className="text-gray-800">{locationDate}</p>
-              </div>
+            {isStandalone ? (
+              // Modo standalone: renderiza HTML gerado diretamente
+              <div
+                className="contract-paper whitespace-pre-wrap break-words"
+                dangerouslySetInnerHTML={{ __html: content! }}
+              />
+            ) : (
+              // Modo context: renderiza a partir do ContractContext
+              <>
+                <div className="mb-8 text-center">
+                  <h1 className="font-bold text-xl text-blue-800 uppercase">
+                    {displayName}
+                  </h1>
+                </div>
+                {contractingParties && renderSection('Partes Principais', contractingParties)}
+                {otherInvolved && renderSection('Outros Envolvidos', otherInvolved)}
+                {renderSection('', filledTemplate)}
+                {locationDate && (
+                  <div className="mb-8 text-right">
+                    <p className="text-gray-800">{locationDate}</p>
+                  </div>
+                )}
+                {signatures && renderSection('Assinaturas', signatures)}
+              </>
             )}
-
-            {/* Assinaturas */}
-            {signatures && renderSection('Assinaturas', signatures)}
           </div>
         </div>
 
         <div className="flex-shrink-0 flex justify-end gap-3 pt-4 border-t">
-          {/* TEMPORARIAMENTE DESABILITADO - Impressão/PDF em desenvolvimento
-          <Button 
-            onClick={handlePrint}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <Printer className="w-4 h-4" />
-            Imprimir
-          </Button>
-          */}
           <DocumentDownloader
             documentData={getDocumentData()}
-            filename={selectedTemplate.name}
+            filename={displayName}
             elementId="contract-preview-modal"
             variant="outline"
+            contractId={contractId}
+            actorRole={actorRole}
           />
-          <Button 
+          <Button
             onClick={() => onOpenChange(false)}
             className="flex items-center gap-2"
           >

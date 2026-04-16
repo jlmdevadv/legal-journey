@@ -49,6 +49,31 @@ const SharedQuestionnaireContainer = ({
   const [contractName, setContractName] = useState<string>('');
   const prevQuestionIndexRef = useRef(currentQuestionIndex);
 
+  const insertInitialEvents = async (contractId: string) => {
+    // Busca dados do share link para usar no evento link_created
+    const { data: linkData } = await supabase
+      .from('share_links')
+      .select('created_at, created_by_user_id')
+      .eq('id', shareLinkId)
+      .single();
+
+    const eventsToInsert = [
+      {
+        contract_id: contractId,
+        user_id: linkData?.created_by_user_id ?? null,
+        event_type: 'link_created',
+        occurred_at: linkData?.created_at ?? new Date().toISOString(),
+      },
+      {
+        contract_id: contractId,
+        user_id: user!.id,
+        event_type: 'contract_accessed',
+      },
+    ];
+
+    await supabase.from('contract_events').insert(eventsToInsert);
+  };
+
   useEffect(() => {
     loadTemplateAndDocument();
   }, [templateId]);
@@ -139,6 +164,7 @@ const SharedQuestionnaireContainer = ({
 
         if (insertError) throw insertError;
         setSavedContractId(newDoc.id);
+        await insertInitialEvents(newDoc.id);
       }
     } catch (error: any) {
       toast.error('Erro ao carregar template: ' + error.message);
@@ -186,6 +212,12 @@ const SharedQuestionnaireContainer = ({
         .eq('id', savedContractId);
 
       if (error) throw error;
+
+      await supabase.from('contract_events').insert({
+        contract_id: savedContractId,
+        user_id: user.id,
+        event_type: 'submitted_for_review',
+      });
 
       toast.success('Documento enviado para revisão!');
       setContractStatus('pending_review');

@@ -1301,6 +1301,13 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         .eq('id', currentSavedContractId);
 
       if (error) throw error;
+
+      await supabase.from('contract_events').insert({
+        contract_id: currentSavedContractId,
+        user_id: (await supabase.auth.getUser()).data.user?.id ?? null,
+        event_type: 'submitted_for_review',
+      });
+
       setCurrentContractStatus('pending_review');
       toast.success('Documento reenviado para revisão!');
       return true;
