@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useContract } from '@/contexts/ContractContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import ContractCard from '@/components/contracts/ContractCard';
+import SharedContractCard from '@/components/contracts/SharedContractCard';
+import { ContractEvent } from '@/types/document';
 import { FileText, Plus, Building2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 
@@ -17,20 +19,12 @@ interface SavedContract {
   organization_id?: string | null;
   review_notes?: string | null;
   reviewed_at?: string | null;
+  generated_document?: string | null;
   share_links?: { token: string } | null;
   contract_templates?: {
     name: string;
   } | null;
 }
-
-const statusLabels: Record<string, string> = {
-  draft: 'Rascunho',
-  completed: 'Finalizado',
-  archived: 'Arquivado',
-  pending_review: 'Pendente de Revisão',
-  approved: 'Aprovado',
-  rejected: 'Reprovado',
-};
 
 const MeusContratos = () => {
   const navigate = useNavigate();
@@ -39,25 +33,42 @@ const MeusContratos = () => {
   const [contracts, setContracts] = useState<SavedContract[]>([]);
   const [filter, setFilter] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
-  const [expandedFeedback, setExpandedFeedback] = useState<Set<string>>(new Set());
-
-  const toggleFeedback = (id: string) => {
-    setExpandedFeedback(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
+  const [sharedContractEvents, setSharedContractEvents] = useState<Map<string, ContractEvent[]>>(new Map());
+  const [eventsLoading, setEventsLoading] = useState(false);
 
   useEffect(() => {
     loadContracts();
   }, []);
+
+  const loadEventsForSharedContracts = async (sharedIds: string[]) => {
+    if (sharedIds.length === 0) return;
+    setEventsLoading(true);
+    const { data } = await supabase
+      .from('contract_events')
+      .select('*')
+      .in('contract_id', sharedIds)
+      .order('occurred_at', { ascending: true });
+
+    if (data) {
+      const map = new Map<string, ContractEvent[]>();
+      for (const event of data as ContractEvent[]) {
+        const existing = map.get(event.contract_id) ?? [];
+        map.set(event.contract_id, [...existing, event]);
+      }
+      setSharedContractEvents(map);
+    }
+    setEventsLoading(false);
+  };
 
   const loadContracts = async () => {
     setIsLoading(true);
     const data = await listUserContracts();
     setContracts(data);
     setIsLoading(false);
+
+    const shared = data.filter((c: SavedContract) => !!c.organization_id);
+    const sharedIds = shared.map((c: SavedContract) => c.id);
+    await loadEventsForSharedContracts(sharedIds);
   };
 
   const handleOpenContract = async (contractId: string) => {
@@ -97,7 +108,7 @@ const MeusContratos = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
+
       <div className="container mx-auto py-8 px-4 sm:px-6">
         <div className="mb-8">
           <h1 className="font-serif text-3xl text-foreground mb-2">Meus Contratos</h1>
@@ -150,55 +161,19 @@ const MeusContratos = () => {
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {sharedContracts.map((contract) => (
-                <div key={contract.id} className="rounded border border-border bg-surface p-4 space-y-2">
-                  <div className="flex justify-between items-start">
-                    <h3 className="font-sans text-sm font-medium text-foreground truncate">{contract.name}</h3>
-                    <Badge variant={
-                      contract.status === 'approved' ? 'approved' :
-                      contract.status === 'rejected' ? 'rejected' :
-                      contract.status === 'pending_review' ? 'pending' : 'draft'
-                    }>
-                      {statusLabels[contract.status] || contract.status}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Template: {contract.contract_templates?.name || '-'}
-                  </p>
-                  {contract.status === 'draft' && (
-                    <Button size="sm" onClick={() => handleOpenContract(contract.id)}>
-                      Continuar Preenchimento
-                    </Button>
-                  )}
-                  {contract.status === 'rejected' && (
-                    <div className="space-y-2">
-                      {contract.review_notes && (
-                        <div className="rounded border border-destructive/30 bg-destructive/5 p-3 space-y-1">
-                          <p className="text-xs font-medium text-destructive">Feedback do Revisor</p>
-                          <p className={`text-xs text-foreground whitespace-pre-wrap ${expandedFeedback.has(contract.id) ? '' : 'line-clamp-3'}`}>
-                            {contract.review_notes}
-                          </p>
-                          {contract.review_notes.length > 120 && (
-                            <button
-                              onClick={() => toggleFeedback(contract.id)}
-                              className="text-xs text-muted-foreground underline hover:text-foreground"
-                            >
-                              {expandedFeedback.has(contract.id) ? 'ver menos' : 'ver mais'}
-                            </button>
-                          )}
-                        </div>
-                      )}
-                      {contract.share_links?.token ? (
-                        <Button size="sm" onClick={() => navigate(`/s/${contract.share_links!.token}`)} variant="destructive" className="w-full">
-                          Editar e Reenviar
-                        </Button>
-                      ) : (
-                        <Button size="sm" onClick={() => handleOpenContract(contract.id)} variant="destructive" className="w-full">
-                          Editar e Reenviar
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </div>
+                <SharedContractCard
+                  key={contract.id}
+                  contract={contract as any}
+                  events={sharedContractEvents.get(contract.id) ?? []}
+                  eventsLoading={eventsLoading}
+                  onOpen={() => handleOpenContract(contract.id)}
+                  onNavigateToSharedLink={() =>
+                    navigate(`/s/${contract.share_links!.token}`)
+                  }
+                  onDownload={(_contractId) => {
+                    // Download acontece dentro do ContractPreviewModal via DocumentDownloader
+                  }}
+                />
               ))}
             </div>
           </div>
