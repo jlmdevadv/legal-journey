@@ -1,6 +1,7 @@
 # Auditoria de Segurança — Exposição no Cliente
 
 **Data:** 2026-04-07  
+**Última atualização:** 2026-04-16 — correções implementadas (ver seção "Status das Correções")  
 **Escopo:** Arquivos acessíveis no browser (JS bundle compilado pelo Vite)  
 **Stack:** React + Vite + Supabase (SPA)
 
@@ -164,7 +165,25 @@ Expõe operações internas nos DevTools do browser.
 
 ---
 
-## Resumo de prioridades
+## Status das Correções
+
+Implementadas em 2026-04-16 na branch `auditoria-seguranca-cliente`.
+
+| # | Item | Severidade | Status | Como foi corrigido |
+|---|------|-----------|--------|-------------------|
+| 1 | XSS via `dangerouslySetInnerHTML` | **Alta** | ✅ Corrigido | `MasterReview.tsx` e `ContractPreviewModal.tsx`: substituído por renderização de texto puro (React textContent + `whitespace-pre-wrap`). `TemplateEditor.tsx`: sanitização com DOMPurify antes de inserir spans. |
+| 2 | RLS `contract_events` sem filtro de org | **Média** | ✅ Corrigido | Migration `20260416000000_fix_contract_events_master_rls.sql`: policy recriada com `JOIN organizations WHERE owner_user_id = auth.uid()`. |
+| 3 | Schema completo do banco no bundle | **Média** | 🔲 Pendente | Arquitetural — requer gateway/backend. Sem prazo definido. |
+| 4 | Funções admin expostas no bundle | **Média** | 🔲 Pendente | Arquitetural — requer Edge Functions. Sem prazo definido. |
+| 5 | Credenciais no bundle | **Baixa** | 🔲 Pendente (aceitável) | Inerente ao Supabase SPA. Protegido por RLS. |
+| 6 | Histórico de RLS permissiva | **Baixa** | 🔲 Pendente | Prática — auditar novas tabelas ao criar. |
+| 7 | Lógica de negócio no bundle | **Baixa** | 🔲 Pendente | Arquitetural — requer backend layer. Sem prazo definido. |
+| 8 | Fluxo de auth exposto | **Baixa** | 🔲 Pendente (aceitável) | Inerente à arquitetura SPA. |
+| 9 | `console.log` em produção | **Muito baixa** | ✅ Corrigido | Removido de `seedDefaultTemplates.ts`. |
+
+---
+
+## Resumo de prioridades (original)
 
 | # | Item | Severidade | Ação necessária |
 |---|------|-----------|-----------------|
