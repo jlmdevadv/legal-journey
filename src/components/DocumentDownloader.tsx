@@ -12,6 +12,7 @@ import { downloadDocument } from '../utils/documentGenerators';
 import { DocumentData, DocumentFormat } from '../types/document';
 import { useToast } from '@/hooks/use-toast';
 import { generatePDF } from '../utils/pdfGenerator';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DocumentDownloaderProps {
   documentData: DocumentData;
@@ -21,6 +22,8 @@ interface DocumentDownloaderProps {
   size?: 'default' | 'sm' | 'lg';
   className?: string;
   disabled?: boolean;
+  contractId?: string | null;
+  actorRole?: 'master' | 'user';
 }
 
 const DocumentDownloader = ({
@@ -30,7 +33,9 @@ const DocumentDownloader = ({
   variant = 'outline',
   size = 'default',
   className = '',
-  disabled = false
+  disabled = false,
+  contractId,
+  actorRole,
 }: DocumentDownloaderProps) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadingFormat, setDownloadingFormat] = useState<DocumentFormat | null>(null);
@@ -85,6 +90,18 @@ const DocumentDownloader = ({
         title: 'Download concluído',
         description: `Documento baixado em formato ${format.toUpperCase()}`
       });
+
+      if (contractId) {
+        // fire-and-forget: não bloqueia o download
+        supabase.auth.getUser().then(({ data: { user } }) => {
+          supabase.from('contract_events').insert({
+            contract_id: contractId,
+            user_id: user?.id ?? null,
+            event_type: 'document_downloaded',
+            metadata: actorRole ? { downloaded_by_role: actorRole } : null,
+          });
+        });
+      }
     } catch (error) {
       console.error('Download error:', error);
       toast({
