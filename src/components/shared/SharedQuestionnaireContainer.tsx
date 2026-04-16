@@ -213,6 +213,12 @@ const SharedQuestionnaireContainer = ({
 
       if (error) throw error;
 
+      await supabase.from('contract_events').insert({
+        contract_id: savedContractId,
+        user_id: user.id,
+        event_type: 'submitted_for_review',
+      });
+
       toast.success('Documento enviado para revisão!');
       setContractStatus('pending_review');
       setGeneratedDocument(fullDocument);
