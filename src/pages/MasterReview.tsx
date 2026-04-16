@@ -73,6 +73,15 @@ const MasterReview = () => {
 
       if (error) throw error;
 
+      await supabase.from('contract_events').insert({
+        contract_id: documentId,
+        user_id: user.id,
+        event_type: status === 'approved' ? 'review_approved' : 'review_rejected',
+        metadata: status === 'rejected' && reviewNotes
+          ? { notes: reviewNotes }
+          : null,
+      });
+
       toast.success(status === 'approved' ? 'Documento aprovado!' : 'Documento reprovado.');
       navigate('/master');
     } catch (error: any) {
