@@ -457,9 +457,10 @@ const QuestionnaireSummary = ({ isSharedContext, onSubmitForReview }: Questionna
         </CardContent>
       </Card>
 
-      <ContractPreviewModal 
+      <ContractPreviewModal
         open={showPreviewModal}
         onOpenChange={setShowPreviewModal}
+        showDownload={!isSharedContext && !currentContractOrganizationId}
       />
     </div>
   );
