@@ -11,6 +11,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import MeusContratos from "./pages/MeusContratos";
 import MasterDashboard from "./pages/MasterDashboard";
+import Dashboard from "./pages/Dashboard";
 import MasterTemplateEditor from "./pages/MasterTemplateEditor";
 import MasterReview from "./pages/MasterReview";
 import SharedTemplate from "./pages/SharedTemplate";
@@ -29,8 +30,16 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
-              <Route 
-                path="/meus-contratos" 
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/meus-contratos"
                 element={
                   <ProtectedRoute>
                     <MeusContratos />
