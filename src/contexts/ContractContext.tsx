@@ -38,6 +38,7 @@ interface SavedContract {
   organization_id?: string | null;
   review_notes?: string | null;
   reviewed_at?: string | null;
+  share_links?: { token: string } | null;
 }
 
 interface ContractContextType {
@@ -1326,7 +1327,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
 
       const { data, error } = await supabase
         .from("saved_contracts")
-        .select("id, name, status, template_id, updated_at, organization_id, review_notes, reviewed_at, share_links(token), contract_templates(name)")
+        .select("id, name, status, template_id, updated_at, organization_id, review_notes, reviewed_at, generated_document, share_links(token), contract_templates(name)")
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false });
 
