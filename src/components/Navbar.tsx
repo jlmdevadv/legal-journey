@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Shield, User, LogOut, Briefcase } from 'lucide-react';
+import { Shield, User, LogOut } from 'lucide-react';
 import AddTemplateModal from './admin/AddTemplateModal';
 import TemplateImporter from './admin/TemplateImporter';
 
@@ -37,20 +37,11 @@ const Navbar = () => {
         <div className="flex items-center gap-3">
           {user ? (
             <>
-              <Link to="/meus-contratos" className="hidden md:block">
+              <Link to="/dashboard" className="hidden md:block">
                 <Button variant="ghost">
-                  Meus Contratos
+                  Dashboard
                 </Button>
               </Link>
-
-              {isMaster && (
-                <Link to="/master" className="hidden md:block">
-                  <Button variant="ghost">
-                    <Briefcase className="mr-2 h-4 w-4" />
-                    Painel do Escritório
-                  </Button>
-                </Link>
-              )}
 
               {isAdmin && (
                 <>
@@ -145,12 +136,7 @@ const Navbar = () => {
               <a href="/" className="py-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors" onClick={() => setMobileOpen(false)}>Início</a>
               <a href="/#templates" className="py-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors" onClick={() => setMobileOpen(false)}>Modelos</a>
               {user && (
-                <>
-                  <Link to="/meus-contratos" className="py-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors" onClick={() => setMobileOpen(false)}>Meus Contratos</Link>
-                  {isMaster && (
-                    <Link to="/master" className="py-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors" onClick={() => setMobileOpen(false)}>Painel do Escritório</Link>
-                  )}
-                </>
+                <Link to="/dashboard" className="py-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors" onClick={() => setMobileOpen(false)}>Dashboard</Link>
               )}
             </nav>
             {user ? (

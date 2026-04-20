@@ -18,9 +18,10 @@ interface ContractPreviewModalProps {
   contractName?: string;
   contractId?: string | null;
   actorRole?: 'master' | 'user';
+  showDownload?: boolean;
 }
 
-const ContractPreviewModal = ({ open, onOpenChange, content, contractName, contractId, actorRole }: ContractPreviewModalProps) => {
+const ContractPreviewModal = ({ open, onOpenChange, content, contractName, contractId, actorRole, showDownload = true }: ContractPreviewModalProps) => {
   const {
     selectedTemplate,
     fillContractTemplate,
@@ -132,14 +133,16 @@ const ContractPreviewModal = ({ open, onOpenChange, content, contractName, contr
         </div>
 
         <div className="flex-shrink-0 flex justify-end gap-3 pt-4 border-t">
-          <DocumentDownloader
-            documentData={getDocumentData()}
-            filename={displayName}
-            elementId="contract-preview-modal"
-            variant="outline"
-            contractId={contractId}
-            actorRole={actorRole}
-          />
+          {showDownload && (
+            <DocumentDownloader
+              documentData={getDocumentData()}
+              filename={displayName}
+              elementId="contract-preview-modal"
+              variant="outline"
+              contractId={contractId}
+              actorRole={actorRole}
+            />
+          )}
           <Button
             onClick={() => onOpenChange(false)}
             className="flex items-center gap-2"
