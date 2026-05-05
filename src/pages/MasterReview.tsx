@@ -266,19 +266,6 @@ const MasterReview = () => {
             </Card>
           )}
 
-          {/* Already reviewed info */}
-          {(document.status === 'approved' || document.status === 'rejected') && document.reviewed_at && (
-            <Card>
-              <CardContent className="py-4">
-                <p className="text-sm text-muted-foreground">
-                  Revisado em {format(new Date(document.reviewed_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                </p>
-                {document.review_notes && (
-                  <p className="text-sm mt-2">Observações: {document.review_notes}</p>
-                )}
-              </CardContent>
-            </Card>
-          )}
         </div>
       </main>
     </div>

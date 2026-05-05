@@ -140,7 +140,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } else {
         toast({
           title: "Cadastro realizado!",
-          description: "Você já pode fazer login."
+          description: "Verifique seu email e clique no link de confirmação antes de fazer login."
         });
       }
 
@@ -163,10 +163,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       if (error) {
+        const isEmailNotConfirmed = error.message?.toLowerCase().includes('email not confirmed');
         toast({
           variant: "destructive",
           title: "Erro no login",
-          description: "Credenciais inválidas. Verifique seu email e senha."
+          description: isEmailNotConfirmed
+            ? "Email ainda não confirmado. Verifique sua caixa de entrada e clique no link de confirmação."
+            : "Credenciais inválidas. Verifique seu email e senha."
         });
       }
 

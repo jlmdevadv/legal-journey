@@ -50,28 +50,27 @@ const SharedQuestionnaireContainer = ({
   const prevQuestionIndexRef = useRef(currentQuestionIndex);
 
   const insertInitialEvents = async (contractId: string) => {
-    // Busca dados do share link para usar no evento link_created
     const { data: linkData } = await supabase
       .from('share_links')
-      .select('created_at, created_by_user_id')
+      .select('created_at')
       .eq('id', shareLinkId)
       .single();
 
-    const eventsToInsert = [
-      {
-        contract_id: contractId,
-        user_id: linkData?.created_by_user_id ?? null,
-        event_type: 'link_created',
-        occurred_at: linkData?.created_at ?? new Date().toISOString(),
-      },
-      {
-        contract_id: contractId,
-        user_id: user!.id,
-        event_type: 'contract_accessed',
-      },
-    ];
+    // Dois inserts separados para evitar que falha de RLS em um derrube o outro.
+    // link_created registra quando o link foi criado; user_id é o preenchedor
+    // porque é ele quem está autenticado e tem permissão de insert no contrato.
+    await supabase.from('contract_events').insert({
+      contract_id: contractId,
+      user_id: user!.id,
+      event_type: 'link_created',
+      occurred_at: linkData?.created_at ?? new Date().toISOString(),
+    });
 
-    await supabase.from('contract_events').insert(eventsToInsert);
+    await supabase.from('contract_events').insert({
+      contract_id: contractId,
+      user_id: user!.id,
+      event_type: 'contract_accessed',
+    });
   };
 
   useEffect(() => {
@@ -192,23 +191,29 @@ const SharedQuestionnaireContainer = ({
         signatures ? `ASSINATURAS\n\n${signatures}` : '',
       ].filter(Boolean).join('\n\n');
 
+      const updatePayload: Record<string, unknown> = {
+        status: 'pending_review',
+        generated_document: fullDocument,
+        form_values: formValues,
+        parties_data: partiesData,
+        number_of_parties: numberOfParties,
+        other_parties_data: otherPartiesData,
+        number_of_other_parties: numberOfOtherParties,
+        has_other_parties: hasOtherParties,
+        location_data: locationData,
+        repeatable_fields_data: repeatableFieldsData,
+        current_question_index: currentQuestionIndex,
+        current_party_loop_index: currentPartyLoopIndex,
+      };
+
+      // Só grava a data de envio na primeira submissão
+      if (contractStatus !== 'rejected') {
+        updatePayload.submitted_for_review_at = new Date().toISOString();
+      }
+
       const { error } = await supabase
         .from('saved_contracts')
-        .update({
-          status: 'pending_review',
-          submitted_for_review_at: new Date().toISOString(),
-          generated_document: fullDocument,
-          form_values: formValues,
-          parties_data: partiesData,
-          number_of_parties: numberOfParties,
-          other_parties_data: otherPartiesData,
-          number_of_other_parties: numberOfOtherParties,
-          has_other_parties: hasOtherParties,
-          location_data: locationData,
-          repeatable_fields_data: repeatableFieldsData,
-          current_question_index: currentQuestionIndex,
-          current_party_loop_index: currentPartyLoopIndex,
-        })
+        .update(updatePayload)
         .eq('id', savedContractId);
 
       if (error) throw error;
