@@ -232,12 +232,7 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
         setCustomTemplates(templates);
         console.log(`✅ Carregados ${templates.length} templates do banco`);
       } else {
-        // Se banco vazio, fazer seed automático
-        console.log("📦 Banco vazio, executando seed...");
-        const { seedDefaultTemplates } = await import("@/utils/seedDefaultTemplates");
-        await seedDefaultTemplates();
-        // Recarregar após seed
-        await loadTemplatesFromSupabase();
+        setCustomTemplates([]);
       }
     } catch (error) {
       console.error("❌ Erro ao carregar templates:", error);

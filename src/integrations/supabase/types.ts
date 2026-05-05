@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -10,10 +10,45 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
+      contract_events: {
+        Row: {
+          contract_id: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          occurred_at: string
+          user_id: string | null
+        }
+        Insert: {
+          contract_id: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          occurred_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          contract_id?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          occurred_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_events_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "saved_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_templates: {
         Row: {
           created_at: string | null
