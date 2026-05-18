@@ -11,6 +11,8 @@ import { Plus, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { ContractTemplate } from '@/types/template';
 import GenerateLinkModal from '@/components/master/GenerateLinkModal';
+import ContentModal from '@/components/admin/ContentModal';
+import TemplateWizard from '@/components/admin/wizard/TemplateWizard';
 
 interface Props {
   templates: ContractTemplate[];
@@ -23,8 +25,17 @@ const MeusModelosSection = ({ templates, onReload }: Props) => {
   const [linkModal, setLinkModal] = useState<{ open: boolean; templateId: string; templateName: string }>({
     open: false, templateId: '', templateName: '',
   });
+  const [contentModalOpen, setContentModalOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [pendingContent, setPendingContent] = useState('');
 
   const limitReached = organization ? templates.length >= organization.templates_limit : false;
+
+  const handleContentConfirm = (content: string) => {
+    setPendingContent(content);
+    setContentModalOpen(false);
+    setWizardOpen(true);
+  };
 
   const handleDelete = async (templateId: string, templateName: string) => {
     if (!organization) return;
@@ -46,7 +57,7 @@ const MeusModelosSection = ({ templates, onReload }: Props) => {
           <h2 className="font-serif text-xl text-foreground">Meus Modelos</h2>
           <div className="mt-1 h-px w-full bg-border" />
         </div>
-        <Button onClick={() => navigate('/master/template/new')} disabled={limitReached}>
+        <Button onClick={() => setContentModalOpen(true)} disabled={limitReached}>
           <Plus className="w-4 h-4 mr-2" />
           Novo Modelo
         </Button>
@@ -64,7 +75,7 @@ const MeusModelosSection = ({ templates, onReload }: Props) => {
       {templates.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-14 text-center border border-dashed border-border rounded-lg">
           <p className="text-sm text-muted-foreground mb-4">Nenhum modelo criado ainda.</p>
-          <Button onClick={() => navigate('/master/template/new')}>
+          <Button onClick={() => setContentModalOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Criar Primeiro Modelo
           </Button>
@@ -120,6 +131,18 @@ const MeusModelosSection = ({ templates, onReload }: Props) => {
         onOpenChange={open => setLinkModal(prev => ({ ...prev, open }))}
         templateId={linkModal.templateId}
         templateName={linkModal.templateName}
+      />
+
+      <ContentModal
+        open={contentModalOpen}
+        onOpenChange={setContentModalOpen}
+        onConfirm={handleContentConfirm}
+      />
+
+      <TemplateWizard
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        initialContent={pendingContent}
       />
     </section>
   );
