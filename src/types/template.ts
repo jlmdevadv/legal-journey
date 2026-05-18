@@ -100,10 +100,60 @@ export interface ContractTemplate {
   fields: ContractField[];
   version?: TemplateVersion;
   usePartySystem?: boolean;
+  partyConfig?: PartyConfig;
   created_at?: string;
   updated_at?: string;
   is_default?: boolean;
   created_by?: string;
   last_modified_by?: string;
   organization_id?: string | null;
+}
+
+export type PersonType = 'PF' | 'PJ';
+
+export interface FixedParty {
+  registryId?: string;
+  role: string;
+  name: string;
+  personType: PersonType;
+  document?: string;
+  nationality?: string;
+  maritalStatus?: string;
+  profession?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  email?: string;
+}
+
+export interface OtherPartiesConfig {
+  acceptedTypes: PersonType[];
+  roles: string[];
+  fixedParties: FixedParty[];
+}
+
+export interface PartyConfig {
+  minParties: number;
+  maxParties: number;
+  acceptedTypes: PersonType[];
+  roles: string[];
+  allowOtherParties: boolean;
+  fixedParties: FixedParty[];
+  otherPartiesConfig?: OtherPartiesConfig;
+}
+
+export interface PartyRegistryEntry {
+  id: string;
+  owner_id: string;
+  name: string;
+  person_type: PersonType;
+  document?: string;
+  nationality?: string;
+  marital_status?: string;
+  profession?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  email?: string;
+  created_at?: string;
 }
