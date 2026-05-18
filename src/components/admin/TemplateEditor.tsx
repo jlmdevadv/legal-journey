@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Save, Plus, Info, Keyboard, Clock, Eye, Edit3, Download, Code, Pencil } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Info, Keyboard, Clock, Eye, Edit3, Download, Code, Pencil, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { RenameTemplateModal } from './RenameTemplateModal';
 import { useContract } from '../../contexts/ContractContext';
@@ -19,6 +19,8 @@ import { useKeyboardSelection } from '../../hooks/useKeyboardSelection';
 import { detectPlaceholders, humanizeVariableName, sanitizeVariableName } from '../../utils/templateUtils';
 import { incrementVersion, createNewVersion, restoreVersion } from '../../utils/versionUtils';
 import { downloadTemplateJSON } from '../../utils/templateExporter';
+import TemplatePartsTab from './TemplatePartsTab';
+import { PartyConfig } from '../../types/template';
 
 interface TemplateEditorProps {
   template: ContractTemplate;
@@ -30,7 +32,7 @@ interface TemplateEditorProps {
 const TemplateEditor = ({ template, onSave, onCancel, isMasterContext }: TemplateEditorProps) => {
   const { renameTemplate } = useContract();
   const [editingTemplate, setEditingTemplate] = useState<ContractTemplate>(template);
-  const [editMode, setEditMode] = useState<'edit' | 'preview'>('edit');
+  const [editMode, setEditMode] = useState<'edit' | 'partes' | 'preview'>('edit');
   const [selectedText, setSelectedText] = useState('');
   const [selectionRange, setSelectionRange] = useState<{ start: number; end: number } | null>(null);
   const [showFieldModal, setShowFieldModal] = useState(false);
@@ -266,6 +268,10 @@ const TemplateEditor = ({ template, onSave, onCancel, isMasterContext }: Templat
     toast.info('Funcionalidade de preview em desenvolvimento');
   };
 
+  const handlePartsChange = (config: PartyConfig) => {
+    setEditingTemplate(prev => ({ ...prev, partyConfig: config }));
+  };
+
   const handleInsertConditionalClause = (clauseText: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -387,6 +393,15 @@ const TemplateEditor = ({ template, onSave, onCancel, isMasterContext }: Templat
               Editar
             </Button>
             <Button
+              variant={editMode === 'partes' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setEditMode('partes')}
+              className="flex items-center gap-1"
+            >
+              <Users className="w-3 h-3" />
+              Partes
+            </Button>
+            <Button
               variant={editMode === 'preview' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setEditMode('preview')}
@@ -434,114 +449,123 @@ const TemplateEditor = ({ template, onSave, onCancel, isMasterContext }: Templat
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Fields List */}
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Plus className="w-5 h-5" />
-                Campos Configurados ({editingTemplate.fields.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <SortableFieldList
-                fields={editingTemplate.fields}
-                onReorder={handleFieldsReorder}
-                onEdit={handleFieldEdit}
-                onRemove={handleRemoveField}
-              />
-            </CardContent>
-          </Card>
+      {editMode === 'partes' ? (
+        <div className="max-w-2xl mx-auto">
+          <TemplatePartsTab
+            template={editingTemplate}
+            onChange={handlePartsChange}
+          />
         </div>
-
-        {/* Template Editor/Preview */}
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                {editMode === 'edit' ? (
-                  <>
-                    <Edit3 className="w-5 h-5" />
-                    Modo Edição
-                  </>
-                ) : (
-                  <>
-                    <Eye className="w-5 h-5" />
-                    Modo Preview
-                  </>
-                )}
-              </CardTitle>
-              <div className="space-y-2 text-sm text-gray-600">
-                {editMode === 'edit' ? (
-                  <>
-                    <p className="text-blue-600 font-medium">Edite o texto livremente. O cursor funciona normalmente.</p>
-                    <div className="space-y-1">
-                      <p className="flex items-center gap-2">
-                        <Keyboard className="w-3 h-3" />
-                        <strong>Como criar campos editáveis:</strong>
-                      </p>
-                      <p className="ml-5">• Selecione texto (mouse ou Shift+setas)</p>
-                      <p className="ml-5">• Digite <code className="bg-gray-100 px-1 rounded text-xs">{'{{variavel}}'}</code> no texto</p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p className="flex items-center gap-2">
-                      <span className="w-2 h-2 bg-blue-100 border border-blue-300 rounded"></span>
-                      Campos configurados (clique para editar)
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <span className="w-2 h-2 bg-green-100 border border-green-300 rounded"></span>
-                      Placeholders detectados automaticamente
-                    </p>
-                  </>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {editMode === 'edit' ? (
-                <>
-                  <Textarea
-                    ref={textareaRef}
-                    value={editingTemplate.template}
-                    onChange={(e) => {
-                      setEditingTemplate(prev => ({
-                        ...prev,
-                        template: e.target.value
-                      }));
-                    }}
-                    onMouseDown={handleMouseDown}
-                    onMouseUp={handleMouseTextSelection}
-                    className={`
-                      w-full min-h-[400px] font-mono text-sm
-                      ${isSelectionActive ? 'bg-blue-50' : ''}
-                      transition-colors
-                    `}
-                    placeholder="Digite o texto do template aqui..."
-                  />
-                  {isSelectionActive && (
-                    <div className="mt-2 text-sm text-blue-600 flex items-center gap-1">
-                      <Info className="w-3 h-3" />
-                      {shiftPressed ? 'Use as setas para selecionar texto (mantenha Shift pressionado)' : 'Selecione o texto que deseja transformar em campo editável'}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div
-                  ref={previewRef}
-                  className="whitespace-pre-wrap text-sm border p-4 rounded-lg bg-white"
-                  onClick={handlePreviewClick}
-                  dangerouslySetInnerHTML={renderPreview()}
-                  style={{ 
-                    minHeight: '400px'
-                  }}
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Fields List */}
+          <div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="w-5 h-5" />
+                  Campos Configurados ({editingTemplate.fields.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SortableFieldList
+                  fields={editingTemplate.fields}
+                  onReorder={handleFieldsReorder}
+                  onEdit={handleFieldEdit}
+                  onRemove={handleRemoveField}
                 />
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Template Editor/Preview */}
+          <div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  {editMode === 'edit' ? (
+                    <>
+                      <Edit3 className="w-5 h-5" />
+                      Modo Edição
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-5 h-5" />
+                      Modo Preview
+                    </>
+                  )}
+                </CardTitle>
+                <div className="space-y-2 text-sm text-gray-600">
+                  {editMode === 'edit' ? (
+                    <>
+                      <p className="text-blue-600 font-medium">Edite o texto livremente. O cursor funciona normalmente.</p>
+                      <div className="space-y-1">
+                        <p className="flex items-center gap-2">
+                          <Keyboard className="w-3 h-3" />
+                          <strong>Como criar campos editáveis:</strong>
+                        </p>
+                        <p className="ml-5">• Selecione texto (mouse ou Shift+setas)</p>
+                        <p className="ml-5">• Digite <code className="bg-gray-100 px-1 rounded text-xs">{'{{variavel}}'}</code> no texto</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-blue-100 border border-blue-300 rounded"></span>
+                        Campos configurados (clique para editar)
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-green-100 border border-green-300 rounded"></span>
+                        Placeholders detectados automaticamente
+                      </p>
+                    </>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {editMode === 'edit' ? (
+                  <>
+                    <Textarea
+                      ref={textareaRef}
+                      value={editingTemplate.template}
+                      onChange={(e) => {
+                        setEditingTemplate(prev => ({
+                          ...prev,
+                          template: e.target.value
+                        }));
+                      }}
+                      onMouseDown={handleMouseDown}
+                      onMouseUp={handleMouseTextSelection}
+                      className={`
+                        w-full min-h-[400px] font-mono text-sm
+                        ${isSelectionActive ? 'bg-blue-50' : ''}
+                        transition-colors
+                      `}
+                      placeholder="Digite o texto do template aqui..."
+                    />
+                    {isSelectionActive && (
+                      <div className="mt-2 text-sm text-blue-600 flex items-center gap-1">
+                        <Info className="w-3 h-3" />
+                        {shiftPressed ? 'Use as setas para selecionar texto (mantenha Shift pressionado)' : 'Selecione o texto que deseja transformar em campo editável'}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div
+                    ref={previewRef}
+                    className="whitespace-pre-wrap text-sm border p-4 rounded-lg bg-white"
+                    onClick={handlePreviewClick}
+                    dangerouslySetInnerHTML={renderPreview()}
+                    style={{
+                      minHeight: '400px'
+                    }}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
+      )}
 
       <SelectionConfirmationModal
         open={showSelectionConfirmation}
