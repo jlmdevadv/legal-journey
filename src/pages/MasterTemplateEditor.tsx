@@ -6,36 +6,20 @@ import { ContractTemplate } from '@/types/template';
 import TemplateEditor from '@/components/admin/TemplateEditor';
 import { toast } from 'sonner';
 
-const generateId = () => {
-  return crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).substring(2);
-};
-
 const MasterTemplateEditor = () => {
   const { templateId } = useParams<{ templateId: string }>();
   const { organization, user } = useAuth();
   const navigate = useNavigate();
   const [template, setTemplate] = useState<ContractTemplate | null>(null);
   const [loading, setLoading] = useState(true);
-  const isNew = templateId === 'new';
 
   useEffect(() => {
     if (!organization) return;
-
-    if (isNew) {
-      const newTemplate: ContractTemplate = {
-        id: generateId(),
-        name: 'Novo Modelo',
-        description: '',
-        template: '',
-        fields: [],
-        usePartySystem: true,
-        organization_id: organization.id,
-      };
-      setTemplate(newTemplate);
-      setLoading(false);
-    } else {
-      loadTemplate();
+    if (templateId === 'new') {
+      navigate('/dashboard', { replace: true });
+      return;
     }
+    loadTemplate();
   }, [templateId, organization]);
 
   const loadTemplate = async () => {
@@ -53,7 +37,7 @@ const MasterTemplateEditor = () => {
 
       if (!data) {
         toast.error('Modelo não encontrado');
-        navigate('/master');
+        navigate('/dashboard');
         return;
       }
 
@@ -64,12 +48,13 @@ const MasterTemplateEditor = () => {
         template: data.template,
         fields: Array.isArray(data.fields) ? (data.fields as any[]) : [],
         usePartySystem: data.use_party_system ?? true,
+        partyConfig: data.party_config as any ?? undefined,
         version: data.version as any,
         organization_id: data.organization_id,
       });
     } catch (error: any) {
       toast.error('Erro ao carregar modelo: ' + error.message);
-      navigate('/master');
+      navigate('/dashboard');
     } finally {
       setLoading(false);
     }
@@ -80,43 +65,32 @@ const MasterTemplateEditor = () => {
 
     try {
       const record = {
-        id: updatedTemplate.id,
         name: updatedTemplate.name,
         description: updatedTemplate.description || null,
         template: updatedTemplate.template,
         fields: updatedTemplate.fields as any,
         use_party_system: updatedTemplate.usePartySystem ?? true,
+        party_config: updatedTemplate.partyConfig as any ?? null,
         version: updatedTemplate.version as any,
         organization_id: organization.id,
         last_modified_by: user.email || null,
       };
 
-      if (isNew) {
-        const { error } = await supabase
-          .from('contract_templates')
-          .insert({ ...record, created_by: user.email || null });
+      const { error } = await supabase
+        .from('contract_templates')
+        .update(record)
+        .eq('id', updatedTemplate.id)
+        .eq('organization_id', organization.id);
 
-        if (error) throw error;
-        toast.success('Modelo criado com sucesso!');
-      } else {
-        const { error } = await supabase
-          .from('contract_templates')
-          .update(record)
-          .eq('id', updatedTemplate.id)
-          .eq('organization_id', organization.id);
-
-        if (error) throw error;
-        toast.success('Modelo salvo com sucesso!');
-      }
-
-      navigate('/master');
+      if (error) throw error;
+      toast.success('Modelo salvo com sucesso!');
     } catch (error: any) {
       toast.error('Erro ao salvar: ' + error.message);
     }
   };
 
   const handleCancel = () => {
-    navigate('/master');
+    navigate('/dashboard');
   };
 
   if (loading) {

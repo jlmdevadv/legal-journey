@@ -60,6 +60,7 @@ export type Database = {
           last_modified_by: string | null
           name: string
           organization_id: string | null
+          party_config: Json | null
           template: string
           updated_at: string | null
           use_party_system: boolean | null
@@ -75,6 +76,7 @@ export type Database = {
           last_modified_by?: string | null
           name: string
           organization_id?: string | null
+          party_config?: Json | null
           template: string
           updated_at?: string | null
           use_party_system?: boolean | null
@@ -90,6 +92,7 @@ export type Database = {
           last_modified_by?: string | null
           name?: string
           organization_id?: string | null
+          party_config?: Json | null
           template?: string
           updated_at?: string | null
           use_party_system?: boolean | null
@@ -104,6 +107,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      party_registry: {
+        Row: {
+          id: string
+          owner_id: string
+          name: string
+          person_type: string
+          document: string | null
+          nationality: string | null
+          marital_status: string | null
+          profession: string | null
+          address: string | null
+          city: string | null
+          state: string | null
+          email: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          owner_id: string
+          name: string
+          person_type: string
+          document?: string | null
+          nationality?: string | null
+          marital_status?: string | null
+          profession?: string | null
+          address?: string | null
+          city?: string | null
+          state?: string | null
+          email?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          owner_id?: string
+          name?: string
+          person_type?: string
+          document?: string | null
+          nationality?: string | null
+          marital_status?: string | null
+          profession?: string | null
+          address?: string | null
+          city?: string | null
+          state?: string | null
+          email?: string | null
+          created_at?: string
+        }
+        Relationships: []
       }
       organizations: {
         Row: {
@@ -307,6 +358,7 @@ export type Database = {
           is_revoked: boolean
           organization_id: string
           revoked_at: string | null
+          share_party_registry: boolean
           template_id: string
           token: string
         }
@@ -318,6 +370,7 @@ export type Database = {
           is_revoked?: boolean
           organization_id: string
           revoked_at?: string | null
+          share_party_registry?: boolean
           template_id: string
           token?: string
         }
@@ -329,6 +382,7 @@ export type Database = {
           is_revoked?: boolean
           organization_id?: string
           revoked_at?: string | null
+          share_party_registry?: boolean
           template_id?: string
           token?: string
         }

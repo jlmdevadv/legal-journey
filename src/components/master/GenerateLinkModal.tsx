@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Copy, Check, Link2, Loader2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -20,6 +21,7 @@ const GenerateLinkModal = ({ open, onOpenChange, templateId, templateName }: Gen
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [sharePartyRegistry, setSharePartyRegistry] = useState(false);
 
   const handleGenerate = async () => {
     if (!user || !organization) return;
@@ -32,6 +34,7 @@ const GenerateLinkModal = ({ open, onOpenChange, templateId, templateName }: Gen
           template_id: templateId,
           organization_id: organization.id,
           created_by_user_id: user.id,
+          share_party_registry: sharePartyRegistry,
         })
         .select('token')
         .single();
@@ -60,6 +63,7 @@ const GenerateLinkModal = ({ open, onOpenChange, templateId, templateName }: Gen
     if (!open) {
       setGeneratedLink(null);
       setCopied(false);
+      setSharePartyRegistry(false);
     }
     onOpenChange(open);
   };
@@ -78,6 +82,20 @@ const GenerateLinkModal = ({ open, onOpenChange, templateId, templateName }: Gen
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {!generatedLink && (
+            <div className="flex items-center justify-between rounded-lg border border-border p-3">
+              <div>
+                <p className="text-sm font-medium">Compartilhar Cadastro de Partes</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Os destinatários poderão buscar partes do seu cadastro ao preencher.
+                </p>
+              </div>
+              <Switch
+                checked={sharePartyRegistry}
+                onCheckedChange={setSharePartyRegistry}
+              />
+            </div>
+          )}
           {!generatedLink ? (
             <Button onClick={handleGenerate} disabled={isGenerating} className="w-full">
               {isGenerating ? (

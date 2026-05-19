@@ -6,6 +6,7 @@ import ContratosPropriosSection from '@/components/dashboard/sections/ContratosP
 import MeusModelosSection from '@/components/dashboard/sections/MeusModelosSection';
 import DocumentosRecebidosSection from '@/components/dashboard/sections/DocumentosRecebidosSection';
 import DocumentosCompartilhadosSection from '@/components/dashboard/sections/DocumentosCompartilhadosSection';
+import PartyRegistrySection from '@/components/dashboard/PartyRegistrySection';
 import { useDashboardData } from '@/hooks/useDashboardData';
 
 const Dashboard = () => {
@@ -56,6 +57,8 @@ const Dashboard = () => {
         )}
 
         <DocumentosRecebidosSection docs={receivedDocs} />
+
+        <PartyRegistrySection />
 
         {isMaster && (
           <DocumentosCompartilhadosSection
