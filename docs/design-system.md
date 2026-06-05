@@ -412,21 +412,43 @@ Navbar
 
 Em mobile: botões "Aprovar" / "Reprovar" ficam fixos na barra inferior.
 
-### 5.4 Layout do Dashboard (MasterDashboard)
+### 5.4 Layout do Dashboard Unificado (/dashboard)
+
+O `/dashboard` é a página principal dos usuários autenticados. Usa layout de seções empilhadas verticalmente dentro do container padrão:
+
+```
+Navbar
+└── Container (max 1200px)
+    ├── Heading de página (DM Serif Display 32px)
+    ├── StatsBar — métricas resumidas em linha
+    ├── ContratosPropriosSection — contratos do usuário
+    ├── MeusModelosSection — templates da org (apenas Master)
+    ├── DocumentosRecebidosSection — documentos de organizações
+    ├── PartyRegistrySection — cadastro de partes (todos os autenticados)
+    └── DocumentosCompartilhadosSection — documentos da org (apenas Master)
+```
+
+- Seções separadas por `margin-top: 48px` com `heading + border-bottom`
+- `StatsBar` exibe contadores horizontais no desktop; empilha verticalmente no mobile
+- `PartyRegistrySection` disponível para todos os usuários autenticados (não apenas Master)
+
+### 5.4.1 Layout do MasterDashboard (/master)
+
+O painel exclusivo do Master em `/master` mantém um layout focado em gestão:
 
 ```
 Navbar
 └── Container (max 1200px)
     ├── Seção: Templates
-    │   ├── Heading + botão "+ Novo template"
-    │   └── Grid de cards (3 colunas desktop → 2 tablet → 1 mobile)
+    │   ├── Heading + botão "Novo Modelo"
+    │   └── Lista de templates com ações (editar, gerar link, excluir)
     └── Seção: Documentos
         ├── Heading + filtro de status
         └── Tabela: Nome | Template | Status | Enviado em | Ações
 ```
 
-- Seções separadas por `margin-top: 48px` com `heading + border-bottom`
 - Tabela em mobile: cada linha vira um card empilhado
+- Botão "Novo Modelo" abre o `ContentModal` → `TemplateWizard` (6 passos)
 
 ### 5.5 Responsividade
 

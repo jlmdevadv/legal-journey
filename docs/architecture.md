@@ -33,6 +33,7 @@ contrato-completo-facil-02/
 │   ├── pages/                     # Páginas roteadas via React Router
 │   │   ├── Index.tsx              # Página inicial — seleção de template e questionário
 │   │   ├── Auth.tsx               # Login e cadastro de usuários
+│   │   ├── Dashboard.tsx          # Painel unificado do usuário autenticado (/dashboard)
 │   │   ├── MeusContratos.tsx      # Lista de contratos salvos do usuário logado
 │   │   ├── MasterDashboard.tsx    # Painel do Master — gestão de templates e links
 │   │   ├── MasterTemplateEditor.tsx # Editor completo de template (campos, texto, versões)
@@ -49,15 +50,26 @@ contrato-completo-facil-02/
 │   │   ├── admin/                 # Componentes do painel administrativo (admin/master)
 │   │   │   ├── AddTemplateModal.tsx         # Modal para criar novo template
 │   │   │   ├── ConditionalClauseHelper.tsx  # UI auxiliar para lógica condicional de cláusulas
+│   │   │   ├── ContentModal.tsx             # Modal de entrada de conteúdo (3 abas: texto, JSON, arquivo)
 │   │   │   ├── FieldConfigModal.tsx         # Modal de configuração detalhada de campo
 │   │   │   ├── HelpSectionEditor.tsx        # Editor das seções de ajuda de um campo
+│   │   │   ├── PartyRegistryLookup.tsx      # Busca e seleção de partes do cadastro no editor
 │   │   │   ├── RenameTemplateModal.tsx      # Modal para renomear template
 │   │   │   ├── SelectionConfirmationModal.tsx # Confirmação de seleção de template para edição
 │   │   │   ├── SortableFieldItem.tsx        # Item arrastável de campo (dnd-kit)
 │   │   │   ├── SortableFieldList.tsx        # Lista de campos com drag-and-drop
 │   │   │   ├── TemplateEditor.tsx           # Editor principal — texto do template com variáveis
 │   │   │   ├── TemplateImporter.tsx         # Import de template via JSON
-│   │   │   └── TemplateVersionHistory.tsx   # Histórico de versões de um template
+│   │   │   ├── TemplatePartsTab.tsx         # Aba de configuração de partes no editor de template
+│   │   │   ├── TemplateVersionHistory.tsx   # Histórico de versões de um template
+│   │   │   └── wizard/                      # Wizard de criação de template (6 passos)
+│   │   │       ├── TemplateWizard.tsx        # Componente orquestrador do wizard
+│   │   │       ├── WizardStep1Name.tsx       # Passo 1: nome e descrição do template
+│   │   │       ├── WizardStep2PartyConfig.tsx # Passo 2: configuração de partes principais
+│   │   │       ├── WizardStep3Roles.tsx      # Passo 3: papéis das partes
+│   │   │       ├── WizardStep4FixedParties.tsx # Passo 4: partes fixas pré-preenchidas
+│   │   │       ├── WizardStep5OtherParties.tsx # Passo 5: configuração de outras partes
+│   │   │       └── WizardStep6Summary.tsx    # Passo 6: resumo e confirmação
 │   │   │
 │   │   ├── auth/                  # Guards de rota
 │   │   │   ├── ProtectedRoute.tsx       # Redireciona para /auth se não autenticado
@@ -65,6 +77,15 @@ contrato-completo-facil-02/
 │   │   │
 │   │   ├── contracts/             # Componentes da tela "Meus Contratos"
 │   │   │   └── ContractCard.tsx   # Card de contrato salvo (status, ações)
+│   │   │
+│   │   ├── dashboard/             # Componentes do painel unificado (/dashboard)
+│   │   │   ├── StatsBar.tsx       # Barra de métricas resumidas
+│   │   │   ├── PartyRegistrySection.tsx     # Seção de cadastro de partes (todos os usuários)
+│   │   │   └── sections/
+│   │   │       ├── ContratosPropriosSection.tsx      # Seção: contratos próprios do usuário
+│   │   │       ├── DocumentosCompartilhadosSection.tsx # Seção: documentos da org (master)
+│   │   │       ├── DocumentosRecebidosSection.tsx    # Seção: documentos recebidos
+│   │   │       └── MeusModelosSection.tsx            # Seção: templates da org (master)
 │   │   │
 │   │   ├── master/                # Componentes exclusivos do fluxo Master
 │   │   │   └── GenerateLinkModal.tsx  # Modal para gerar link compartilhável de template
@@ -126,7 +147,9 @@ contrato-completo-facil-02/
 │   │   ├── use-toast.ts           # Hook de toast (shadcn)
 │   │   ├── useAutoSave.ts         # Autosalvamento periódico no Supabase
 │   │   ├── useContractPreviewScroll.ts # Scroll sincronizado na prévia do contrato
-│   │   └── useKeyboardSelection.ts     # Navegação por teclado em listas de seleção
+│   │   ├── useDashboardData.ts    # Dados agregados do painel unificado
+│   │   ├── useKeyboardSelection.ts     # Navegação por teclado em listas de seleção
+│   │   └── usePartyRegistry.ts    # CRUD do cadastro de partes (party_registry)
 │   │
 │   ├── integrations/
 │   │   └── supabase/
@@ -173,6 +196,7 @@ contrato-completo-facil-02/
 |------|-----------|----------|-----------|
 | `/` | `Index` | Pública | Seleção de template e questionário guiado |
 | `/auth` | `Auth` | Pública | Login e cadastro |
+| `/dashboard` | `Dashboard` | `ProtectedRoute` (user autenticado) | Painel unificado do usuário |
 | `/meus-contratos` | `MeusContratos` | `ProtectedRoute` (user autenticado) | Lista de contratos salvos |
 | `/master` | `MasterDashboard` | `MasterProtectedRoute` (role: master) | Painel de gestão de templates |
 | `/master/template/:templateId` | `MasterTemplateEditor` | `MasterProtectedRoute` | Editor de template |
@@ -188,14 +212,22 @@ contrato-completo-facil-02/
 
 | Tabela | Descrição |
 |--------|-----------|
-| `contract_templates` | Templates de contratos (texto, campos, versão, metadados) |
+| `contract_templates` | Templates de contratos (texto, campos, versão, metadados, `party_config` JSONB) |
 | `organizations` | Organizações dos usuários Master |
+| `party_registry` | Cadastro de partes reutilizáveis por usuário (PF/PJ com dados completos) |
 | `party_types` | Tipos de partes (Contratante, Contratado, Fiador, etc.) |
 | `profiles` | Perfil público dos usuários (nome, avatar, telefone) |
 | `saved_contracts` | Contratos em andamento ou finalizados pelos usuários |
-| `share_links` | Links temporários gerados pelo Master para acesso externo |
+| `share_links` | Links temporários gerados pelo Master (`share_party_registry` boolean) |
 | `user_roles` | Roles dos usuários: `user`, `admin`, `master` |
 | `contract_events` | Histórico imutável de eventos por contrato (criação, acesso, envio, revisão) |
+
+#### Colunas relevantes adicionadas
+
+| Tabela | Coluna | Tipo | Descrição |
+|--------|--------|------|-----------|
+| `contract_templates` | `party_config` | `jsonb \| null` | Configuração de partes do template: min/max, tipos aceitos, papéis, partes fixas |
+| `share_links` | `share_party_registry` | `boolean` | Quando `true`, o destinatário do link pode usar o cadastro de partes ao preencher |
 
 ### Funções RPC
 
@@ -208,6 +240,63 @@ contrato-completo-facil-02/
 | `promote_user_to_admin(email)` | Promove usuário a admin |
 | `create_master_account(org_name, email)` | Cria conta master com organização |
 | `validate_share_link(token)` | Valida token de link compartilhado |
+
+### Tipos TypeScript principais (`src/types/template.ts`)
+
+Tipos adicionados na v3.2 para suporte a `PartyConfig` e cadastro de partes:
+
+```typescript
+export type PersonType = 'PF' | 'PJ';
+
+export interface FixedParty {
+  registryId?: string;     // referência a um PartyRegistryEntry
+  role: string;
+  name: string;
+  personType: PersonType;
+  document?: string;
+  nationality?: string;
+  maritalStatus?: string;
+  profession?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  email?: string;
+}
+
+export interface OtherPartiesConfig {
+  acceptedTypes: PersonType[];
+  roles: string[];
+  fixedParties: FixedParty[];
+}
+
+export interface PartyConfig {
+  minParties: number;
+  maxParties: number;
+  acceptedTypes: PersonType[];
+  roles: string[];
+  allowOtherParties: boolean;
+  fixedParties: FixedParty[];
+  otherPartiesConfig?: OtherPartiesConfig;
+}
+
+export interface PartyRegistryEntry {
+  id: string;
+  owner_id: string;
+  name: string;
+  person_type: PersonType;
+  document?: string;
+  nationality?: string;
+  marital_status?: string;
+  profession?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  email?: string;
+  created_at?: string;
+}
+```
+
+`PartyConfig` é serializado como JSONB na coluna `party_config` de `contract_templates`. `PartyRegistryEntry` espelha a tabela `party_registry`.
 
 ---
 

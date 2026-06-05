@@ -25,6 +25,7 @@ O sistema possui quatro perfis de usuário, com diferentes níveis de acesso:
 |------|-------|------|-------|--------|--------|
 | `/` | ✅ Acessa, seleciona template e preenche (sem salvar) | ✅ Acessa, preenche e salva automaticamente | ✅ Igual ao User + pode editar templates | ✅ Igual ao User | Pública |
 | `/auth` | ✅ Página de login/cadastro | ✅ Redirecionado para `/` se já logado | ✅ | ✅ | Pública |
+| `/dashboard` | ❌ Redirecionado para `/auth` | ✅ Painel com contratos, documentos recebidos e cadastro de partes | ✅ | ✅ Idem + seções de modelos e documentos da org | `ProtectedRoute` |
 | `/meus-contratos` | ❌ Redirecionado para `/auth` | ✅ Vê e gerencia contratos próprios | ✅ | ✅ | `ProtectedRoute` |
 | `/master` | ❌ Redirecionado para `/auth` | ❌ Redirecionado para `/` | ❌ Redirecionado para `/` | ✅ Painel de gerenciamento da organização | `MasterProtectedRoute` |
 | `/master/template/:templateId` | ❌ | ❌ | ❌ | ✅ Editor de template | `MasterProtectedRoute` |
@@ -163,13 +164,25 @@ const MasterProtectedRoute = ({ children }) => {
 10. Ao concluir todas as perguntas, o usuário chega à tela de resumo e pode exportar o contrato como PDF.
 11. O contrato permanece salvo com status `draft` ou `completed` conforme o fluxo.
 
-### 4.5 Visualização em Meus Contratos
+### 4.5 Painel do Usuário (/dashboard)
 
-12. O usuário acessa `/meus-contratos` pelo menu.
-13. A página lista os contratos próprios (sem `organization_id`) e, se aplicável, documentos compartilhados (com `organization_id`).
-14. O usuário pode abrir um contrato para continuar editando ou excluí-lo.
+12. O usuário acessa `/dashboard` pelo menu.
+13. O painel exibe em sequência: métricas resumidas (`StatsBar`), contratos próprios (`ContratosPropriosSection`), documentos recebidos de organizações (`DocumentosRecebidosSection`) e o cadastro de partes (`PartyRegistrySection`).
+14. Usuários Master veem adicionalmente as seções `MeusModelosSection` e `DocumentosCompartilhadosSection`.
 
-### 4.6 Envio para Revisão (fluxo B2B)
+### 4.6 Cadastro de Partes
+
+15. Na seção "Cadastro de Partes" do dashboard, o usuário pode criar, editar e excluir entradas de pessoas físicas ou jurídicas para reutilização nos questionários.
+16. As entradas ficam na tabela `party_registry` vinculadas ao `owner_id` do usuário.
+17. Ao preencher os dados de uma parte no questionário, o sistema pode sugerir entradas do cadastro para autocompletar.
+
+### 4.7 Visualização em Meus Contratos
+
+18. O usuário acessa `/meus-contratos` pelo menu.
+19. A página lista os contratos próprios (sem `organization_id`) e, se aplicável, documentos compartilhados (com `organization_id`).
+20. O usuário pode abrir um contrato para continuar editando ou excluí-lo.
+
+### 4.8 Envio para Revisão (fluxo B2B)
 
 15. Se o contrato foi criado a partir de um link compartilhado (`/s/:token`), ele estará associado a uma organização.
 16. Ao concluir o preenchimento, o usuário pode enviar o documento para revisão. O status muda para `pending_review`.
@@ -189,9 +202,15 @@ const MasterProtectedRoute = ({ children }) => {
 ### 5.2 Gerenciamento de Templates
 
 4. No painel `/master`, o Master vê a lista de templates da organização e os contadores de documentos (pendentes, aprovados, reprovados).
-5. Para criar um template: clica em "Novo Modelo" → navega para `/master/template/new` → preenche nome, texto do contrato e campos dinâmicos no editor (`MasterTemplateEditor`) → salva.
+5. Para criar um template: clica em "Novo Modelo" → o modal `ContentModal` abre com três abas (texto livre, importar JSON, importar arquivo) → após inserir o conteúdo, o `TemplateWizard` conduz 6 passos de configuração:
+   1. **Nome e descrição** do template
+   2. **Configuração de partes principais** (min/max, tipos PF/PJ aceitos)
+   3. **Papéis das partes** (ex: Contratante, Contratado)
+   4. **Partes fixas** pré-preenchidas (opcionalmente vinculadas ao cadastro de partes via `registryId`)
+   5. **Configuração de outras partes** (Fiador, Testemunha, etc.)
+   6. **Resumo e confirmação** → navega para `/master/template/:templateId` (editor completo)
 6. Para editar um template existente: clica em "Editar" na linha do template → navega para `/master/template/:templateId`.
-7. Para gerar um link de preenchimento compartilhado: clica em "Gerar Link" → o modal `GenerateLinkModal` cria um token via Supabase e exibe a URL `/s/:token` para distribuição.
+7. Para gerar um link de preenchimento compartilhado: clica em "Gerar Link" → o modal `GenerateLinkModal` cria um token via Supabase, permite ativar o toggle `share_party_registry` (compartilha o cadastro de partes do Master com o destinatário) e exibe a URL `/s/:token` para distribuição.
 8. Para excluir um template: clica no ícone de lixeira e confirma.
 
 > O número máximo de templates é definido pelo campo `templates_limit` da organização. Ao atingir o limite, o botão "Novo Modelo" é desabilitado e um aviso é exibido.
