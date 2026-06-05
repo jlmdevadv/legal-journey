@@ -94,6 +94,14 @@ Master clica no documento → Página MasterReview (/master/review/:documentId)
 
 ---
 
+### `Dashboard` (página)
+
+- **Arquivo:** `src/pages/Dashboard.tsx`
+- **Rota:** `/dashboard`
+- **Documentos recebidos:** A seção `DocumentosRecebidosSection` exibe contratos vinculados à organização do usuário. Contratos com status `rejected` aparecem com badge "Reprovado" e opção de abrir para edição e reenvio.
+
+---
+
 ### `MeusContratos` (página)
 
 - **Arquivo:** `src/pages/MeusContratos.tsx`

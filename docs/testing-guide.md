@@ -100,11 +100,23 @@ CONTRATO PARA CONVERTER:
 
 ### Como Importar o JSON Gerado
 
-1. No painel master (`/master`), clique em **"Novo Modelo"** ou edite um existente
-2. No editor de template, clique em **"Importar JSON"**
-3. Cole o JSON gerado pelo Claude e confirme
-4. Revise os campos gerados e ajuste se necessário
-5. Salve o modelo
+O fluxo de criação de template usa um wizard de 6 passos iniciado pelo `ContentModal`:
+
+1. No painel master (`/master`), clique em **"Novo Modelo"**
+2. O modal `ContentModal` abre com três abas:
+   - **Texto livre**: cole diretamente o texto do contrato com `{{placeholders}}`
+   - **Importar JSON**: cole o JSON gerado pelo Claude e confirme
+   - **Importar arquivo**: faça upload de um arquivo `.json`
+3. Após confirmar o conteúdo, o **TemplateWizard** inicia com 6 passos:
+   1. Nome e descrição do template
+   2. Configuração de partes principais (min/max, tipos PF/PJ)
+   3. Papéis das partes (ex: Contratante, Contratado)
+   4. Partes fixas pré-preenchidas (opcional)
+   5. Configuração de outras partes (Fiador, Testemunha, etc.)
+   6. Resumo e confirmação
+4. Ao concluir o wizard, o sistema navega para o editor completo (`/master/template/:id`)
+5. Revise os campos gerados e ajuste se necessário
+6. Salve o modelo
 
 ---
 
